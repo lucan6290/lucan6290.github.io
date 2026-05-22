@@ -1,0 +1,358 @@
+# --------------------------------------
+# Butterfly Theme Configuration
+# 文档: https://butterfly.js.org/
+# --------------------------------------
+
+# --------------------------------------
+# 导航设置
+# --------------------------------------
+nav:
+  logo:
+  display_title: true
+  display_post_title: true
+  fixed: true
+
+menu:
+  首页: / || fas fa-home
+  归档: /archives/ || fas fa-archive
+  分类: /categories/ || fas fa-folder
+  标签: /tags/ || fas fa-tags
+  关于: /about/ || fas fa-user
+
+# --------------------------------------
+# 代码块
+# --------------------------------------
+code_blocks:
+  theme: pale night
+  macStyle: true
+  height_limit: 520
+  word_wrap: false
+  copy: true
+  language: true
+  shrink: false
+  fullpage: false
+
+# --------------------------------------
+# 社交链接
+# --------------------------------------
+social:
+  fab fa-github: https://github.com/lucan6290 || GitHub || '#24292e'
+  fab fa-git-alt: https://gitee.com/lucan6290 || Gitee || '#c71d23'
+  fas fa-blog: https://blog.csdn.net/2301_80165396 || CSDN || '#fc5531'
+  fas fa-envelope: mailto:lucan6290@gmail.com || 邮箱 || '#4a7dbe'
+
+# --------------------------------------
+# 图片设置
+# --------------------------------------
+favicon: /img/favicon.png
+
+avatar:
+  img: /img/avatar.png
+  effect: true
+
+# 首页顶部大图（可选，留空则为纯色背景）
+index_img:
+archive_img:
+tag_img:
+category_img:
+
+# 文章封面
+cover:
+  index_enable: true
+  aside_enable: true
+  archives_enable: true
+  default_cover:
+
+# 404 页面
+error_404:
+  enable: true
+  subtitle: '页面未找到...不如回去看看其他文章？'
+  background:
+
+# --------------------------------------
+# 文章元信息
+# --------------------------------------
+post_meta:
+  page:
+    date_type: created
+    date_format: date
+    categories: true
+    tags: false
+    label: true
+  post:
+    position: left
+    date_type: both
+    date_format: date
+    categories: true
+    tags: true
+    label: true
+
+# --------------------------------------
+# 首页设置
+# --------------------------------------
+index_site_info_top:
+index_top_img_height:
+
+subtitle:
+  enable: true
+  effect: true
+  source: false
+  sub:
+    - 箓藏千思，川流不息
+    - 于技术之川，拾字成箓
+    - 记录每一次探索与成长
+
+index_layout: 4
+
+index_post_content:
+  method: 2
+  length: 300
+
+# --------------------------------------
+# 文章页设置
+# --------------------------------------
+toc:
+  post: true
+  page: false
+  number: true
+  expand: false
+  style_simple: false
+  scroll_percent: true
+
+post_copyright:
+  enable: true
+  decode: false
+  author_href: https://github.com/lucan6290
+  license: CC BY-NC-SA 4.0
+  license_url: https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+reward:
+  enable: false
+
+related_post:
+  enable: true
+  limit: 6
+  date_type: created
+
+post_pagination: 1
+
+noticeOutdate:
+  enable: true
+  style: flat
+  limit_day: 180
+  position: top
+  message_prev: 距今已有
+  message_next: 天未更新，内容可能已过时。
+
+# --------------------------------------
+# 页脚设置
+# --------------------------------------
+footer:
+  owner:
+    enable: true
+    since: 2026
+  copyright:
+    enable: true
+    version: true
+  custom_text: 箓川码笺 · 箓藏千思，川流不息
+
+# --------------------------------------
+# 侧边栏
+# --------------------------------------
+aside:
+  enable: true
+  hide: false
+  button: true
+  mobile: true
+  position: right
+  display:
+    archive: true
+    tag: true
+    category: true
+  card_author:
+    enable: true
+    description: 于技术之川，拾字成箓
+    button:
+      enable: true
+      icon: fab fa-github
+      text: GitHub
+      link: https://github.com/lucan6290
+  card_announcement:
+    enable: true
+    content: 箓藏千思，川流不息。记录学习、踩坑、成长的技术博客。
+  card_recent_post:
+    enable: true
+    limit: 5
+    sort: date
+  card_categories:
+    enable: true
+    limit: 8
+    expand: none
+  card_tags:
+    enable: true
+    limit: 40
+    color: true
+    orderby: random
+    order: 1
+  card_archives:
+    enable: true
+    type: monthly
+    format: YYYY年MM月
+    order: -1
+    limit: 12
+  card_webinfo:
+    enable: true
+    post_count: true
+    last_push_date: true
+    runtime_date: true
+  card_post_series:
+    enable: true
+    series_title: false
+    orderBy: 'date'
+    order: -1
+
+# --------------------------------------
+# 右下角按钮
+# --------------------------------------
+rightside_bottom:
+
+translate:
+  enable: false
+
+readmode: true
+
+darkmode:
+  enable: true
+  button: true
+  autoChangeMode: 1
+
+rightside_scroll_percent: true
+
+# --------------------------------------
+# 字数统计
+# --------------------------------------
+wordcount:
+  enable: true
+  post_wordcount: true
+  min2read: true
+  total_wordcount: true
+
+# 不蒜子统计
+busuanzi:
+  site_uv: true
+  site_pv: true
+  page_pv: true
+
+# --------------------------------------
+# 搜索 - 本地搜索
+# --------------------------------------
+search:
+  use: local_search
+  placeholder: 搜索文章...
+
+  local_search:
+    preload: false
+    top_n_per_article: 1
+    unescape: false
+    pagination:
+      enable: false
+      hitsPerPage: 8
+
+# --------------------------------------
+# 分享
+# --------------------------------------
+share:
+  use: sharejs
+  sharejs:
+    sites: qq,wechat,weibo
+
+# --------------------------------------
+# 评论系统 - 暂时不启用
+# --------------------------------------
+comments:
+  use:
+  text: true
+  lazyload: false
+  count: false
+  card_post_count: false
+
+# --------------------------------------
+# 图片灯箱
+# --------------------------------------
+lightbox: fancybox
+
+# --------------------------------------
+# Mermaid 图表支持
+# --------------------------------------
+mermaid:
+  enable: true
+  code_write: false
+  theme:
+    light: default
+    dark: dark
+  open_in_new_tab: true
+  zoom_pan: true
+
+# --------------------------------------
+# 通知提示
+# --------------------------------------
+note:
+  style: flat
+  icons: true
+  border_radius: 3
+  light_bg_offset: 0
+
+# --------------------------------------
+# 美化
+# --------------------------------------
+rounded_corners_ui: true
+
+enter_transitions: true
+
+beautify:
+  enable: true
+  field: post
+  title_prefix_icon:
+  title_prefix_icon_color:
+
+# 打字特效
+activate_power_mode:
+  enable: false
+
+# 点击烟花
+fireworks:
+  enable: false
+
+# 鼠标特效
+click_heart:
+  enable: false
+
+# --------------------------------------
+# Lazyload 图片懒加载
+# --------------------------------------
+lazyload:
+  enable: true
+  native: true
+  field: site
+  placeholder:
+  blur: false
+
+# --------------------------------------
+# Pjax
+# --------------------------------------
+pjax:
+  enable: false
+
+# --------------------------------------
+# 其他
+# --------------------------------------
+instantpage: false
+
+css_prefix: true
+
+# Open Graph
+Open_Graph_meta:
+  enable: true
+  option:
+
+# 文章过期提醒

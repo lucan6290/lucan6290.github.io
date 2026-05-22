@@ -1,0 +1,137 @@
+# Hexo Configuration
+## Docs: https://hexo.io/docs/configuration.html
+
+# Site
+title: 箓川码笺
+subtitle: '于技术之川，拾字成箓'
+description: '箓藏千思，川流不息 —— 在广阔无垠的技术山川中，记录每一次探索、每一个踩坑、每一份感悟。'
+keywords:
+  - 技术博客
+  - 踩坑记录
+  - 前端
+  - 后端
+  - Agent
+  - 求职经验
+author: Lucan
+language: zh-CN
+timezone: 'Asia/Shanghai'
+
+# URL
+url: https://lucan6290.github.io
+permalink: :year/:month/:day/:title/
+permalink_defaults:
+pretty_urls:
+  trailing_index: true
+  trailing_html: true
+
+# Directory
+source_dir: source
+public_dir: public
+tag_dir: tags
+archive_dir: archives
+category_dir: categories
+code_dir: downloads/code
+i18n_dir: :lang
+skip_render:
+
+# Writing
+new_post_name: :title.md
+default_layout: post
+titlecase: false
+external_link:
+  enable: true
+  field: site
+  exclude: ''
+filename_case: 0
+render_drafts: false
+post_asset_folder: true
+relative_link: false
+future: true
+syntax_highlighter: highlight.js
+highlight:
+  line_number: true
+  auto_detect: false
+  tab_replace: ''
+  wrap: true
+  hljs: false
+prismjs:
+  preprocess: true
+  line_number: true
+  tab_replace: ''
+
+# Home page setting
+index_generator:
+  path: ''
+  per_page: 8
+  order_by: -date
+
+# Category & Tag
+default_category: 技术研习
+category_map:
+  技术研习: tech-study
+  入门笔记: beginner-notes
+  进阶教程: advanced-tutorial
+  原理探究: principle-deep-dive
+  源码解读: source-code-reading
+  前沿追踪: frontier-tracking
+  系列专题: series
+  踩坑复盘: pitfall-review
+  环境配置: env-setup
+  代码调试: code-debug
+  工程问题: engineering-issue
+  部署运维: deploy-ops
+  数据问题: data-issue
+  工具问题: tool-issue
+  项目实战: project-practice
+  项目介绍: project-intro
+  架构设计: architecture-design
+  开发日志: dev-log
+  功能实现: feature-impl
+  性能优化: performance-opt
+  项目总结: project-summary
+  开源分享: open-source-share
+  成长随笔: growth-essay
+  求职之路: career-path
+  简历优化: resume-opt
+  面试真题: interview-questions
+  offer选择: offer-choice
+  学习方法: learning-method
+  读书笔记: reading-notes
+  日常感悟: daily-reflection
+  短思考: short-thoughts
+  年度总结: annual-summary
+  资源分享: resource-sharing
+  工具推荐: tool-recommendation
+  学习资源: learning-resource
+  代码片段: code-snippet
+  模板分享: template-share
+  文档翻译: doc-translation
+  cheatsheet: cheatsheet
+tag_map:
+
+# Metadata elements
+meta_generator: true
+
+# Date / Time format
+date_format: YYYY-MM-DD
+time_format: HH:mm:ss
+updated_option: 'mtime'
+
+# Pagination
+per_page: 8
+pagination_dir: page
+
+# Include / Exclude file(s)
+include:
+exclude:
+ignore:
+
+# Extensions
+theme: butterfly
+
+# Deployment
+## Docs: https://hexo.io/docs/one-command-deployment
+deploy:
+  type: git
+  repo: https://github.com/lucan6290/lucan6290.github.io.git
+  branch: main
