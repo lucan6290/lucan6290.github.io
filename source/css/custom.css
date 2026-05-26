@@ -1,0 +1,468 @@
+/* ==========================================
+   箓川码笺 - 极致阅读体验优化
+   设计理念：柔和、舒适、层次分明、避免视觉疲劳
+   ========================================== */
+
+/* ------------------------------
+   1. 基础主题优化 - 柔和舒适
+   ------------------------------ */
+
+/* 设置 color-scheme 以优化暗色模式下的原生控件 */
+:root {
+  /* 主色调微调：更柔和的苔原墨绿 */
+  --theme-primary: #3a7a5a;
+  --theme-primary-light: #4a9a72;
+  --theme-primary-dark: #2d5f46;
+  --theme-accent: #d48a40; /* 琥珀色点缀 */
+  
+  /* 柔和的背景色系统 */
+  --bg-page: #fafbfc;
+  --bg-card: #ffffff;
+  --bg-hover: rgba(58, 122, 90, 0.06);
+  --bg-code: rgba(58, 122, 90, 0.04);
+  
+  /* 文本层次系统 - 高可读性 */
+  --text-primary: #1a1f2e;
+  --text-secondary: #4a5568;
+  --text-muted: #718096;
+  
+  /* 柔和的阴影系统 */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+  
+  /* 舒适的间距系统 */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space: 16px;
+  --space-md: 24px;
+  --space-lg: 32px;
+  --space-xl: 48px;
+}
+
+html {
+  color-scheme: light dark;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-page);
+}
+
+/* ------------------------------
+   2. 排版优化 - 高可读性，避免疲劳
+   ------------------------------ */
+
+/* 标题使用 text-pretty/text-wrap: balance 避免孤行 */
+.article-title,
+.page-title,
+h1, h2, h3, h4, h5, h6 {
+  text-wrap: balance;
+  text-wrap: pretty;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+
+/* 舒适的行高和字间距 */
+.article-content p {
+  line-height: 1.8 !important;
+  letter-spacing: 0.01em;
+  margin-bottom: 1.5em;
+}
+
+/* 段落首行缩进 - 更像书籍阅读体验 */
+.article-content p:first-of-type,
+.article-content p + p {
+  text-indent: 2em;
+}
+
+/* 表格数字列使用等宽数字 */
+td.number-column,
+th.number-column,
+table {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 滚动边距，点击锚点跳转时预留足够空间 */
+[id] {
+  scroll-margin-top: 100px; /* 适配 fixed header */
+}
+
+/* ------------------------------
+   3. 卡片优化 - 柔和层次，避免刺眼
+   ------------------------------ */
+
+/* 主内容卡片优化 */
+.layout > div:first-child > .card-widget,
+.layout > div:first-child > article {
+  background-color: var(--bg-card) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--shadow-sm) !important;
+  transition: box-shadow 0.3s ease;
+  border: 1px solid rgba(0, 0, 0, 0.03) !important;
+}
+
+.layout > div:first-child > .card-widget:hover,
+.layout > div:first-child > article:hover {
+  box-shadow: var(--shadow-md) !important;
+}
+
+/* 侧边栏卡片 - 柔和边框而非深阴影 */
+.card-widget {
+  border: 1px solid rgba(0, 0, 0, 0.04) !important;
+  background-color: var(--bg-card) !important;
+  border-radius: 10px !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+/* 文章卡片列表 */
+#recent-posts > .recent-post-item {
+  border-radius: 10px !important;
+  background-color: var(--bg-card) !important;
+  box-shadow: var(--shadow-sm) !important;
+  border: 1px solid rgba(0, 0, 0, 0.03) !important;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+#recent-posts > .recent-post-item:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md) !important;
+}
+
+/* ------------------------------
+   4. 分类与标签优化 - 更好的组织
+   ------------------------------ */
+
+/* 标签云优化 - 柔和渐变，层次分明 */
+.tag-cloud a {
+  border-radius: 999px !important;
+  padding: 4px 14px !important;
+  font-size: 0.9rem !important;
+  background: linear-gradient(135deg, rgba(58, 122, 90, 0.08), rgba(74, 154, 114, 0.05)) !important;
+  border: 1px solid rgba(58, 122, 90, 0.15) !important;
+  color: var(--theme-primary) !important;
+  transition: all 0.2s ease;
+}
+
+.tag-cloud a:hover {
+  background: linear-gradient(135deg, rgba(58, 122, 90, 0.15), rgba(74, 154, 114, 0.12)) !important;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 分类列表优化 */
+.card-categories .category-list-link {
+  border-radius: 6px !important;
+  padding: 6px 12px !important;
+  transition: all 0.2s ease;
+}
+
+.card-categories .category-list-link:hover {
+  background-color: var(--bg-hover) !important;
+  color: var(--theme-primary) !important;
+}
+
+/* ------------------------------
+   5. 代码块优化 - 柔和不刺眼
+   ------------------------------ */
+
+/* 代码块容器优化 */
+figure.highlight {
+  border-radius: 10px !important;
+  box-shadow: var(--shadow-sm) !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+/* 行内代码优化 - 更柔和 */
+code:not([class*="language-"]) {
+  font-family: "Fira Code", "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  background-color: var(--bg-code) !important;
+  color: var(--theme-primary-dark) !important;
+  padding: 0.15em 0.4em !important;
+  border-radius: 6px !important;
+  font-size: 0.9em !important;
+}
+
+/* ------------------------------
+   6. 焦点状态优化 (Accessibility)
+   ------------------------------ */
+
+/* 所有交互元素使用 focus-visible 代替 outline: none */
+:focus-visible {
+  outline: 3px solid var(--theme-primary);
+  outline-offset: 2px;
+}
+
+/* 按钮/链接的 focus-visible 增强样式 */
+a:focus-visible,
+button:focus-visible {
+  outline: 3px solid var(--theme-primary);
+  outline-offset: 2px;
+  z-index: 10;
+}
+
+/* ------------------------------
+   7. 暗色模式优化 - 深度柔和
+   ------------------------------ */
+
+[data-theme='dark'] {
+  /* 更新暗色系统变量 */
+  --bg-page: #0d1117;
+  --bg-card: #161b22;
+  --bg-hover: rgba(74, 154, 114, 0.12);
+  --bg-code: rgba(58, 122, 90, 0.15);
+  
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted: #6e7681;
+  
+  /* 右下角按钮：恢复墨绿色 */
+  --btn-bg: rgba(58, 122, 90, 0.25);
+  --btn-hover-color: rgba(74, 154, 114, 0.4);
+
+  /* 滚动条：恢复墨绿色 */
+  --scrollbar-color: rgba(58, 122, 90, 0.35);
+
+  /* 卡片背景：微提亮，与侧边栏 #0d0d0d 形成层级 */
+  --card-bg: #151e18;
+
+  /* 侧边栏菜单悬停：墨绿色高亮替代灰色 */
+  --text-bg-hover: rgba(58, 122, 90, 0.12);
+
+  /* 引用块背景：墨绿基调 */
+  --blockquote-bg: #1a241e;
+
+  /* 行内代码背景：微带墨绿 */
+  --code-bg: #1a241e;
+
+  /* 链接悬停：琥珀色在暗色下稍亮 */
+  --link-hover-color: #d48a40;
+}
+
+/* 暗色模式下链接优化 */
+[data-theme='dark'] a:hover {
+  color: #d48a40;
+}
+
+/* 暗色模式下卡片阴影 - 更柔和 */
+[data-theme='dark'] .card-widget,
+[data-theme='dark'] #recent-posts > .recent-post-item,
+[data-theme='dark'] .layout > div:first-child > .card-widget,
+[data-theme='dark'] .layout > div:first-child > article {
+  border-color: rgba(255, 255, 255, 0.06) !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.2), 0 1px 2px -1px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* 暗色模式代码块 */
+[data-theme='dark'] code:not([class*="language-"]) {
+  background-color: rgba(58,122,90,0.25) !important;
+  color: #98d1b3 !important;
+}
+
+/* 暗色模式选中文本 */
+[data-theme='dark'] *::selection {
+  background-color: rgba(58, 122, 90, 0.4);
+  color: #e8e8e8;
+}
+
+/* 暗色模式分隔线 */
+[data-theme='dark'] hr {
+  border-color: rgba(58, 122, 90, 0.2);
+}
+
+/* 暗色模式表格表头：墨绿底色 */
+[data-theme='dark'] table thead {
+  background: rgba(58, 122, 90, 0.15);
+}
+
+/* ------------------------------
+   8. 动画优化 - 平滑不突兀
+   ------------------------------ */
+
+/* 为减少动画偏好的用户关闭不必要动画 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 适度的进入动画 */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#recent-posts > .recent-post-item {
+  animation: fadeInUp 0.4s ease-out;
+  animation-fill-mode: both;
+}
+
+/* 为文章卡片添加渐进式动画延迟 */
+#recent-posts > .recent-post-item:nth-child(1) { animation-delay: 0.05s; }
+#recent-posts > .recent-post-item:nth-child(2) { animation-delay: 0.1s; }
+#recent-posts > .recent-post-item:nth-child(3) { animation-delay: 0.15s; }
+#recent-posts > .recent-post-item:nth-child(4) { animation-delay: 0.2s; }
+#recent-posts > .recent-post-item:nth-child(5) { animation-delay: 0.25s; }
+#recent-posts > .recent-post-item:nth-child(6) { animation-delay: 0.3s; }
+
+/* ------------------------------
+   9. 响应式与安全区域优化
+   ------------------------------ */
+
+/* 防止水平滚动条 */
+#body-wrap {
+  overflow-x: hidden;
+}
+
+/* 安全区域适配 (针对刘海屏/折叠屏) */
+.layout {
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+}
+
+#rightside {
+  right: calc(-48px + env(safe-area-inset-right, 0));
+}
+
+/* 移动端布局优化 */
+@media (max-width: 900px) {
+  .layout {
+    padding: var(--space);
+  }
+  
+  #body-wrap {
+    padding-top: 0 !important;
+  }
+}
+
+/* ------------------------------
+   10. 阅读模式增强 - 沉浸阅读
+   ------------------------------ */
+
+.readmode {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 var(--space-md);
+}
+
+.readmode .article-title {
+  text-wrap: balance;
+  font-size: 1.8rem;
+}
+
+.readmode .article-content p {
+  line-height: 1.9;
+  text-wrap: pretty;
+  font-size: 1.05rem;
+}
+
+/* 阅读模式下的引用块优化 */
+.readmode blockquote {
+  border-left: 4px solid var(--theme-primary);
+  background: rgba(58, 122, 90, 0.05);
+  padding: 1.2em 1.5em;
+  margin: 1.5em 0;
+  border-radius: 0 10px 10px 0;
+}
+
+/* ------------------------------
+   11. 导航与菜单优化
+   ------------------------------ */
+
+/* 导航菜单项 - 舒适的悬停 */
+#nav a:hover {
+  background-color: var(--bg-hover) !important;
+  color: var(--theme-primary) !important;
+  border-radius: 8px;
+}
+
+/* 归档页面优化 */
+#archives .archive-item .archive-item-link {
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+#archives .archive-item .archive-item-link:hover {
+  background-color: var(--bg-hover);
+  color: var(--theme-primary);
+}
+
+/* ------------------------------
+   12. 头像与个人信息优化
+   ------------------------------ */
+
+.card-info-avatar .author-info__name {
+  font-weight: 600;
+}
+
+.card-info-avatar .author-info__description {
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* ------------------------------
+   13. 文章分类标签展示优化
+   ------------------------------ */
+
+.post-meta__categories a,
+.post-meta__tags a {
+  border-radius: 999px !important;
+  padding: 2px 10px !important;
+  font-size: 0.85rem !important;
+}
+
+/* 文章过期提示优化 */
+.note.outdate-info {
+  border-radius: 10px !important;
+  padding: 12px 16px !important;
+}
+
+/* ------------------------------
+   14. WIP 文章标识
+   ------------------------------ */
+
+.article-container .article-title::before {
+  content: none;
+}
+
+.article-container.wip-article .article-title::before {
+  content: "🚧 WIP · ";
+  color: #ed8936;
+  font-weight: 600;
+}
+
+#post .wip-banner {
+  background: linear-gradient(135deg, rgba(237, 137, 54, 0.15), rgba(246, 173, 85, 0.1));
+  border: 1px solid rgba(237, 137, 54, 0.3);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  color: #c05621;
+}
+
+#post .wip-banner::before {
+  content: "🚧 ";
+}
+
+[data-theme='dark'] #post .wip-banner {
+  background: linear-gradient(135deg, rgba(237, 137, 54, 0.2), rgba(246, 173, 85, 0.15));
+  border-color: rgba(237, 137, 54, 0.4);
+  color: #fbd38d;
+}

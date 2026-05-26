@@ -1,8 +1,8 @@
 // color
-$bright-blue = #49B1F5
-$strong-cyan = #00c4b6
-$light-orange = #FF7242
-$light-red = #F47466
+$bright-blue = #3a7a5a
+$strong-cyan = #3a7a5a
+$light-orange = #4a9a72
+$light-red = #a85a2a
 $themeColorEnable = hexo-config('theme_color') && hexo-config('theme_color.enable')
 $theme-color = $themeColorEnable && hexo-config('theme_color.main') ? convert(hexo-config('theme_color.main')) : $bright-blue
 $theme-paginator-color = $themeColorEnable && hexo-config('theme_color.paginator') ? convert(hexo-config('theme_color.paginator')) : $strong-cyan
@@ -50,11 +50,11 @@ $text-bg-hover = $theme-color
 // code
 $line-height-code-block = 1.6
 $blockquote-color = #6a737d
-$blockquote-padding-color = $themeColorEnable && hexo-config('theme_color.blockquote_padding_color') ? convert(hexo-config('theme_color.blockquote_padding_color')) : #49B1F5
+$blockquote-padding-color = $themeColorEnable && hexo-config('theme_color.blockquote_padding_color') ? convert(hexo-config('theme_color.blockquote_padding_color')) : #3a7a5a
 $blockquote-background-color = $themeColorEnable && hexo-config('theme_color.blockquote_background_color') ? alpha(convert(hexo-config('theme_color.blockquote_background_color')), .1) : alpha($blockquote-padding-color, .1)
 // page
 $body-bg = #fff
-$a-link-color = #99a9bf
+$a-link-color = #b86b29
 $sticky-color = $light-orange
 $theme-meta-color = $themeColorEnable && hexo-config('theme_color.meta_color') ? convert(hexo-config('theme_color.meta_color')) : #858585
 // sidebar
@@ -81,7 +81,7 @@ $reward-pop-up-color = #858585
 $search-bg = #f6f8fa
 $search-input-color = $font-black
 $search-color = $theme-color
-$search-keyword-highlight = #F47466
+$search-keyword-highlight = #a85a2a
 $search-a-color = $font-black
 // comments
 $comments-switch-first-text = $bright-blue

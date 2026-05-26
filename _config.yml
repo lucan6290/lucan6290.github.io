@@ -66,23 +66,45 @@ index_generator:
   order_by: -date
 
 # Category & Tag
+# 分类体系说明：
+# 一级分类（5个，保持稳定）：技术研习、踩坑复盘、项目实战、成长随笔、资源分享
+# 二级分类：灵活扩展
+
 default_category: 技术研习
 category_map:
+  # ==========================================
+  # 一级分类
+  # ==========================================
   技术研习: tech-study
+  踩坑复盘: pitfall-review
+  项目实战: project-practice
+  成长随笔: growth-essay
+  资源分享: resource-sharing
+
+  # ==========================================
+  # 技术研习 - 二级分类
+  # ==========================================
   入门笔记: beginner-notes
   进阶教程: advanced-tutorial
   原理探究: principle-deep-dive
   源码解读: source-code-reading
   前沿追踪: frontier-tracking
+  AI 探索: ai-exploration
   系列专题: series
-  踩坑复盘: pitfall-review
+
+  # ==========================================
+  # 踩坑复盘 - 二级分类
+  # ==========================================
   环境配置: env-setup
   代码调试: code-debug
   工程问题: engineering-issue
   部署运维: deploy-ops
   数据问题: data-issue
   工具问题: tool-issue
-  项目实战: project-practice
+
+  # ==========================================
+  # 项目实战 - 二级分类
+  # ==========================================
   项目介绍: project-intro
   架构设计: architecture-design
   开发日志: dev-log
@@ -90,7 +112,10 @@ category_map:
   性能优化: performance-opt
   项目总结: project-summary
   开源分享: open-source-share
-  成长随笔: growth-essay
+
+  # ==========================================
+  # 成长随笔 - 二级分类
+  # ==========================================
   求职之路: career-path
   简历优化: resume-opt
   面试真题: interview-questions
@@ -100,7 +125,11 @@ category_map:
   日常感悟: daily-reflection
   短思考: short-thoughts
   年度总结: annual-summary
-  资源分享: resource-sharing
+  博客建设: blog-setup
+
+  # ==========================================
+  # 资源分享 - 二级分类
+  # ==========================================
   工具推荐: tool-recommendation
   学习资源: learning-resource
   代码片段: code-snippet
@@ -135,3 +164,12 @@ deploy:
   type: git
   repo: https://github.com/lucan6290/lucan6290.github.io.git
   branch: main
+
+# RSS
+feed:
+  enable: true
+  type: atom
+  path: atom.xml
+  limit: 20
+  hub:
+  content: true

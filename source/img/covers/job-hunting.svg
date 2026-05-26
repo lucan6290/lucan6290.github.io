@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400" viewBox="0 0 800 400">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#533483"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="400" fill="url(#bg)"/>
+  <text x="400" y="180" text-anchor="middle" fill="#f5c518" font-size="36" font-family="Arial, sans-serif" font-weight="bold">求职经验分享</text>
+  <text x="400" y="230" text-anchor="middle" fill="#533483" font-size="20" font-family="Arial, sans-serif">2026 暑期实习面试全过程复盘</text>
+  <line x1="300" y1="260" x2="500" y2="260" stroke="#f5c518" stroke-width="2" opacity="0.5"/>
+</svg>

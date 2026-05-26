@@ -24,7 +24,7 @@ menu:
 # --------------------------------------
 code_blocks:
   theme: pale night
-  macStyle: true
+  macStyle: false
   height_limit: 520
   word_wrap: false
   copy: true
@@ -44,30 +44,33 @@ social:
 # --------------------------------------
 # 图片设置
 # --------------------------------------
-favicon: /img/favicon.png
+favicon: /img/favicon.svg
 
 avatar:
-  img: /img/avatar.png
+  img: /img/avatar.svg
   effect: true
 
 # 首页顶部大图（可选，留空则为纯色背景）
-index_img:
-archive_img:
-tag_img:
-category_img:
+index_img: /img/default-cover.svg
+archive_img: /img/default-cover.svg
+tag_img: /img/default-cover.svg
+category_img: /img/default-cover.svg
+
+# 默认背景图片（用于所有未单独设置背景的页面）
+default_top_img: /img/default-cover.svg
 
 # 文章封面
 cover:
-  index_enable: true
+  index_enable: false
   aside_enable: true
   archives_enable: true
-  default_cover:
+  default_cover: /img/default-cover.svg
 
 # 404 页面
 error_404:
   enable: true
   subtitle: '页面未找到...不如回去看看其他文章？'
-  background:
+  background: /img/default-cover.svg
 
 # --------------------------------------
 # 文章元信息
@@ -135,6 +138,10 @@ related_post:
   date_type: created
 
 post_pagination: 1
+
+post_edit:
+  enable: true
+  url: https://github.com/lucan6290/lucan6290.github.io/tree/main/source/
 
 noticeOutdate:
   enable: true
@@ -267,14 +274,26 @@ share:
     sites: qq,wechat,weibo
 
 # --------------------------------------
-# 评论系统 - 暂时不启用
+# 评论系统 - Giscus
+# 设置步骤: https://giscus.app/zh-CN
 # --------------------------------------
 comments:
-  use:
+  use: giscus
   text: true
-  lazyload: false
-  count: false
-  card_post_count: false
+  lazyload: true
+  count: true
+  card_post_count: true
+  giscus:
+    repo: lucan6290/lucan6290.github.io
+    repo_id: ''
+    category_id: ''
+    category_name: General
+    mapping: pathname
+    reactions_enabled: 1
+    emit_metadata: 0
+    input_position: bottom
+    theme: preferred_color_scheme
+    lang: zh-CN
 
 # --------------------------------------
 # 图片灯箱
@@ -292,6 +311,13 @@ mermaid:
     dark: dark
   open_in_new_tab: true
   zoom_pan: true
+
+# --------------------------------------
+# 数学公式
+# --------------------------------------
+math:
+  use: katex
+  per_page: true
 
 # --------------------------------------
 # 通知提示
@@ -314,6 +340,25 @@ beautify:
   field: post
   title_prefix_icon:
   title_prefix_icon_color:
+
+# --------------------------------------
+# 统一主题配色 - 苔原墨绿
+# --------------------------------------
+theme_color:
+  enable: true
+  main: "#3a7a5a"
+  paginator: "#3a7a5a"
+  text_selection: "#3a7a5a"
+  link_color: "#b86b29"
+  hr_color: "#3a7a5a"
+  code_foreground: "#a85a2a"
+  code_background: "rgba(58,122,90,0.08)"
+  toc_color: "#3a7a5a"
+  meta_color: "#6c757d"
+  button_hover: "#4a9a72"
+  scrollbar_color: "#3a7a5a"
+  blockquote_padding_color: "#4a9a72"
+  blockquote_background_color: "#3a7a5a"
 
 # 打字特效
 activate_power_mode:
@@ -355,4 +400,39 @@ Open_Graph_meta:
   enable: true
   option:
 
+structured_data:
+  enable: true
+
 # 文章过期提醒
+
+# --------------------------------------
+# 自定义注入
+# --------------------------------------
+inject:
+  head:
+  bottom:
+    - <link rel="stylesheet" href="/css/custom.css">
+    - |
+      <script>
+      // 为纯图标按钮添加 aria-label，提升可访问性
+      document.addEventListener('DOMContentLoaded', function() {
+        const iconButtons = [
+          { id: 'readmode', label: '阅读模式' },
+          { id: 'translateLink', label: '翻译' },
+          { id: 'darkmode', label: '切换暗色模式' },
+          { id: 'hide-aside-btn', label: '隐藏侧边栏' },
+          { id: 'mobile-toc-button', label: '目录' },
+          { id: 'chat-btn', label: '聊天' },
+          { id: 'rightside-config', label: '设置' },
+          { id: 'go-up', label: '返回顶部' },
+          { id: 'to_comment', label: '跳转到评论' }
+        ];
+
+        iconButtons.forEach(function(item) {
+          const el = document.getElementById(item.id);
+          if (el && !el.hasAttribute('aria-label')) {
+            el.setAttribute('aria-label', item.label);
+          }
+        });
+      });
+      </script>

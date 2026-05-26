@@ -5,7 +5,6 @@ categories:
   - [成长随笔, 求职之路]
 tags: [career-growth, summer-internship-2026, experience, 简历, 面试, 求职, 实习]
 description: 记录找实习过程中的简历打磨、投递渠道、面试准备等经验。
-cover:
 ---
 
 ## 写在前面

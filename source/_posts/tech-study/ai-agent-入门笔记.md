@@ -2,10 +2,9 @@
 title: Agent 入门笔记 —— 从概念到实战
 date: 2026-05-20 10:00:00
 categories:
-  - [技术研习, 入门笔记]
-tags: [ai-agent, llm, tutorial, note, learning-process, Agent, AI, LLM, 人工智能]
+  - [技术研习, AI 探索]
+tags: [ai-agent, llm, tutorial, note, learning-process, AI, 人工智能]
 description: 系统学习 AI Agent 的笔记，涵盖概念、架构、核心组件和实践经验。
-cover:
 ---
 
 ## 什么是 Agent？
