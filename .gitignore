@@ -14,3 +14,8 @@ themes/landscape/
 # 项目运行时生成的
 cache/
 .temp/
+.idea/
+.trae/
+.vscode/
+.claude/
+.supervisor/
