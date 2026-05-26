@@ -45,3 +45,10 @@ cd themes
 ```
 
 See `THEME_SETUP.md` for details.
+
+## Documentation Maintenance
+
+When project structure, conventions, or directory layout changes are requested, automatically update these documentation files:
+- `CLAUDE.md` — this file
+- `.claude-guidelines.md` — detailed development guidelines
+- `README.md` — project overview
