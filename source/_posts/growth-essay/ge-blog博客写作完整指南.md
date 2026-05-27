@@ -56,11 +56,11 @@ hexo new growth-essay "2026 年终技术总结"
 
 | 前缀 | 一级分类 | 适用场景 |
 |------|---------|---------|
-| `tech-` | 技术研习 | 技术学习、教程、原理分析 |
-| `pitfall-` | 踩坑复盘 | 问题解决、踩坑记录 |
-| `project-` | 项目实战 | 项目开发、实战案例 |
-| `growth-` | 成长随笔 | 个人感悟、求职经验 |
-| `resource-` | 资源分享 | 工具推荐、资源整理 |
+| `ts-` | 技术研习 | 技术学习、教程、原理分析 |
+| `pr-` | 踩坑复盘 | 问题解决、踩坑记录 |
+| `pp-` | 项目实战 | 项目开发、实战案例 |
+| `ge-` | 成长随笔 | 个人感悟、求职经验 |
+| `rs-` | 资源分享 | 工具推荐、资源整理 |
 
 #### 1.2.2 二级分类前缀规则
 
@@ -89,27 +89,27 @@ hexo new growth-essay "2026 年终技术总结"
 
 ```bash
 # 技术研习
-tech-vue3-响应式原理详解.md           # Vue 3 相关
-tech-claude-开发环境配置.md           # Claude 工具相关
-tech-cursor-快捷键速查.md             # Cursor 编辑器相关
-tech-docker-容器网络配置.md           # Docker 相关
+ts-vue3-响应式原理详解.md           # Vue 3 相关
+ts-claude-开发环境配置.md           # Claude 工具相关
+ts-cursor-快捷键速查.md             # Cursor 编辑器相关
+ts-docker-容器网络配置.md           # Docker 相关
 
 # 踩坑复盘
-pitfall-docker-容器启动失败排查.md    # Docker 踩坑
-pitfall-mysql-索引失效分析.md         # MySQL 踩坑
-pitfall-nodejs-版本冲突解决.md        # Node.js 踩坑
+pr-docker-容器启动失败排查.md    # Docker 踩坑
+pr-mysql-索引失效分析.md         # MySQL 踩坑
+pr-nodejs-版本冲突解决.md        # Node.js 踩坑
 
 # 项目实战
-project-blog-用户认证功能实现.md      # 博客项目
-project-shop-订单模块开发日志.md      # 商城项目
+pp-blog-用户认证功能实现.md      # 博客项目
+pp-shop-订单模块开发日志.md      # 商城项目
 
 # 成长随笔
-growth-career-求职经历总结.md         # 求职相关
-growth-learn-高效学习方法.md          # 学习方法
+ge-career-求职经历总结.md         # 求职相关
+ge-learn-高效学习方法.md          # 学习方法
 
 # 资源分享
-resource-claude-常用提示词合集.md     # Claude 资源
-resource-vue3-组件库推荐.md           # Vue 3 资源
+rs-claude-常用提示词合集.md     # Claude 资源
+rs-vue3-组件库推荐.md           # Vue 3 资源
 ```
 
 #### 1.2.3 二级分类前缀速查表
@@ -123,7 +123,7 @@ resource-vue3-组件库推荐.md           # Vue 3 资源
 | `vue2-` / `vue3-` | Vue |
 | `react-` | React |
 | `angular-` | Angular |
-| `ts-` / `typescript-` | TypeScript |
+| `typescript-` | TypeScript |
 | `js-` / `javascript-` | JavaScript |
 | `css-` | CSS |
 | `webpack-` | Webpack |
@@ -185,15 +185,15 @@ resource-vue3-组件库推荐.md           # Vue 3 资源
 
 ```bash
 # ✅ 正确示例
-tech-vue3-组合式API详解.md
-tech-claude-提示词编写技巧.md
-pitfall-docker-容器网络踩坑.md
+ts-vue3-组合式API详解.md
+ts-claude-提示词编写技巧.md
+pr-docker-容器网络踩坑.md
 
 # ❌ 错误示例
-tech-vue3.md                      # 缺少具体主题
-vue3-组合式API.md                 # 缺少一级分类前缀
-tech_vue3_组合式API.md            # 使用下划线分隔
-tech-vue3-组合式API详解教程入门笔记.md  # 太长，超过60字符
+ts-vue3.md                      # 缺少具体主题
+vue3-组合式API.md               # 缺少一级分类前缀
+ts_vue3_组合式API.md            # 使用下划线分隔
+ts-vue3-组合式API详解教程入门笔记.md  # 太长，超过60字符
 ```
 
 **长度建议：**
@@ -466,8 +466,8 @@ ___
 
 ```
 source/_posts/tech-study/
-├── ai-ocr模型生产环境部署.md        # 文章文件
-└── ai-ocr模型生产环境部署/          # 资源文件夹（与文章同名）
+├── ts-ocr模型生产环境部署.md        # 文章文件
+└── ts-ocr模型生产环境部署/          # 资源文件夹（与文章同名）
     ├── architecture.png            # 架构图
     ├── flowchart.png               # 流程图
     └── screenshot.png              # 截图
@@ -484,13 +484,13 @@ source/_posts/tech-study/
 **方法二：使用相对路径**
 
 ```markdown
-![系统架构图](ai-ocr模型生产环境部署/architecture.png)
+![系统架构图](ts-ocr模型生产环境部署/architecture.png)
 ```
 
 **方法三：使用 Markdown 标准语法**
 
 ```markdown
-![系统架构图](./ai-ocr模型生产环境部署/architecture.png)
+![系统架构图](./ts-ocr模型生产环境部署/architecture.png)
 ```
 
 ### 4.3 图片命名规范
@@ -676,10 +676,10 @@ Vue 3 的响应式系统基于 Proxy 实现...
 
 ```bash
 # 创建资源文件夹（如果不存在）
-mkdir source/_posts/tech-study/Vue\ 3\ 响应式原理详解
+mkdir source/_posts/tech-study/ts-vue3-响应式原理详解
 
 # 将图片复制到资源文件夹
-cp ~/Downloads/reactivity-flow.png source/_posts/tech-study/Vue\ 3\ 响应式原理详解/
+cp ~/Downloads/reactivity-flow.png source/_posts/tech-study/ts-vue3-响应式原理详解/
 ```
 
 ### 7.4 本地预览
