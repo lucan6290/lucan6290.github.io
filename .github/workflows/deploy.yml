@@ -25,10 +25,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download Butterfly theme
-        run: |
-          git clone --depth 1 --branch 5.5.5-b1 https://github.com/jerryc127/hexo-theme-butterfly.git themes/butterfly
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
