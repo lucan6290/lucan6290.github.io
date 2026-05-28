@@ -6,7 +6,6 @@ categories:
 tags: [blog, 长期规划, 规范, 架构设计, 分类体系, 可持续性]
 description: 博客面向未来发展的完整架构规范，包括定位规划、分类体系、内容组织策略、命名规范、链接稳定性、维护指南等。
 cover: /img/covers/growth-essay.svg
-sticky: 1000
 ---
 
 ## 前言
