@@ -1,0 +1,90 @@
+<svg width="800" height="450" viewBox="0 0 800 450" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="50%" style="stop-color:#16213e"/>
+      <stop offset="100%" style="stop-color:#0f3460"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#e94560;stop-opacity:0"/>
+      <stop offset="50%" style="stop-color:#e94560"/>
+      <stop offset="100%" style="stop-color:#e94560;stop-opacity:0"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f5af19"/>
+      <stop offset="50%" style="stop-color:#f12711"/>
+      <stop offset="100%" style="stop-color:#f5af19"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softGlow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="800" height="450" fill="url(#bg)"/>
+  <g stroke="#e94560" stroke-width="0.5" opacity="0.06">
+    <line x1="0" y1="75" x2="800" y2="75"><animate attributeName="opacity" values="0.06;0.12;0.06" dur="5s" repeatCount="indefinite"/></line>
+    <line x1="0" y1="150" x2="800" y2="150"><animate attributeName="opacity" values="0.06;0.12;0.06" dur="5s" begin="1s" repeatCount="indefinite"/></line>
+    <line x1="0" y1="225" x2="800" y2="225"><animate attributeName="opacity" values="0.06;0.12;0.06" dur="5s" begin="2s" repeatCount="indefinite"/></line>
+    <line x1="0" y1="300" x2="800" y2="300"><animate attributeName="opacity" values="0.06;0.12;0.06" dur="5s" begin="3s" repeatCount="indefinite"/></line>
+    <line x1="0" y1="375" x2="800" y2="375"><animate attributeName="opacity" values="0.06;0.12;0.06" dur="5s" begin="4s" repeatCount="indefinite"/></line>
+  </g>
+  <g fill="#e94560" font-family="'Fira Code',Consolas,monospace" font-size="10" opacity="0.08">
+    <text x="50" y="30">目录 / Index <animate attributeName="x" values="50;45;55;50" dur="10s" repeatCount="indefinite"/></text>
+    <text x="200" y="45">导航 / Navigate <animate attributeName="x" values="200;205;195;200" dur="12s" repeatCount="indefinite"/></text>
+    <text x="380" y="35">索引 / Catalog <animate attributeName="x" values="380;375;385;380" dur="11s" repeatCount="indefinite"/></text>
+    <text x="550" y="50">文章 / Articles <animate attributeName="x" values="550;555;545;550" dur="13s" repeatCount="indefinite"/></text>
+    <text x="650" y="28">📚 <animate attributeName="opacity" values="0.08;0.15;0.08" dur="3s" repeatCount="indefinite"/></text>
+  </g>
+  <g transform="translate(120, 180)">
+    <rect x="0" y="0" width="60" height="80" fill="#16213e" stroke="#e94560" stroke-width="1" rx="3" opacity="0.3">
+      <animate attributeName="opacity" values="0.3;0.5;0.3" dur="4s" repeatCount="indefinite"/>
+    </rect>
+    <line x1="10" y1="15" x2="50" y2="15" stroke="#e94560" stroke-width="0.5" opacity="0.5"/>
+    <line x1="10" y1="25" x2="50" y2="25" stroke="#e94560" stroke-width="0.5" opacity="0.4"/>
+    <line x1="10" y1="35" x2="50" y2="35" stroke="#e94560" stroke-width="0.5" opacity="0.3"/>
+    <line x1="10" y1="45" x2="50" y2="45" stroke="#e94560" stroke-width="0.5" opacity="0.5"/>
+    <line x1="10" y1="55" x2="50" y2="55" stroke="#e94560" stroke-width="0.5" opacity="0.4"/>
+    <line x1="10" y1="65" x2="50" y2="65" stroke="#e94560" stroke-width="0.5" opacity="0.3"/>
+  </g>
+  <g transform="translate(620, 180)">
+    <rect x="0" y="0" width="60" height="80" fill="#16213e" stroke="#e94560" stroke-width="1" rx="3" opacity="0.3">
+      <animate attributeName="opacity" values="0.3;0.5;0.3" dur="4s" begin="2s" repeatCount="indefinite"/>
+    </rect>
+    <line x1="10" y1="15" x2="50" y2="15" stroke="#e94560" stroke-width="0.5" opacity="0.5"/>
+    <line x1="10" y1="25" x2="50" y2="25" stroke="#e94560" stroke-width="0.5" opacity="0.4"/>
+    <line x1="10" y1="35" x2="50" y2="35" stroke="#e94560" stroke-width="0.5" opacity="0.3"/>
+    <line x1="10" y1="45" x2="50" y2="45" stroke="#e94560" stroke-width="0.5" opacity="0.5"/>
+    <line x1="10" y1="55" x2="50" y2="55" stroke="#e94560" stroke-width="0.5" opacity="0.4"/>
+    <line x1="10" y1="65" x2="50" y2="65" stroke="#e94560" stroke-width="0.5" opacity="0.3"/>
+  </g>
+  <text x="400" y="320" text-anchor="middle" font-family="serif" font-size="280" font-weight="700" fill="#e94560" filter="url(#glow)" opacity="0.12">
+    <animate attributeName="opacity" values="0.12;0.06;0.12" dur="5s" repeatCount="indefinite"/>
+    目
+  </text>
+  <text x="400" y="220" text-anchor="middle" font-family="serif" font-size="52" font-weight="700" fill="url(#gold)" filter="url(#softGlow)">
+    <animate attributeName="opacity" values="1;0.85;1" dur="3s" repeatCount="indefinite"/>
+    文章目录
+  </text>
+  <text x="400" y="260" text-anchor="middle" font-family="'Fira Code',Consolas,monospace" font-size="14" fill="#e94560" opacity="0.7">// 箓川码笺 · 知识导航</text>
+  <rect x="620" y="248" width="8" height="16" fill="#e94560" rx="1">
+    <animate attributeName="opacity" values="0.7;0;0.7" dur="1s" repeatCount="indefinite"/>
+  </rect>
+  <path d="M-20 340 Q100 310 200 335 T400 315 T600 340 T820 320" fill="none" stroke="url(#accent)" stroke-width="2.5" filter="url(#glow)">
+    <animate attributeName="d" values="M-20 340 Q100 310 200 335 T400 315 T600 340 T820 320;M-20 320 Q100 350 200 325 T400 345 T600 320 T820 340;M-20 340 Q100 310 200 335 T400 315 T600 340 T820 320" dur="5s" repeatCount="indefinite"/>
+  </path>
+  <path d="M-20 360 Q120 335 230 355 T450 340 T650 360 T820 345" fill="none" stroke="url(#accent)" stroke-width="1.5" opacity="0.5">
+    <animate attributeName="d" values="M-20 360 Q120 335 230 355 T450 340 T650 360 T820 345;M-20 345 Q120 370 230 350 T450 365 T650 345 T820 360;M-20 360 Q120 335 230 355 T450 340 T650 360 T820 345" dur="6s" repeatCount="indefinite"/>
+  </path>
+  <g transform="translate(400, 380)" text-anchor="middle">
+    <circle cx="-80" cy="0" r="4" fill="#f5af19" opacity="0.6"><animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite"/></circle>
+    <circle cx="-40" cy="0" r="4" fill="#e94560" opacity="0.6"><animate attributeName="opacity" values="0.6;1;0.6" dur="2s" begin="0.5s" repeatCount="indefinite"/></circle>
+    <circle cx="0" cy="0" r="4" fill="#f5af19" opacity="0.6"><animate attributeName="opacity" values="0.6;1;0.6" dur="2s" begin="1s" repeatCount="indefinite"/></circle>
+    <circle cx="40" cy="0" r="4" fill="#e94560" opacity="0.6"><animate attributeName="opacity" values="0.6;1;0.6" dur="2s" begin="1.5s" repeatCount="indefinite"/></circle>
+    <circle cx="80" cy="0" r="4" fill="#f5af19" opacity="0.6"><animate attributeName="opacity" values="0.6;1;0.6" dur="2s" begin="2s" repeatCount="indefinite"/></circle>
+  </g>
+  <text x="20" y="435" font-family="'Fira Code',Consolas,monospace" font-size="10" fill="#e94560" opacity="0.2">Blog Index</text>
+</svg>

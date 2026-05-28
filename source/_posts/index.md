@@ -8,7 +8,7 @@ tags:
 
 description: 箓川码笺博客文章总目录，按分类组织所有已发布文章。
 
-cover: /img/covers/default-cover.svg
+cover: /img/covers/blog-index.svg
 sticky: 9999
 slug: blog-index
 status: published
