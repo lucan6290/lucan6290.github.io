@@ -7,6 +7,7 @@ tags: [ai-agent, claude-code, vibe-coding, ai-coding, 教程, 入门]
 series: "Vibe Coding 使用专题"
 series_order: 1
 description: Claude Code 完整入门教程，涵盖安装配置、核心功能、基础使用，开启 AI 驱动的编程新体验。
+cover: /img/covers/tech-study.svg
 ---
 
 ## 前言
@@ -224,6 +225,13 @@ dist/
 1. 📖 阅读「项目开发规范」了解如何工程化地使用 AI
 2. 💡 查看「使用技巧」提升协作效率
 3. 🚀 开始你的第一个 AI 驱动的项目！
+
+---
+
+**📚 本系列文章：**
+1. Claude Code 入门指南 ⬅️ 当前位置
+2. [AI 项目开发规范](ts-claude-code项目开发规范.md)
+3. [Claude Code 使用技巧](ts-claude-code使用技巧.md)
 
 ---
 

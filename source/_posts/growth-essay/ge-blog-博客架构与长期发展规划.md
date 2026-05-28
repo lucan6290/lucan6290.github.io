@@ -5,6 +5,7 @@ categories:
   - [成长随笔, 博客建设]
 tags: [blog, 长期规划, 规范, 架构设计, 分类体系, 可持续性]
 description: 博客面向未来发展的完整架构规范，包括定位规划、分类体系、内容组织策略、命名规范、链接稳定性、维护指南等。
+cover: /img/covers/growth-essay.svg
 sticky: 1000
 ---
 
@@ -25,15 +26,17 @@ sticky: 1000
 | **内容类型** | 技术为主，个人成长为辅 | 技术占 80%，个人成长占 20% |
 | **目标读者** | 未来的自己，同行工程师 | 以个人沉淀为主，分享为辅 |
 | **内容风格** | 严谨、详细、可复现 | 记录完整思考过程和踩坑记录 |
-| **更新频率** | 无固定周期，有沉淀即发布 | 不追求热点，不追求日更 |
+| **更新频率** | 不定时更新 | 内容从飞书文档迁移，有沉淀即整理发布 |
 
-### 1.2 内容增长预估
+### 1.2 内容来源与更新方式
 
-| 时间 | 预计文章数 | 规模说明 |
-|-----|---------|---------|
-| 第1年 | 50-100篇 | 建立分类体系和内容框架 |
-| 第5年 | 300-500篇 | 需要搜索、标签分类、归档 |
-| 第10年 | 800-1500篇 | 可能需要内容重组、专题整理 |
+博客内容主要从**飞书文档**迁移而来：
+
+- 平时记录笔记、学习过程都在飞书文档上进行（记录方便、简单）
+- 不定时将飞书文档中的笔记整理迁移到博客
+- 迁移时会进行内容梳理、格式规范化
+
+> 💡 兼顾日常记录的便捷性和博客内容的规范性
 
 ---
 
@@ -155,17 +158,6 @@ series_order: 1
 ---
 ```
 
-### 3.2 系列导航
-
-在每篇文章开头或结尾添加：
-
-```markdown
-**📚 本系列文章：**
-1. [Claude Code 入门指南]()
-2. [AI 项目开发规范]() ⬅️ 当前位置
-3. [Claude Code 使用技巧]()
-```
-
 ---
 
 ## 四、内容分级策略
@@ -202,14 +194,58 @@ source/_posts/
 └── resource-sharing/     # 资源分享
 ```
 
-### 5.2 创建新文章
+### 5.2 创建新文章（自定义命令）
 
+本博客已定制 `hexo np` 命令，自动完成命名、目录创建和 Front Matter 生成。
+
+**命令格式：**
 ```bash
-hexo new tech-study "文章标题"      # 创建在 tech-study/
-hexo new growth-essay "文章标题"    # 创建在 growth-essay/
-hexo new pitfall-review "文章标题"  # 创建在 pitfall-review/
-hexo new project-practice "文章标题" # 创建在 project-practice/
-hexo new resource-sharing "文章标题" # 创建在 resource-sharing/
+hexo np <一级前缀> <二级前缀> <标题>
+```
+
+**使用示例：**
+```bash
+hexo np ts vue3 "Vue3组合式 API详解"
+# → source/_posts/tech-study/ts-vue3-Vue3组合式 API详解.md
+```
+
+> 💡 详细说明请参考 [定制创建文章命令记录](ge-blog-定制创建文章命令记录.md)
+
+### 5.3 图片资源目录
+
+图片按一级分类组织，与文章目录结构对应：
+
+```
+source/img/posts/
+├── tech-study/        # 技术研习图片
+├── pitfall-review/    # 踩坑复盘图片
+├── project-practice/  # 项目实战图片
+├── growth-essay/      # 成长随笔图片
+└── resource-sharing/  # 资源分享图片
+```
+
+### 5.4 图片命名规范
+
+图片命名与文章命名规范一致，末尾添加 `-imgN`：
+
+**命名格式**：`[一级分类前缀]-[二级分类前缀]-[具体主题]-imgN.扩展名`
+
+| 一级分类 | 图片目录 | 命名示例 |
+|---------|---------|---------|
+| 技术研习 | `source/img/posts/tech-study/` | `ts-vue3-响应式原理详解-img1.png` |
+| 踩坑复盘 | `source/img/posts/pitfall-review/` | `pr-docker-容器启动失败排查-img1.png` |
+| 项目实战 | `source/img/posts/project-practice/` | `pp-blog-用户认证功能实现-img1.png` |
+| 成长随笔 | `source/img/posts/growth-essay/` | `ge-annual-2026年终技术总结-img1.png` |
+| 资源分享 | `source/img/posts/resource-sharing/` | `rs-claude-常用提示词合集-img1.png` |
+
+**命名规则：**
+- 图片名称与文章名称保持一致，末尾添加 `-imgN`
+- 数字 N 从 1 开始，每篇文章单独递增
+- 扩展名使用小写：`.png`、`.jpg`、`.gif`、`.svg`
+
+**Markdown 引用：**
+```markdown
+![图片描述](/img/posts/tech-study/ts-vue3-响应式原理详解-img1.png)
 ```
 
 ---
@@ -259,14 +295,69 @@ tags:
 
 description: 100-200字的文章摘要，清晰描述文章内容。
 
-cover: /img/covers/xxx.svg    # 自动根据一级分类分配
-sticky: 100                   # 置顶优先级（可选）
-slug: 自定义URL路径            # 保持链接稳定（可选）
-status: published             # draft / wip / published
+# Hexo 官方参数
+layout: post                     # 布局，默认 post
+comments: true                   # 评论开关，默认 true
+permalink: 自定义永久链接/         # 覆盖默认 permalink
+excerpt: 页面摘要纯文本            # 页面摘要
+published: true                  # 是否发布，草稿为 false
+lang: zh-CN                      # 语言设置
+
+# Butterfly 主题参数
+cover: /img/covers/xxx.svg       # 封面图，按一级分类自动分配
+sticky: 100                      # 置顶优先级（可选）
+
+# 博客自定义参数
+slug: 自定义URL路径               # 保持链接稳定（可选）
+status: published                # draft / wip / published（默认）
+
+# 系列文章（可选，3篇以上相关文章时使用）
+series: "系列名称"
+series_order: 1
 ---
 ```
 
-### 7.2 标签使用规范
+**字段说明：**
+
+| 字段 | 必填 | 说明 |
+|-----|------|------|
+| `title` | ✅ | 文章标题 |
+| `date` | ✅ | 发布日期 |
+| `updated` | ❌ | 更新日期 |
+| `categories` | ✅ | 二级分类格式 `[一级, 二级]` |
+| `tags` | ✅ | 3-8 个标签 |
+| `description` | ✅ | 文章摘要，100-200字 |
+
+**Hexo 官方参数：**
+
+| 字段 | 默认值 | 说明 |
+|-----|-------|------|
+| `layout` | `post` | 布局类型 |
+| `comments` | `true` | 评论开关 |
+| `permalink` | 配置值 | 覆盖默认永久链接 |
+| `excerpt` | - | 页面摘要（纯文本） |
+| `published` | `true` | 是否发布，草稿为 `false` |
+| `lang` | 配置值 | 语言设置 |
+
+**Butterfly 主题参数：**
+
+| 字段 | 说明 |
+|-----|------|
+| `cover` | 封面图，按一级分类自动分配 |
+| `sticky` | 置顶优先级，数值越大越靠前 |
+
+**博客自定义参数：**
+
+| 字段 | 说明 |
+|-----|------|
+| `slug` | 自定义 URL，保持链接稳定 |
+| `status` | 内容分级：`draft` / `wip` / `published` |
+| `series` | 系列名称，3篇以上相关文章时使用 |
+| `series_order` | 系列中的顺序编号 |
+
+> 💡 官方文档：https://hexo.io/docs/front-matter.html
+
+### 8.2 标签使用规范
 
 | 原则 | 说明 |
 |-----|-----|
@@ -295,43 +386,22 @@ status: published             # draft / wip / published
 
 ---
 
-## 九、维护与运营指南
+## 九、数据备份策略
 
-### 9.1 年度检查清单
-
-每 12 个月运行一次：
-
-- [ ] 检查所有外部链接是否还可用
-- [ ] 清理过时的内容（添加 deprecate 标记）
-- [ ] 回顾分类体系是否需要调整
-- [ ] 更新「年度总结」文章
-- [ ] 备份所有 Markdown 源文件
-- [ ] 检查依赖是否有安全更新
-
-### 9.2 内容更新策略
-
-- ✅ 小错误：直接编辑原文章
-- ✅ 信息补充：添加"更新于 xxx"章节
-- ❌ 重大变更：写新文章，旧文章添加过时标记
-
----
-
-## 十、数据备份策略
-
-### 10.1 备份位置（至少3个）
+### 9.1 备份位置（至少3个）
 
 1. GitHub 仓库（主版本控制）
 2. 本地硬盘
 3. 云存储（OneDrive/Dropbox 等）
 
-### 10.2 备份内容
+### 9.2 备份内容
 
 - ✅ 完整的 blog 仓库
 - ✅ 纯 Markdown 文章
 - ✅ 图片资源
 - ✅ 配置文件
 
-### 10.3 平台迁移预案
+### 9.3 平台迁移预案
 
 如果 GitHub Pages 不可用，可迁移至：
 - Vercel

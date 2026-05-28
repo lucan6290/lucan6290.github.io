@@ -5,6 +5,7 @@ categories:
   - [技术研习, AI 探索]
 tags: [ocr, deep-learning, gpu, 生产部署, 并发优化, cuda, paddleocr]
 description: PaddleOCR GPU 服务容器化部署全流程文档，涵盖环境配置、依赖冲突解决、服务封装、永久后台运行等完整流程。
+cover: /img/covers/tech-study.svg
 ---
 
 ## 一、基础环境信息

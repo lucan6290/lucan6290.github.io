@@ -1,171 +1,264 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+本文件为 Claude Code (claude.ai/code) 提供项目指引。
 
-## Project Overview
+## 项目概述
 
-Hexo 8.1.2 blog ("箓川码笺") using the Butterfly 5.5.5-b1 theme. Chinese-language technical blog deployed to GitHub Pages at https://lucan6290.github.io. Author: lucan.
+Hexo 8.1.2 博客（"箓川码笺"），使用 Butterfly 5.5.5-b1 主题。中文技术博客，部署到 GitHub Pages：https://lucan6290.github.io。作者：lucan。
 
-## Commands
+## 常用命令
 
-- `npm run server` — local dev server (default http://localhost:4000)
-- `npm run build` — generate static files to `public/`
-- `npm run clean` — clear cache and `public/`
-- `npx hexo new "Post Title"` — create a new post in `source/_posts/`
-- `npx hexo new page "Page Name"` — create a new page in `source/<name>/`
+| 命令 | 说明 |
+|------|------|
+| `npm run server` | 启动本地预览（http://localhost:4000） |
+| `npm run build` | 生成静态文件到 `public/` |
+| `npm run clean` | 清理缓存和 `public/` |
+| `npx hexo np <一级前缀> <二级前缀> "标题"` | 创建新文章（推荐，自动命名） |
+| `npx hexo new page "Page Name"` | 创建新页面 |
 
-## Architecture
+## 项目架构
 
-- **`_config.yml`** — Hexo site config (URL, categories/tags maps, permalink format `:year/:month/:day/:title/`)
-- **`_config.butterfly.yml`** — Butterfly theme config. This is the primary file for all theme customization.
-- **`themes/butterfly/`** — Butterfly theme (NOT tracked in git, see `.gitignore`). Download from https://github.com/jerryc127/hexo-theme-butterfly/releases/tag/v5.5.5-b1
-- **`source/_posts/`** — blog posts organized by category folders (Markdown with YAML front matter)
-- **`source/css/custom.css`** — custom CSS styles
-- **`scaffolds/`** — post templates for each category
+- **`_config.yml`** — Hexo 站点配置（URL、分类/标签映射、永久链接格式 `:year/:month/:day/:title/`）
+- **`_config.butterfly.yml`** — Butterfly 主题配置。所有主题定制都在此文件。
+- **`themes/butterfly/`** — Butterfly 主题（不提交到 git，见 `.gitignore`）。下载地址：https://github.com/jerryc127/hexo-theme-butterfly/releases/tag/v5.5.5-b1
+- **`source/_posts/`** — 博客文章，按分类文件夹组织（Markdown + YAML front matter）
+- **`source/css/custom.css`** — 自定义 CSS 样式
+- **`scaffolds/`** — 各分类的文章模板
+- **`scripts/`** — Hexo 自定义脚本（如 `new-post.js`）
 
-## Deployment
+## 目录结构
 
-GitHub Actions workflow (`.github/workflows/deploy.yml`) runs on push to `main`: installs deps with `npm ci`, runs `npx hexo generate`, then deploys via GitHub Pages Actions. Manual trigger available via `workflow_dispatch`.
+```
+blog/
+├── source/
+│   ├── _posts/              # 博客文章（按分类文件夹组织）
+│   │   ├── tech-study/      # 技术研习
+│   │   ├── pitfall-review/  # 踩坑复盘
+│   │   ├── project-practice/  # 项目实战
+│   │   ├── growth-essay/    # 成长随笔
+│   │   └── resource-sharing/  # 资源分享
+│   ├── _drafts/             # 草稿
+│   ├── about/               # 关于页面
+│   ├── categories/          # 分类页
+│   ├── tags/                # 标签页
+│   └── img/                 # 图片资源
+│       ├── covers/          # 分类封面图
+│       └── posts/           # 文章图片（按一级分类组织）
+│           ├── tech-study/        # 技术研习图片
+│           ├── pitfall-review/    # 踩坑复盘图片
+│           ├── project-practice/  # 项目实战图片
+│           ├── growth-essay/      # 成长随笔图片
+│           └── resource-sharing/  # 资源分享图片
+├── themes/
+│   └── butterfly/           # Butterfly 主题（不提交到 git）
+├── scaffolds/               # 文章模板（按分类）
+├── scripts/                 # Hexo 自定义脚本
+├── _config.yml              # Hexo 主配置
+├── _config.butterfly.yml    # Butterfly 主题配置
+└── source/css/custom.css    # 自定义样式
+```
 
-## Conventions
+## 部署
+
+GitHub Actions 工作流（`.github/workflows/deploy.yml`）在推送到 `main` 分支时触发：使用 `npm ci` 安装依赖，运行 `npx hexo generate`，然后通过 GitHub Pages Actions 部署。支持手动触发（`workflow_dispatch`）。
+
+## 规范
 
 ### 创建新文章（必须遵守）
 
-#### 使用分类模板创建（推荐）
-
 **命令格式：**
 ```bash
-hexo new [分类模板] "文章标题"
+npx hexo np <一级前缀> <二级前缀> "标题"
 ```
-
-**五个一级分类模板：**
-
-| 命令 | 一级分类 | 创建目录 | 适用场景 |
-|------|---------|---------|---------|
-| `hexo new tech-study "标题"` | 技术研习 | `source/_posts/tech-study/` | 技术学习、教程、原理分析 |
-| `hexo new pitfall-review "标题"` | 踩坑复盘 | `source/_posts/pitfall-review/` | 问题解决、踩坑记录 |
-| `hexo new project-practice "标题"` | 项目实战 | `source/_posts/project-practice/` | 项目开发、实战案例 |
-| `hexo new growth-essay "标题"` | 成长随笔 | `source/_posts/growth-essay/` | 个人感悟、求职经验 |
-| `hexo new resource-sharing "标题"` | 资源分享 | `source/_posts/resource-sharing/` | 工具推荐、资源整理 |
 
 **示例：**
 ```bash
-hexo new tech-study "Vue 3 组合式 API 详解"
-hexo new pitfall-review "Docker 环境配置踩坑"
-hexo new growth-essay "2026 年终技术总结"
+npx hexo np ts vue3 "Vue3组合式API详解"
+# → 文件: source/_posts/tech-study/ts-vue3-Vue3组合式API详解.md
+
+npx hexo np pr docker "Docker环境配置踩坑"
+# → 文件: source/_posts/pitfall-review/pr-docker-Docker环境配置踩坑.md
+
+npx hexo np ge annual "2026年终技术总结"
+# → 文件: source/_posts/growth-essay/ge-annual-2026年终技术总结.md
 ```
 
 ### 文件命名规范（必须严格遵守）
 
-**命名格式**: `[一级分类前缀]-[二级分类前缀]-[具体主题].md`
-
-- `一级分类前缀`: 固定的分类前缀（见下表）
-- `二级分类前缀`: 技术/工具/项目名称（灵活定义）
-- `具体主题`: 文章主题描述，中英文均可
+**命名格式**: `[一级前缀]-[二级前缀]-[具体主题].md`
 
 #### 一级分类前缀对照表
 
-| 一级分类 | 前缀 | 目录 | 适用场景 |
-|---------|------|------|---------|
-| 技术研习 | `ts-` | `source/_posts/tech-study/` | 技术学习、教程、原理分析 |
-| 踩坑复盘 | `pr-` | `source/_posts/pitfall-review/` | 问题解决、踩坑记录 |
-| 项目实战 | `pp-` | `source/_posts/project-practice/` | 项目开发、实战案例 |
-| 成长随笔 | `ge-` | `source/_posts/growth-essay/` | 个人感悟、求职经验 |
-| 资源分享 | `rs-` | `source/_posts/resource-sharing/` | 工具推荐、资源整理 |
+| 前缀 | 分类 | 目录 | 适用场景 |
+|------|------|------|---------|
+| `ts` | 技术研习 | `source/_posts/tech-study/` | 技术学习、教程、原理分析 |
+| `pr` | 踩坑复盘 | `source/_posts/pitfall-review/` | 问题解决、踩坑记录 |
+| `pp` | 项目实战 | `source/_posts/project-practice/` | 项目开发、实战案例 |
+| `ge` | 成长随笔 | `source/_posts/growth-essay/` | 个人感悟、求职经验 |
+| `rs` | 资源分享 | `source/_posts/resource-sharing/` | 工具推荐、资源整理 |
 
-#### 二级分类前缀规则
-
-二级分类前缀**灵活定义**，用于标识文章所属的技术栈、工具、项目或主题。
-
-**命名原则：**
-1. 按技术栈命名：使用技术/工具的英文名或缩写
-2. 按项目命名：使用项目代号或简称
-3. 按主题命名：使用主题关键词
-
-**常用二级分类前缀速查表：**
+#### 二级分类前缀（灵活定义）
 
 | 前缀 | 说明 | 前缀 | 说明 |
 |------|------|------|------|
-| `vue3-` / `vue2-` | Vue | `react-` | React |
-| `typescript-` | TypeScript | `js-` / `javascript-` | JavaScript |
-| `node-` / `nodejs-` | Node.js | `python-` | Python |
-| `docker-` | Docker | `k8s-` / `kubernetes-` | Kubernetes |
-| `mysql-` | MySQL | `redis-` | Redis |
-| `linux-` | Linux | `nginx-` | Nginx |
-| `ai-` | AI 通用 | `llm-` | 大语言模型 |
-| `claude-` | Claude | `cursor-` | Cursor |
-| `git-` | Git | `hexo-` | Hexo |
-| `vmware-` | VMware | `env-` | 环境配置通用 |
-| `career-` | 求职之路 | `interview-` | 面试相关 |
-| `learn-` | 学习方法 | `read-` | 读书笔记 |
-| `annual-` | 年度总结 | `blog-` | 博客建设 |
+| `ai` | AI 通用 | `llm` | 大语言模型 |
+| `git` | Git | `hexo` | Hexo |
+| `learn` | 学习方法 | `read` | 读书笔记 |
+| `annual` | 年度总结 | `blog` | 博客建设 |
 
 #### 命名示例
 
 ```bash
-# 技术研习
-ts-vue3-响应式原理详解.md
-ts-claude-开发环境配置.md
-ts-docker-容器网络配置.md
-
-# 踩坑复盘
-pr-docker-容器启动失败排查.md
-pr-mysql-索引失效分析.md
-pr-vmware-共享目录配置.md
-
-# 项目实战
-pp-blog-用户认证功能实现.md
-pp-shop-订单模块开发日志.md
-
-# 成长随笔
-ge-career-求职经历总结.md
-ge-learn-高效学习方法.md
-ge-blog-博客架构规划.md
-
-# 资源分享
-rs-claude-常用提示词合集.md
-rs-vue3-组件库推荐.md
+ts-frontend-vue3响应式原理详解.md       # 技术研习
+pr-docker-docker容器启动失败排查.md   # 踩坑复盘
+pp-blog-用户认证功能实现.md     # 项目实战
+ge-career-求职经历总结.md       # 成长随笔
+rs-claude-AI常用提示词合集.md     # 资源分享
 ```
 
-#### 命名注意事项
+### 文章 Front Matter
 
-```bash
-# ✅ 正确示例
-ts-vue3-组合式API详解.md
-pr-vmware-共享目录配置.md
+每篇文章必须包含以下内容(hexo np命令已自动创建)：
 
-# ❌ 错误示例
-ts-vue3.md                      # 缺少具体主题
-vue3-组合式API.md               # 缺少一级分类前缀
-ts_vue3_组合式API.md            # 使用下划线分隔
-ts-vue3-组合式API详解教程入门笔记.md  # 太长，超过60字符
+```yaml
+---
+title: 文章标题
+date: 2026-05-22 15:30:00
+updated:
+
+categories:
+  - [一级分类, 二级分类]
+
+tags:
+  - 标签1
+  - 标签2
+
+description: 文章简介（100-200字）
+
+# Hexo 官方参数
+layout: post
+comments: true
+permalink:
+excerpt:
+published: true
+lang: zh-CN
+
+# Butterfly 主题参数
+cover: /img/covers/封面.svg  # 按分类自动设置
+sticky:
+
+# 博客自定义参数
+slug:
+status: draft  # draft / wip / published
+
+# 系列文章（可选，3篇以上相关文章时使用）
+series:
+series_order:
+---
 ```
 
-**长度建议：**
-- 理想长度：15-40 个字符
-- 最大长度：不超过 60 个字符
+> 💡 官方文档：https://hexo.io/docs/front-matter.html
 
-### 元数据规范
+### 系列文章导航
 
-- Posts use YAML front matter with `title`, `date`, `categories`, `tags`, `description`, `cover`
-- Language: `zh-CN`; timezone: `Asia/Shanghai`
-- Categories mapped to English slugs via `category_map` in `_config.yml`
+当有 3 篇以上紧密相关的文章时，使用 `series` 字段组织：
 
-## Theme Setup
+```yaml
+---
+series: "系列名称"
+series_order: 1
+---
+```
 
-If `themes/butterfly/` is missing, download it:
+### 分类目录索引
+
+每个一级分类目录下有一个索引文章（置顶）：
+
+| 索引文件 | 作用 |
+|---------|------|
+| `ts-index.md` | 技术研习目录 |
+| `pr-index.md` | 踩坑复盘目录 |
+| `pp-index.md` | 项目实战目录 |
+| `ge-index.md` | 成长随笔目录 |
+| `rs-index.md` | 资源分享目录 |
+
+**索引维护规则：**
+
+创建新文章后，必须检查并更新对应一级分类的索引文件，将新文章添加到对应的二级分类位置：
+
+```markdown
+## 二级分类名称
+
+- [文章标题](文件名.md)
+```
+
+**示例：**
+
+创建 `ge-blog-博客架构规划.md` 后，更新 `ge-index.md`：
+
+```markdown
+## 博客建设
+
+- [博客架构与长期发展规划](ge-blog-博客架构与长期发展规划.md)
+- [博客架构规划](ge-blog-博客架构规划.md)  ← 新增
+```
+
+> 💡 索引文件按二级分类组织，新增文章需放入对应二级分类区块内
+
+### 写作规范
+
+- **语言**：中文为主，清晰易懂
+- **格式**：Markdown，合理使用标题、列表、表格、代码块
+- **代码块**：注明语言，示例要正确可运行
+- **图片**：按一级分类存放，命名与文章一致
+
+#### 图片命名规范
+
+**命名格式**：`[一级分类前缀]-[二级分类前缀]-[具体主题]-imgN.扩展名`
+
+| 一级分类 | 图片目录 | 命名示例 |
+|---------|---------|---------|
+| 技术研习 | `source/img/posts/tech-study/` | `ts-vue3-响应式原理详解-img1.png` |
+| 踩坑复盘 | `source/img/posts/pitfall-review/` | `pr-docker-容器启动失败排查-img1.png` |
+| 项目实战 | `source/img/posts/project-practice/` | `pp-blog-用户认证功能实现-img1.png` |
+| 成长随笔 | `source/img/posts/growth-essay/` | `ge-annual-2026年终技术总结-img1.png` |
+| 资源分享 | `source/img/posts/resource-sharing/` | `rs-claude-常用提示词合集-img1.png` |
+
+**Markdown 引用：**
+```markdown
+![图片描述](/img/posts/tech-study/ts-vue3-响应式原理详解-img1.png)
+```
+
+### 协作规则
+
+#### 必须遵守
+
+1. ✅ 不要直接修改 `themes/butterfly/` 下的文件
+2. ✅ 主题定制在 `_config.butterfly.yml` 和 `source/css/custom.css`
+3. ✅ 重大变更先确认再执行
+4. ✅ 新增文章后，运行 `npm run build` 验证构建
+
+#### 推荐做法
+
+- 先了解现有文章的风格再创建新文章
+- 复杂问题拆分成小步骤，逐步执行
+
+## Git 与部署
+
+- 推送到 `main` 分支自动触发 GitHub Actions 部署
+- Commit 信息使用简洁中文描述
+- 也可手动触发：https://github.com/lucan6290/lucan6290.github.io/actions
+
+## 主题安装
+
+如果 `themes/butterfly/` 目录不存在：
 ```bash
 mkdir -p themes
 cd themes
-# Download from https://github.com/jerryc127/hexo-theme-butterfly/releases/tag/v5.5.5-b1
-# Extract to themes/butterfly/
+# 从 https://github.com/jerryc127/hexo-theme-butterfly/releases/tag/v5.5.5-b1 下载
+# 解压到 themes/butterfly/
 ```
 
-See `THEME_SETUP.md` for details.
+## 文档维护
 
-## Documentation Maintenance
-
-When project structure, conventions, or directory layout changes are requested, automatically update these documentation files:
-- `CLAUDE.md` — this file
-- `.claude-guidelines.md` — detailed development guidelines
-- `README.md` — project overview
+当项目结构、规范或目录布局发生变化时，自动更新本文件（`CLAUDE.md`）。

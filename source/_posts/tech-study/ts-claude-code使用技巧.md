@@ -7,6 +7,7 @@ tags: [ai-agent, claude-code, vibe-coding, 技巧, 最佳实践, 效率]
 series: "Vibe Coding 使用专题"
 series_order: 3
 description: Claude Code 高级使用技巧，包括提示词工程、高效协作模式、问题排查、性能优化等，让 AI 成为你的得力搭档。
+cover: /img/covers/tech-study.svg
 ---
 
 ## 前言
@@ -329,6 +330,13 @@ Vibe Coding 的核心是「人机协作」，而不是「AI 替代人」。
 - 🔄 小步迭代，及时反馈
 - ✅ 任何代码都要人工 Review
 - 📚 持续学习，优化你的协作模式
+
+---
+
+**📚 本系列文章：**
+1. [Claude Code 入门指南](ts-claude-code入门与安装.md)
+2. [AI 项目开发规范](ts-claude-code项目开发规范.md)
+3. Claude Code 使用技巧 ⬅️ 当前位置
 
 ---
 

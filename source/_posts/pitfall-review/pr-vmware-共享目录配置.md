@@ -5,6 +5,7 @@ categories:
   - [踩坑复盘, 环境配置]
 tags: [虚拟机, VMware, 共享目录, Linux, 环境配置]
 description: 介绍虚拟机共享目录的概念和配置方法，实现 Windows 与 Linux 虚拟机之间的文件共享。
+cover: /img/covers/pitfall-review.svg
 ---
 
 ## 什么是共享目录

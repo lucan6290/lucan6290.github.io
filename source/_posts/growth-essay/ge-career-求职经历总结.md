@@ -5,6 +5,7 @@ categories:
   - [成长随笔, 求职之路]
 tags: [求职, 面试, 经验总结, career]
 description: 个人求职经历的完整总结，包括简历准备、面试技巧、offer选择等方面的经验分享。
+cover: /img/covers/growth-essay.svg
 ---
 
 ## 前言

@@ -5,6 +5,7 @@ categories:
   - [技术研习, AI 探索]
 tags: [ai-agent, llm, tutorial, note, learning-process, AI, 人工智能]
 description: 系统学习 AI Agent 的笔记，涵盖概念、架构、核心组件和实践经验。
+cover: /img/covers/tech-study.svg
 ---
 
 ## 什么是 Agent？

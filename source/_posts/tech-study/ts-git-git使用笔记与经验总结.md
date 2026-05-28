@@ -6,6 +6,7 @@ categories:
   - [技术研习, 入门笔记]
 tags: [git, 版本控制, 工具, note, 教程]
 description: Git 常用操作笔记与踩坑经验总结，涵盖代码提交、分支管理、冲突解决、回退操作等实用场景。
+cover: /img/covers/tech-study.svg
 ---
 
 ## 一、本地代码上传远程仓库

@@ -5,6 +5,7 @@ categories:
   - [成长随笔, 博客建设]
 tags: [hexo, butterfly, blog, 搭建记录]
 description: Hexo + Butterfly 博客搭建的完整记录，包括环境配置、主题定制、部署流程等。
+cover: /img/covers/growth-essay.svg
 ---
 
 ## 前言
@@ -93,20 +94,40 @@ npm install hexo-deployer-git
 
 ---
 
-## 五、常用命令
+## 五、定制命令
+
+为了自动完成文件命名、目录创建和 Front Matter 生成，定制了 `hexo np` 命令。
+
+**命令格式：**
+```bash
+hexo np <一级前缀> <二级前缀> <标题>
+```
+
+**使用示例：**
+```bash
+hexo np ts vue3 "Vue3组合式 API详解"
+# → source/_posts/tech-study/ts-vue3-Vue3组合式 API详解.md
+```
+
+> 💡 详细说明请参考 [定制创建文章命令记录](ge-blog-定制创建文章命令记录.md)
+
+---
+
+## 六、常用命令
 
 ```bash
 hexo clean     # 清理缓存
 hexo generate  # 生成静态文件
 hexo server    # 本地预览
 hexo deploy    # 部署到远程
+hexo np        # 创建新文章（自定义命令）
 ```
 
 ---
 
-## 总结
+## 七、总结
 
-Hexo + Butterfly 是一个轻量、美观、易扩展的博客方案。搭建完成后，专注于内容创作即可。
+Hexo + Butterfly 是一个轻量、美观、易扩展的博客方案。通过定制 `hexo np` 命令，可以自动完成文章创建的繁琐工作，专注于内容创作即可。
 
 ---
 *记录过程，沉淀经验*
