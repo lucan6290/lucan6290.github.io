@@ -2,7 +2,20 @@
 title: AI编程工具的真实体验：强但没那么神
 date: 2026-06-04 11:04:59
 updated:
-
+categories:
+  - [成长随笔, ai]
+tags:
+  - AI
+  - 编程工具
+  - Claude Code
+  - Cursor
+description: 企业级项目中使用 Cursor、Claude Code 等 AI 编程工具的真实体验：提效 30-40% 但替代不了工程判断，理性看待 AI 编程的能力边界。
+layout: post
+comments: true
+published: true
+lang: zh-CN
+cover: /img/covers/growth-essay.svg
+status: published
 ---
 
 前段时间参与了一个企业级项目，同时使用了 Cursor 和 Claude Code，并且之前也用过 Trae、WorkBuddy 等国产开发工具。简单说下真实体验。
@@ -36,32 +49,4 @@ updated:
 ## AI 编程工具不是没用，恰恰相反，它非常有用
 
 但它不是"替你做项目"的工具，而是"帮会做项目的人更快做项目"的工具。
-
-categories:
-  - [成长随笔, ai]
-
-tags:
-
-description: 企业级项目中使用 Cursor、Claude Code 等 AI 编程工具的真实体验：提效 30-40% 但替代不了工程判断，理性看待 AI 编程的能力边界。
-
-# Hexo 官方参数
-layout: post
-comments: true
-permalink:
-excerpt:
-published: true
-lang: zh-CN
-
-# Butterfly 主题参数
-cover: /img/covers/growth-essay.svg
-sticky:
-
-# 博客自定义参数
-slug:
-status: published
-
-# 系列文章（可选，3篇以上相关文章时使用）
-series:
-series_order:
----
 

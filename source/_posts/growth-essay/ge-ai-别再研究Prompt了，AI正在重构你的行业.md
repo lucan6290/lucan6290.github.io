@@ -2,7 +2,20 @@
 title: 别再研究Prompt了，AI正在重构你的行业
 date: 2026-06-04 11:15:52
 updated:
-
+categories:
+  - [成长随笔, ai]
+tags:
+  - AI
+  - Agent
+  - 行业重构
+  - 生产结构
+description: 大部分人只是在研究 AI 表层玩法，真正理解 AI 的人关注的是它在重构什么。AI 不是工具，是新的生产结构——从模型、算力、应用到流程，理解结构比学一百个技巧都有用。
+layout: post
+comments: true
+published: true
+lang: zh-CN
+cover: /img/covers/growth-essay.svg
+status: published
 ---
 
 有人天天研究的AI玩法，但跟AI的底层逻辑毫无关系。
@@ -93,32 +106,4 @@ AI不是某一个行业，而是渗透所有行业的变量。
 不是在学AI，是在用AI重构你的赛道。
 
 这个问题想清楚了，比学一百个技巧都有用。
-
-categories:
-  - [成长随笔, ai]
-
-tags:
-
-description: 大部分人只是在研究 AI 表层玩法，真正理解 AI 的人关注的是它在重构什么。AI 不是工具，是新的生产结构——从模型、算力、应用到流程，理解结构比学一百个技巧都有用。
-
-# Hexo 官方参数
-layout: post
-comments: true
-permalink:
-excerpt:
-published: true
-lang: zh-CN
-
-# Butterfly 主题参数
-cover: /img/covers/growth-essay.svg
-sticky:
-
-# 博客自定义参数
-slug:
-status: published
-
-# 系列文章（可选，3篇以上相关文章时使用）
-series:
-series_order:
----
 
