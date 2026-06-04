@@ -56,9 +56,9 @@ status: published
 - [Hexo 博客搭建记录](/2026/05/21/growth-essay/ge-hexo-博客搭建记录/)
 - [从零开始写一篇博客 —— 完整写作指南](/2026/05/25/growth-essay/ge-blog-博客写作完整指南/)
 
-### 4.2 求职之路
+### 4.2 AI 工具体验
 
-- [求职经历总结](/2026/05/24/growth-essay/ge-career-求职经历总结/)
+- [AI编程工具的真实体验：强但没那么神](/2026/06/04/growth-essay/ge-ai-AI编程工具的真实体验：强但没那么神/)
 
 ---
 
