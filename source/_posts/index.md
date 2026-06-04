@@ -58,6 +58,7 @@ status: published
 
 ### 4.2 AI 工具体验
 
+- [别再研究Prompt了，AI正在重构你的行业](/2026/06/04/growth-essay/ge-ai-别再研究Prompt了，AI正在重构你的行业/)
 - [AI编程工具的真实体验：强但没那么神](/2026/06/04/growth-essay/ge-ai-AI编程工具的真实体验：强但没那么神/)
 
 ---
