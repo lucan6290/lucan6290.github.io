@@ -33,6 +33,7 @@ category_dir: categories
 code_dir: downloads/code
 i18n_dir: :lang
 skip_render:
+  - google56aca72643bc536d.html
 
 # Writing
 new_post_name: :title.md
@@ -173,3 +174,8 @@ feed:
   limit: 20
   hub:
   content: true
+
+# Sitemap
+sitemap:
+  path: sitemap.xml
+  rel: false

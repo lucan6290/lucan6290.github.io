@@ -410,6 +410,7 @@ structured_data:
 # --------------------------------------
 inject:
   head:
+    - <meta name="google-site-verification" content="_Hh4_BMyNi3E6FYQomtwtWddvvYS1U4VEgLOpIDMMGU" />
   bottom:
     - <link rel="stylesheet" href="/css/custom.css">
     - |
