@@ -3,7 +3,7 @@ title: 别再研究Prompt了，AI正在重构你的行业
 date: 2026-06-04 11:15:52
 updated:
 categories:
-  - [成长随笔, ai]
+  - [成长随笔, AI 思考]
 tags:
   - AI
   - Agent

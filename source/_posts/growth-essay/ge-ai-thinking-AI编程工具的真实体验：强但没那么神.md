@@ -3,7 +3,7 @@ title: AI编程工具的真实体验：强但没那么神
 date: 2026-06-04 11:04:59
 updated:
 categories:
-  - [成长随笔, ai]
+  - [成长随笔, AI 思考]
 tags:
   - AI
   - 编程工具
