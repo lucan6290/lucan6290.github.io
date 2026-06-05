@@ -161,32 +161,67 @@ function hello() {
 
 ## 四、插入图片
 
-### 4.1 图片存放位置
+### 4.1 图片存放规范
 
-本博客已启用 `post_asset_folder: true`，每篇文章可以有一个同名文件夹存放图片。
+本博客已启用 `post_asset_folder: true`，每篇文章必须创建**同名资源文件夹**来存放图片。
 
 **目录结构：**
 
 ```
 source/_posts/tech-study/
-├── ts-ocr模型生产环境部署.md        # 文章文件
-└── ts-ocr模型生产环境部署/          # 资源文件夹（与文章同名）
-    ├── architecture.png            # 架构图
-    └── screenshot.png              # 截图
+├── ts-jetson-Ollama部署LLM.md            # 文章文件
+├── ts-jetson-Ollama部署LLM/              # 同名资源文件夹
+│   ├── ts-jetson-Ollama部署LLM-img1.png  # 图片命名：文章名-img序号.后缀
+│   ├── ts-jetson-Ollama部署LLM-img2.png
+│   └── ts-jetson-Ollama部署LLM-img3.png
+├── ts-jetson-常见错误解决笔记.md
+├── ts-jetson-常见错误解决笔记/            # 同名资源文件夹
+│   ├── ts-jetson-常见错误解决笔记-img1.png
+│   └── ts-jetson-常见错误解决笔记-img2.png
 ```
 
-### 4.2 插入图片的方法
+**图片命名规则：**
 
-**方法一：使用 asset_img 标签（推荐）**
+- 格式：`文章文件名-img序号.后缀`（如 `ts-jetson-Ollama部署LLM-img1.png`）
+- 序号从 1 开始递增，按文章中出现的顺序编号
+- 统一使用小写后缀（`.png`、`.jpg`、`.webp`）
+
+### 4.2 在文章中引用图片
+
+**使用 asset_img 标签（推荐）：**
 
 ```markdown
-{% asset_img architecture.png 系统架构图 %}
+{% asset_img 'ts-jetson-Ollama部署LLM-img1.png' 'Ollama 安装信息' %}
 ```
 
-**方法二：使用相对路径**
+> 💡 `{% asset_img %}` 会自动在文章的同名资源文件夹中查找图片，无需写路径。
 
-```markdown
-![系统架构图](ts-ocr模型生产环境部署/architecture.png)
+**完整示例：**
+
+````markdown
+## 一、安装 Ollama
+
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
+安装完成后，Ollama 会自动创建一个服务并在后台运行。
+
+{% asset_img 'ts-jetson-Ollama部署LLM-img1.png' 'Ollama 安装信息' %}
+
+### 验证安装
+
+```bash
+ollama run phi3:mini
+```
+
+{% asset_img 'ts-jetson-Ollama部署LLM-img2.png' 'Ollama 验证安装' %}
+````
+
+### 4.3 图片操作流程
+
+```
+准备图片 → 重命名为规范文件名 → 放入同名资源文件夹 → 在文章中用 asset_img 引用
 ```
 
 ---
