@@ -53,6 +53,7 @@ const frontMatter = ref<FrontMatter>({
 const bodyContent = ref<string>('')
 const isLoading = ref(false)
 const isSaving = ref(false)
+const isPublishing = ref(false)
 const saveStatus = ref<'idle' | 'saving' | 'saved'>('idle')
 
 // 日期时间戳（用于日期选择器）
@@ -159,6 +160,14 @@ const hasChanges = computed(() => {
   return articleContent.value !== originalContent.value
 })
 
+// 确保 tags 始终是数组（防御 YAML 内联数组被解析为字符串）
+const safeTags = computed(() => {
+  const tags = frontMatter.value.tags
+  if (Array.isArray(tags)) return tags
+  if (typeof tags === 'string') return [tags]
+  return []
+})
+
 // 加载文章
 async function loadArticle() {
   const path = route.query.file as string
@@ -258,17 +267,21 @@ async function publishArticle() {
     onPositiveClick: async () => {
       // 设置状态为已发布
       frontMatter.value.status = 'published'
+      isPublishing.value = true
 
-      // 先保存
-      await saveArticle()
-
-      // 触发部署
       try {
-        await api.deploy(`发布文章: ${frontMatter.value.title}`)
+        // 先保存到本地
+        await saveArticle()
+
+        // 提交当前文章并推送
+        const deployPath = `source/_posts/${articlePath.value}`
+        await api.deploy(`发布文章: ${frontMatter.value.title}`, deployPath)
         message.success('发布成功，博客正在部署中...')
       } catch (error) {
-        console.error('部署失败:', error)
-        message.error('部署失败，请手动部署')
+        console.error('发布失败:', error)
+        message.error('发布失败，请手动部署')
+      } finally {
+        isPublishing.value = false
       }
     }
   })
@@ -538,7 +551,7 @@ onUnmounted(() => {
         />
         <n-button
           :loading="isSaving"
-          :disabled="!hasChanges"
+          :disabled="!hasChanges || isPublishing"
           @click="saveArticle"
           style="margin-right: 8px;"
         >
@@ -546,8 +559,8 @@ onUnmounted(() => {
         </n-button>
         <n-button
           type="primary"
-          :loading="isSaving"
-          :disabled="frontMatter.status === 'published' && !hasChanges"
+          :loading="isPublishing"
+          :disabled="frontMatter.status === 'published' && !hasChanges || isSaving"
           @click="publishArticle"
         >
           发布
@@ -587,11 +600,11 @@ onUnmounted(() => {
             {{ subCategoryOptions.find(o => o.value === frontMatter.categories?.[1])?.label || frontMatter.categories[1] }}
           </n-tag>
           <n-tag
-            v-for="(tag, index) in frontMatter.tags"
+            v-for="(tag, index) in safeTags"
             :key="index"
             type="success"
             closable
-            @close="frontMatter.tags?.splice(index, 1); updateContent()"
+            @close="safeTags.splice(index, 1); updateContent()"
           >
             {{ tag }}
           </n-tag>

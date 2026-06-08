@@ -60,7 +60,15 @@ function parseMatter(content: string): { data: Record<string, unknown>; content:
       if (val === 'true') data[key] = true
       else if (val === 'false') data[key] = false
       else if (/^\d+$/.test(val)) data[key] = Number(val)
-      else data[key] = val
+      else {
+        // 内联数组格式：[a, b, c]
+        const inlineArrMatch = val.match(/^\[(.*)\]$/)
+        if (inlineArrMatch) {
+          data[key] = inlineArrMatch[1].split(',').map((s: string) => s.trim())
+        } else {
+          data[key] = val
+        }
+      }
     }
   }
   flushList()

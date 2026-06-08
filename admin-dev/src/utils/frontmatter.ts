@@ -78,7 +78,15 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
       if (val === 'true') result[key] = true
       else if (val === 'false') result[key] = false
       else if (/^\d+$/.test(val)) result[key] = Number(val)
-      else result[key] = unwrapQuotes(val)
+      else {
+        // 内联数组格式：[a, b, c]
+        const inlineArrMatch = val.match(/^\[(.*)\]$/)
+        if (inlineArrMatch) {
+          result[key] = inlineArrMatch[1].split(',').map(s => unwrapQuotes(s.trim()))
+        } else {
+          result[key] = unwrapQuotes(val)
+        }
+      }
     }
   }
 
