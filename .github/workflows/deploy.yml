@@ -41,6 +41,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install admin-dev dependencies
+        run: cd admin-dev && npm ci
+
+      - name: Build admin dashboard
+        run: cd admin-dev && npm run build
+
       - name: Generate static files
         run: npx hexo generate
 

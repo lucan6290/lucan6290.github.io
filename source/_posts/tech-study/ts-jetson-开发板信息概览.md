@@ -1,16 +1,32 @@
 ---
-title: "Jetson Orin NANO 开发板信息概览"
+title: Jetson Orin NANO 开发板信息概览
 date: 2025-10-08 10:00:00
+updated: 2026-06-07 15:50:52
+
 categories:
   - [技术研习, 系列专题]
-tags: [jetson, orin-nano, 嵌入式, NVIDIA, 开发板, 硬件, jtop]
-series: "Jetson Orin NANO 开发板使用笔记"
-series_order: 1
+
+tags:
+  - jetson
+  - orin-nano
+  - 嵌入式
+  - NVIDIA
+  - 开发板
+  - 硬件
+  - jtop
+
 description: 记录 Jetson Orin NANO SUPER 开发板的完整硬件与软件环境信息，包括系统概览、NVIDIA 软件栈版本、硬件参数等。
-cover: /img/covers/tech-study.svg
-slug: ts-jetson-board-info
-status: published
+
 lang: zh-CN
+
+cover: /img/covers/tech-study.svg
+
+slug: ts-jetson-board-info
+
+status: published
+
+series: Jetson Orin NANO 开发板使用笔记
+series_order: 1
 ---
 
 ## 前言
