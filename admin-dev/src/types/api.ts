@@ -225,8 +225,9 @@ export interface BlogAPI {
   /**
    * 部署（commit + push）
    * @param message 提交信息
+   * @param filePath 指定提交的文件路径（相对于仓库根目录），为空则提交所有变更
    */
-  deploy(message: string): Promise<GitOperationResult>
+  deploy(message: string, filePath?: string): Promise<GitOperationResult>
 
   // ==================== 工具方法 ====================
 

@@ -97,7 +97,8 @@ const githubAPIAdapter: BlogAPI = {
   },
 
   // Git 操作
-  async deploy(message: string): Promise<GitOperationResult> {
+  async deploy(message: string, _filePath?: string): Promise<GitOperationResult> {
+    // GitHub 模式下 filePath 不适用，整体仓库提交
     const result = await githubAPI.triggerDeploy(message)
     return {
       success: true,
@@ -228,8 +229,8 @@ const localAPIAdapter: BlogAPI = {
     return localAPI.push()
   },
 
-  async deploy(message: string): Promise<GitOperationResult> {
-    return localAPI.deploy(message)
+  async deploy(message: string, filePath?: string): Promise<GitOperationResult> {
+    return localAPI.deploy(message, filePath)
   },
 
   // 工具方法

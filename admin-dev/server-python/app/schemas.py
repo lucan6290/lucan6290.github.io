@@ -110,6 +110,7 @@ class UploadImageRequest(BaseModel):
 class GitCommitRequest(BaseModel):
     """Git 提交请求"""
     message: str
+    filePath: Optional[str] = None  # 指定提交的文件路径（相对于 _posts），为空则提交所有变更
 
 
 # ============================================================

@@ -372,12 +372,13 @@ class LocalAPIClient {
   /**
    * 一键部署：直接调用后端 /api/git/deploy（commit + push）
    * @param message 提交信息
+   * @param filePath 指定提交的文件路径，为空则提交所有变更
    */
-  async deploy(message: string): Promise<GitOperationResult> {
+  async deploy(message: string, filePath?: string): Promise<GitOperationResult> {
     const result = await this.request<{ commit?: { stdout: string }; push?: { stdout: string } } | null>({
       method: 'POST',
       url: '/api/git/deploy',
-      data: { message }
+      data: { message, filePath }
     })
     return {
       success: !!result,

@@ -66,12 +66,16 @@ async def git_push():
 
 @router.post("/deploy")
 async def git_deploy(req: GitCommitRequest):
-    """一键部署：git add . && git commit && git push"""
+    """一键部署：git add (指定文件或全部) && git commit && git push"""
     if not req.message:
         return ApiResponse(success=False, error="提交信息不能为空")
 
     try:
-        await _run_git("add", ".")
+        # 如果指定了文件路径，只 add 该文件；否则 add 所有变更
+        if req.filePath:
+            await _run_git("add", req.filePath)
+        else:
+            await _run_git("add", ".")
         commit_out, commit_err = await _run_git("commit", "-m", req.message)
         push_out, push_err = await _run_git("push", "origin")
 
