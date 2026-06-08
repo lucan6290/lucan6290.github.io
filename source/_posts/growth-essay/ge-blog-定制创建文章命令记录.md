@@ -1,7 +1,7 @@
 ---
 title: 定制创建文章命令记录
 date: 2026-05-27 13:58:25
-updated:
+updated: 2026-06-08 17:34:50
 
 categories:
   - [成长随笔, 博客建设]
@@ -12,12 +12,11 @@ tags:
   - 效率优化
   - 博客建设
 
-description: 记录我为 Hexo 博客定制 `hexo np` 创建文章命令的过程，包括为什么要定制、解决了什么问题、最终效果以及如何实现。
+description: "记录我为 Hexo 博客定制 `hexo np` 创建文章命令的过程，包括为什么要定制、解决了什么问题、最终效果以及如何实现。"
 
 cover: /img/covers/growth-essay.svg
-sticky:
-slug:
-status: draft
+
+status: published
 ---
 
 ## 前言
