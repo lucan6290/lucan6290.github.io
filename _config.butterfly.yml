@@ -118,7 +118,7 @@ index_post_content:
 toc:
   post: true
   page: false
-  number: true
+  number: false
   expand: false
   style_simple: false
   scroll_percent: true
