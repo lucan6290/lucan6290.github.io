@@ -144,7 +144,7 @@ function parseFrontMatter(content: string): { frontMatter: PostFrontMatter; body
   try {
     const { data, content: body } = parseMatter(content)
     return {
-      frontMatter: data as PostFrontMatter,
+      frontMatter: data as unknown as PostFrontMatter,
       body
     }
   } catch (error) {
@@ -478,13 +478,9 @@ export async function getImages(articlePath: string): Promise<{
   sha: string
   url: string
 }[]> {
-  const octokit = getOctokit()
+  void getOctokit()
 
-  // 构建资源文件夹路径：source/_posts/[文章路径去掉.md]/
-  const assetFolderPath = path.join(
-    REPO_CONFIG.postsPath,
-    articlePath.replace(/\.md$/, '')
-  ).replace(/\\/g, '/')
+  const assetFolderPath = `${REPO_CONFIG.postsPath}/${articlePath.replace(/.md$/, "")}`.replace(/\\/g, "/")
 
   try {
     const items = await getDirectoryContents(assetFolderPath)

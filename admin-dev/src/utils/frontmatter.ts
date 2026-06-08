@@ -112,7 +112,7 @@ export function parseFrontMatter(content: string): {
   try {
     const { data, content: body } = parseMatter(content)
     return {
-      frontMatter: data as FrontMatter,
+      frontMatter: data as unknown as FrontMatter,
       body
     }
   } catch (error) {
@@ -149,7 +149,7 @@ export function serializeFrontMatter(frontMatter: Partial<FrontMatter>): string 
     // 如果已有嵌套数组格式（categories[0] 是数组），直接使用
     if (Array.isArray(frontMatter.categories[0])) {
       for (const cat of frontMatter.categories) {
-        const catArr = cat as string[]
+        const catArr = cat as unknown as string[]
         lines.push(`  - [${catArr.map(c => escapeYamlString(c)).join(', ')}]`)
       }
     } else {
