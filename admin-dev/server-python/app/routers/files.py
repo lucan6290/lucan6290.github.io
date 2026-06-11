@@ -4,6 +4,8 @@ GET/POST/PUT/DELETE /api/files/post(s)
 """
 from __future__ import annotations
 
+import logging
+import shutil
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -23,6 +25,14 @@ from ..services.frontmatter import (
     generate_frontmatter,
     parse_frontmatter,
 )
+from ..services.index_updater import (
+    add_to_index,
+    handle_status_change,
+    remove_from_index,
+    update_in_index,
+)
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/files", tags=["文件管理"])
 
@@ -47,6 +57,119 @@ CATEGORY_MAP: Dict[str, str] = _load_category_map()
 def _to_slug(name: str) -> str:
     """中文分类名 → 英文 slug"""
     return CATEGORY_MAP.get(name, name)
+
+
+# ============================================================
+# index.md 自动更新
+# ============================================================
+
+INDEX_MD = POSTS_DIR / "index.md"
+
+
+def _read_index() -> str | None:
+    """读取 index.md 内容，失败返回 None"""
+    if not INDEX_MD.exists():
+        return None
+    return INDEX_MD.read_text(encoding="utf-8")
+
+
+def _write_index(content: str) -> None:
+    """写入 index.md（写前备份，写后验证，确认后删除备份）"""
+    if not INDEX_MD.exists():
+        logger.error("目录文件 index.md 不存在，无法写入")
+        return
+
+    # 写前备份
+    bak_path = INDEX_MD.with_suffix(".md.bak")
+    bak_path.write_text(INDEX_MD.read_text(encoding="utf-8"), encoding="utf-8")
+
+    try:
+        # 写入新内容
+        INDEX_MD.write_text(content, encoding="utf-8")
+
+        # 写后验证：能解析出至少 1 个一级分类
+        from ..services.index_updater import parse_index
+        structure = parse_index(content)
+        if not structure.categories:
+            raise ValueError("写入后验证失败：目录无一级分类")
+
+        # 验证通过，删除备份
+        bak_path.unlink(missing_ok=True)
+        logger.info("index.md 更新成功")
+
+    except Exception as e:
+        # 验证失败，回滚
+        logger.error(f"index.md 写入验证失败，回滚：{e}")
+        INDEX_MD.write_text(bak_path.read_text(encoding="utf-8"), encoding="utf-8")
+        bak_path.unlink(missing_ok=True)
+        raise
+
+
+def _sync_index_on_update(
+    existing_fm: Dict[str, Any],
+    new_fm: Dict[str, Any],
+    filename: str,
+) -> None:
+    """更新文章后同步 index.md（失败不影响文章保存）"""
+    try:
+        index_text = _read_index()
+        if index_text is None:
+            return
+
+        old_status = existing_fm.get("status", "draft")
+        new_status = new_fm.get("status", old_status)
+
+        old_categories = flatten_categories(existing_fm.get("categories", []))
+        new_categories = flatten_categories(new_fm.get("categories", []))
+        old_title = existing_fm.get("title", "")
+        new_title = new_fm.get("title", "")
+        old_date = str(existing_fm.get("date", ""))
+        new_date = str(new_fm.get("date", ""))
+
+        # 获取 category_slug
+        primary_name = new_categories[0] if new_categories else ""
+        category_slug = _to_slug(primary_name)
+
+        # 状态变更处理
+        if old_status != new_status:
+            new_index, msg = handle_status_change(
+                index_text,
+                title=new_title or old_title,
+                date=new_date or old_date,
+                categories=new_categories or old_categories,
+                filename=filename,
+                category_slug=category_slug,
+                old_status=old_status,
+                new_status=new_status,
+            )
+            if new_index != index_text:
+                _write_index(new_index)
+                logger.info(f"目录同步（状态变更）：{msg}")
+            return
+
+        # 已发布文章的标题/日期/分类变更
+        if new_status == "published":
+            old_primary = flatten_categories(existing_fm.get("categories", []))
+            category_changed = old_categories != new_categories
+            title_changed = old_title != new_title
+            date_changed = old_date != new_date
+
+            if category_changed or title_changed or date_changed:
+                new_index, msg = update_in_index(
+                    index_text,
+                    old_filename=filename,
+                    new_title=new_title or old_title,
+                    new_date=new_date or old_date,
+                    new_categories=new_categories or old_categories,
+                    new_filename=filename,
+                    new_category_slug=category_slug,
+                )
+                if new_index != index_text:
+                    _write_index(new_index)
+                    logger.info(f"目录同步（更新）：{msg}")
+
+    except Exception as e:
+        logger.error(f"目录同步失败（不影响文章保存）：{e}")
 
 
 # ============================================================
@@ -219,6 +342,15 @@ async def update_post(path: str, req: UpdatePostRequest):
         new_content = new_fm_text + (req.content or "")
 
         full_path.write_text(new_content, encoding="utf-8")
+
+        # 同步 index.md（失败不影响文章保存）
+        filename = Path(path).stem
+        _sync_index_on_update(
+            existing_fm=parse_frontmatter(existing)[0],
+            new_fm=existing_fm,
+            filename=filename,
+        )
+
         return {"success": True, "data": {"path": path}}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"更新文章失败: {e}")
@@ -232,13 +364,24 @@ async def delete_post(path: str):
         return {"success": False, "error": "文章不存在"}
 
     try:
+        # 从目录移除（在删除文件之前）
+        filename = Path(path).stem
+        try:
+            index_text = _read_index()
+            if index_text is not None:
+                new_index, msg = remove_from_index(index_text, filename)
+                if new_index != index_text:
+                    _write_index(new_index)
+                    logger.info(f"目录同步（删除）：{msg}")
+        except Exception as e:
+            logger.error(f"目录同步失败（不影响删除操作）：{e}")
+
         # 删除 Markdown 文件
         full_path.unlink()
 
         # 删除资源文件夹
         asset_folder = full_path.with_suffix("")
         if asset_folder.exists() and asset_folder.is_dir():
-            import shutil
             shutil.rmtree(asset_folder, ignore_errors=True)
 
         return {"success": True, "data": {"path": path}}
