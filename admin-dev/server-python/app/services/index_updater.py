@@ -409,3 +409,291 @@ def serialize(structure: IndexStructure) -> str:
         text += "\n"
 
     return text
+
+
+# ============================================================
+# 核心操作：add_to_index
+# ============================================================
+
+def add_to_index(
+    index_text: str,
+    title: str,
+    date: str,
+    categories: list[str],
+    filename: str,
+    category_slug: str,
+) -> tuple[str, str]:
+    """
+    插入文章链接到目录。
+
+    Args:
+        index_text: index.md 完整文本
+        title: 文章标题
+        date: 文章日期
+        categories: 分类列表 ["一级分类", "二级分类"]
+        filename: 文件名（不含 .md）
+        category_slug: 分类 slug
+
+    Returns:
+        (new_index_text, message)
+    """
+    # 校验 categories
+    if not categories:
+        raise ValueError("文章缺少 categories 字段，无法确定分类位置")
+
+    # 校验 date
+    date_part = date.split(" ")[0] if date else ""
+    if not date_part or len(date_part.split("-")) != 3:
+        raise ValueError(f"文章日期格式异常：{date}，无法生成链接")
+
+    structure = parse_index(index_text)
+
+    # 幂等性：已存在则静默跳过
+    if match_link_by_filename(serialize(structure), filename):
+        return index_text, f"文章 [{filename}] 已在目录中，跳过插入"
+
+    # 确定分类名
+    primary_name = categories[0]
+    sub_name = categories[1] if len(categories) > 1 else primary_name
+
+    # 匹配一级分类
+    primary = find_primary_category(structure, primary_name)
+
+    if primary is None:
+        # 自动追加新一级分类（spec 5.3）
+        next_num = get_next_chinese_number(structure)
+        heading = f"## {next_num}、{primary_name}"
+        primary = PrimaryCategory(
+            number=next_num,
+            title=primary_name,
+            heading=heading,
+            placeholder="*暂无文章，敬请期待*",
+        )
+        structure.categories.append(primary)
+
+    # 匹配二级分类
+    sub = find_subcategory(primary, sub_name)
+
+    if sub is None:
+        # 自动创建新二级分类
+        next_sub_num = get_next_sub_number(primary)
+        sub_heading = f"### {next_sub_num} {sub_name}"
+        sub = Subcategory(
+            number=next_sub_num,
+            title=sub_name,
+            heading=sub_heading,
+        )
+        primary.subcategories.append(sub)
+
+    # 清除 placeholder
+    primary.placeholder = None
+
+    # 生成链接并追加
+    link_line = generate_link_line(date, category_slug, filename, title)
+    sub.articles.append(Article(line=link_line))
+
+    new_text = serialize(structure)
+    return new_text, f"已将文章 [{title}] 添加到目录"
+
+
+# ============================================================
+# 核心操作：remove_from_index
+# ============================================================
+
+def remove_from_index(
+    index_text: str,
+    filename: str,
+) -> tuple[str, str]:
+    """
+    从目录移除文章链接。
+
+    Args:
+        index_text: index.md 完整文本
+        filename: 文件名（不含 .md）
+
+    Returns:
+        (new_index_text, message)
+    """
+    structure = parse_index(index_text)
+
+    # 检查重复
+    serialized = serialize(structure)
+    link_count = count_links_by_filename(serialized, filename)
+
+    if link_count > 1:
+        raise ValueError(f"目录中发现重复文件名 [{filename}]，请手动检查 index.md")
+
+    if link_count == 0:
+        # 静默跳过
+        return index_text, f"未在目录中找到文章 [{filename}] 的链接"
+
+    # 遍历找到并移除
+    target_primary: PrimaryCategory | None = None
+    target_sub: Subcategory | None = None
+
+    for primary in structure.categories:
+        for sub in primary.subcategories:
+            for article in sub.articles:
+                # 用文件名匹配
+                m = re.search(
+                    rf"^-\s+\[.*?\]\(/.*?/{re.escape(filename)}/\)$",
+                    article.line,
+                )
+                if m:
+                    sub.articles.remove(article)
+                    target_primary = primary
+                    target_sub = sub
+                    break
+            if target_sub:
+                break
+        if target_primary:
+            break
+
+    # 二级分类清空 → 移除该二级分类
+    if target_sub and not target_sub.articles:
+        target_primary.subcategories.remove(target_sub)
+        # 重新编号
+        renumber_subcategories(target_primary)
+
+    # 一级分类所有二级为空 → 恢复占位符
+    if target_primary and not target_primary.subcategories:
+        target_primary.placeholder = "*暂无文章，敬请期待*"
+
+    new_text = serialize(structure)
+    return new_text, f"已从目录移除文章 [{filename}]"
+
+
+# ============================================================
+# 核心操作：update_in_index
+# ============================================================
+
+def update_in_index(
+    index_text: str,
+    old_filename: str,
+    new_title: str,
+    new_date: str,
+    new_categories: list[str],
+    new_filename: str,
+    new_category_slug: str,
+) -> tuple[str, str]:
+    """
+    更新目录中的文章链接。
+
+    Args:
+        index_text: index.md 完整文本
+        old_filename: 旧文件名
+        new_title: 新标题
+        new_date: 新日期
+        new_categories: 新分类列表
+        new_filename: 新文件名
+        new_category_slug: 新分类 slug
+
+    Returns:
+        (new_index_text, message)
+    """
+    # 校验 categories
+    if not new_categories:
+        raise ValueError("文章缺少 categories 字段，无法确定分类位置")
+
+    structure = parse_index(index_text)
+
+    # 找到旧链接
+    old_primary: PrimaryCategory | None = None
+    old_sub: Subcategory | None = None
+    old_article: Article | None = None
+
+    for primary in structure.categories:
+        for sub in primary.subcategories:
+            for article in sub.articles:
+                m = re.search(
+                    rf"/{re.escape(old_filename)}/\)$",
+                    article.line,
+                )
+                if m:
+                    old_primary = primary
+                    old_sub = sub
+                    old_article = article
+                    break
+            if old_article:
+                break
+        if old_article:
+            break
+
+    if old_article is None:
+        return index_text, f"未在目录中找到文章 [{old_filename}] 的链接"
+
+    # 判断是否分类变更
+    old_cat_name = old_primary.title if old_primary else ""
+    old_sub_name = old_sub.title if old_sub else ""
+    new_cat_name = new_categories[0]
+    new_sub_name = new_categories[1] if len(new_categories) > 1 else new_cat_name
+
+    category_changed = (old_cat_name != new_cat_name) or (old_sub_name != new_sub_name)
+    filename_changed = old_filename != new_filename
+
+    if category_changed or filename_changed:
+        # 分类变更 → remove(旧) + add(新)
+        text_after_remove, _ = remove_from_index(index_text, old_filename)
+        return add_to_index(
+            text_after_remove,
+            new_title,
+            new_date,
+            new_categories,
+            new_filename,
+            new_category_slug,
+        )
+
+    # 只改标题或日期 → 就地更新
+    new_link = generate_link_line(new_date, new_category_slug, new_filename, new_title)
+
+    if old_article.line == new_link:
+        return index_text, "文章目录信息无变化"
+
+    old_article.line = new_link
+    new_text = serialize(structure)
+    return new_text, f"已更新目录中文章 [{old_filename}] 的链接"
+
+
+# ============================================================
+# 核心操作：handle_status_change
+# ============================================================
+
+def handle_status_change(
+    index_text: str,
+    title: str,
+    date: str,
+    categories: list[str],
+    filename: str,
+    category_slug: str,
+    old_status: str,
+    new_status: str,
+) -> tuple[str, str]:
+    """
+    根据状态变更决定插入或移除。
+
+    Args:
+        index_text: index.md 完整文本
+        title: 文章标题
+        date: 文章日期
+        categories: 分类列表
+        filename: 文件名
+        category_slug: 分类 slug
+        old_status: 旧状态
+        new_status: 新状态
+
+    Returns:
+        (new_index_text, message)
+    """
+    was_published = old_status == "published"
+    is_published = new_status == "published"
+
+    if not was_published and is_published:
+        # 非published → published：插入
+        return add_to_index(index_text, title, date, categories, filename, category_slug)
+
+    if was_published and not is_published:
+        # published → 非published：移除
+        return remove_from_index(index_text, filename)
+
+    # 其他（draft→wip 等）：不处理
+    return index_text, f"状态变更 {old_status}→{new_status}，无需更新目录"
