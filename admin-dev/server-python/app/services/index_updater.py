@@ -31,6 +31,7 @@ class Subcategory:
     title: str           # "AI 探索"
     heading: str         # 原始标题行 "### 1.1 AI 探索"
     articles: list[Article] = field(default_factory=list)
+    trailing_lines: list[str] = field(default_factory=list)  # 系列文章等附属行
 
 
 @dataclass
@@ -304,7 +305,11 @@ def parse_index(index_text: str) -> IndexStructure:
                     break
                 series_lines.append(next_line)
                 j += 1
-            structure.unknown_lines.extend(series_lines)
+            # Store series block with current subcategory
+            if current_sub is not None:
+                current_sub.trailing_lines.extend(series_lines)
+            else:
+                structure.unknown_lines.extend(series_lines)
             i = j
             continue
 
@@ -383,6 +388,9 @@ def serialize(structure: IndexStructure) -> str:
                 parts.append("")
                 for article in sub.articles:
                     parts.append(article.line)
+                if sub.trailing_lines:
+                    parts.append("")
+                    parts.extend(sub.trailing_lines)
                 parts.append("")
         elif cat.placeholder:
             parts.append(cat.placeholder)
