@@ -70,6 +70,130 @@ _RE_PLACEHOLDER = re.compile(r"^\*暂无文章，敬请期待\*$")
 
 
 # ============================================================
+# 中文序号映射
+# ============================================================
+
+_CHINESE_NUMBERS = [
+    "一", "二", "三", "四", "五", "六", "七", "八", "九", "十",
+    "十一", "十二", "十三", "十四", "十五",
+]
+
+
+def number_to_chinese(n: int) -> str:
+    """数字 → 中文序号（1→一, 2→二, ...），超过映射表动态生成"""
+    if 1 <= n <= len(_CHINESE_NUMBERS):
+        return _CHINESE_NUMBERS[n - 1]
+    # 超出映射表，返回数字字符串
+    return str(n)
+
+
+def chinese_to_number(chinese: str) -> int:
+    """中文序号 → 数字（一→1, 二→2, ...）"""
+    if chinese in _CHINESE_NUMBERS:
+        return _CHINESE_NUMBERS.index(chinese) + 1
+    return 0
+
+
+# ============================================================
+# 链接生成
+# ============================================================
+
+def generate_link_line(date: str, category_slug: str, filename: str, title: str) -> str:
+    """
+    生成目录链接行。
+
+    Args:
+        date: 文章日期，如 "2026-06-08 15:30:00" 或 "2026-06-08"
+        category_slug: 分类 slug，如 "tech-study"
+        filename: 文件名（不含 .md），如 "ts-ai-agent入门笔记"
+        title: 文章标题
+
+    Returns:
+        链接行，如 "- [Agent 入门笔记](/2026/06/08/tech-study/ts-ai-agent入门笔记/)"
+    """
+    # 提取日期部分
+    date_part = date.split(" ")[0]  # "2026-06-08"
+    parts = date_part.split("-")
+    if len(parts) != 3:
+        raise ValueError(f"文章日期格式异常：{date}，无法生成链接")
+    year, month, day = parts
+    return f"- [{title}](/{year}/{month}/{day}/{category_slug}/{filename}/)"
+
+
+# ============================================================
+# 链接匹配
+# ============================================================
+
+def match_link_by_filename(text: str, filename: str) -> Optional[re.Match]:
+    """用文件名匹配目录中的链接"""
+    pattern = re.compile(rf"^-\s+\[.*?\]\(/.*?/{re.escape(filename)}/\)$", re.MULTILINE)
+    return pattern.search(text)
+
+
+def count_links_by_filename(text: str, filename: str) -> int:
+    """统计文件名匹配到的链接数（用于检测重复）"""
+    pattern = re.compile(rf"^-\s+\[.*?\]\(/.*?/{re.escape(filename)}/\)$", re.MULTILINE)
+    return len(pattern.findall(text))
+
+
+# ============================================================
+# 分类名匹配
+# ============================================================
+
+def find_primary_category(
+    structure: IndexStructure, category_name: str
+) -> Optional[PrimaryCategory]:
+    """用中文分类名匹配一级分类（contains 匹配）"""
+    for cat in structure.categories:
+        if category_name in cat.title or cat.title in category_name:
+            return cat
+    return None
+
+
+def find_subcategory(
+    primary: PrimaryCategory, sub_name: str
+) -> Optional[Subcategory]:
+    """匹配二级分类（contains 匹配）"""
+    for sub in primary.subcategories:
+        if sub_name in sub.title or sub.title in sub_name:
+            return sub
+    return None
+
+
+# ============================================================
+# 编号工具
+# ============================================================
+
+def get_next_chinese_number(structure: IndexStructure) -> str:
+    """获取下一个一级分类中文序号"""
+    n = len(structure.categories) + 1
+    return number_to_chinese(n)
+
+
+def get_next_sub_number(primary: PrimaryCategory) -> str:
+    """获取下一个二级分类编号（如当前最大 1.3 → 返回 1.4）"""
+    if not primary.subcategories:
+        # 从一级分类编号提取前缀
+        primary_num = chinese_to_number(primary.number)
+        return f"{primary_num}.1"
+    last = primary.subcategories[-1]
+    # 解析 "1.3" → prefix="1", suffix=3
+    parts = last.number.split(".")
+    prefix = parts[0]
+    suffix = int(parts[1]) + 1
+    return f"{prefix}.{suffix}"
+
+
+def renumber_subcategories(primary: PrimaryCategory) -> None:
+    """重新编号二级分类（消除间隙，如 1.1, 1.3 → 1.1, 1.2）"""
+    primary_num = chinese_to_number(primary.number)
+    for idx, sub in enumerate(primary.subcategories, start=1):
+        new_number = f"{primary_num}.{idx}"
+        sub.number = new_number
+        sub.heading = f"### {new_number} {sub.title}"
+
+
+# ============================================================
 # 解析器
 # ============================================================
 
