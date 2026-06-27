@@ -14,6 +14,8 @@
 ## 本地开发
 
 ```bash
+cd blog-content
+
 # 安装依赖
 npm install
 
@@ -31,11 +33,12 @@ npm run build
 ## 目录结构
 
 ```
-source/_posts/     # 博客文章
-source/img/        # 图片资源
-_config.yml        # Hexo 配置
-_config.butterfly.yml  # 主题配置
-source/css/custom.css  # 自定义样式
+admin-dev/                         # 管理后台源码
+blog-content/source/_posts/        # 博客文章
+blog-content/source/img/           # 图片资源
+blog-content/_config.yml           # Hexo 配置
+blog-content/_config.butterfly.yml # 主题配置
+blog-content/source/css/custom.css # 自定义样式
 ```
 
 ## 文章分类

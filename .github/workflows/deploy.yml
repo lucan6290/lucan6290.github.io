@@ -33,22 +33,26 @@ jobs:
       - name: Cache node_modules
         uses: actions/cache@v4
         with:
-          path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+          path: blog-content/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('blog-content/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
 
       - name: Install dependencies
+        working-directory: blog-content
         run: npm ci
 
       - name: Install admin-dev dependencies
-        run: cd admin-dev && npm ci
+        working-directory: admin-dev/frontend
+        run: npm ci
 
       - name: Build admin dashboard
-        run: cd admin-dev && npm run build
+        working-directory: admin-dev/frontend
+        run: npm run build
 
       - name: Generate static files
-        run: npx hexo generate
+        working-directory: blog-content
+        run: npm run build
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -56,7 +60,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./public
+          path: ./blog-content/public
 
       - name: Deploy to GitHub Pages
         id: deployment

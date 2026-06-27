@@ -1,0 +1,196 @@
+:root {
+  --admin-bg: #eef3ef;
+  --admin-bg-2: #e7eee8;
+  --admin-surface: rgba(255, 255, 255, 0.84);
+  --admin-surface-solid: #ffffff;
+  --admin-line: rgba(31, 52, 43, 0.12);
+  --admin-line-strong: rgba(31, 52, 43, 0.2);
+  --admin-text: #15231d;
+  --admin-muted: #65766e;
+  --admin-brand: #256b52;
+  --admin-brand-dark: #1d563f;
+  --admin-brand-soft: rgba(37, 107, 82, 0.1);
+  --admin-accent: #a9662b;
+  --admin-accent-soft: rgba(169, 102, 43, 0.12);
+  --admin-blue: #486b86;
+  --admin-olive: #727443;
+  --admin-warn-soft: rgba(169, 102, 43, 0.12);
+  --admin-shadow-sm: 0 1px 2px rgba(21, 35, 29, 0.05);
+  --admin-shadow-md: 0 18px 46px rgba(21, 35, 29, 0.1);
+  --admin-shadow-lg: 0 28px 70px rgba(21, 35, 29, 0.14);
+  --admin-radius: 12px;
+  --admin-radius-sm: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  color: var(--admin-text);
+  background:
+    linear-gradient(135deg, rgba(37, 107, 82, 0.08) 0 12%, transparent 12% 100%),
+    linear-gradient(315deg, rgba(169, 102, 43, 0.06) 0 14%, transparent 14% 100%),
+    var(--admin-bg);
+  font-family: "PingFang SC", "Microsoft YaHei UI", "Noto Sans CJK SC", "Source Han Sans SC", "Aptos", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+textarea {
+  font-family: inherit;
+}
+
+#app {
+  background:
+    linear-gradient(rgba(21, 35, 29, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(21, 35, 29, 0.02) 1px, transparent 1px),
+    var(--admin-bg);
+  background-size: 28px 28px, 28px 28px, auto;
+}
+
+.n-card {
+  border: 1px solid var(--admin-line);
+  border-radius: var(--admin-radius);
+  box-shadow: var(--admin-shadow-sm);
+}
+
+.n-card-header {
+  font-weight: 600;
+}
+
+.n-button {
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.n-input,
+.n-base-selection {
+  border-radius: 8px;
+}
+
+.n-data-table {
+  border-radius: var(--admin-radius);
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.n-data-table .n-data-table-th {
+  color: #40534a;
+  background: #f4f7f1;
+  font-weight: 600;
+}
+
+.n-data-table .n-data-table-td {
+  border-color: rgba(41, 63, 52, 0.08);
+}
+
+.n-data-table .n-data-table-tr:hover .n-data-table-td {
+  background: #f7faf3;
+}
+
+.n-tag {
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+.n-layout,
+.n-layout-scroll-container {
+  background: transparent;
+}
+
+.n-layout-sider {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(18px);
+}
+
+.page-shell {
+  width: min(100%, 1440px);
+  margin: 0 auto;
+  padding: 28px;
+}
+
+.page-kicker {
+  margin: 0 0 6px;
+  color: var(--admin-accent);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.page-heading {
+  margin: 0;
+  color: var(--admin-text);
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.page-subtitle {
+  margin: 8px 0 0;
+  color: var(--admin-muted);
+  font-size: 14px;
+}
+
+.glass-panel {
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-line);
+  border-radius: var(--admin-radius);
+  box-shadow: var(--admin-shadow-sm);
+  backdrop-filter: blur(18px);
+}
+
+.surface-panel {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.78));
+  border: 1px solid var(--admin-line);
+  border-radius: var(--admin-radius);
+  box-shadow: var(--admin-shadow-sm);
+}
+
+.mono {
+  font-family: "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+}
+
+.n-card:hover {
+  border-color: rgba(37, 107, 82, 0.18);
+}
+
+.workspace-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(47, 112, 85, 0.35) transparent;
+}
+
+.workspace-scroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.workspace-scroll::-webkit-scrollbar-thumb {
+  background: rgba(47, 112, 85, 0.25);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+@media (max-width: 768px) {
+  .page-shell {
+    padding: 18px;
+  }
+
+  .page-heading {
+    font-size: 23px;
+  }
+}

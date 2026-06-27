@@ -1,0 +1,2 @@
+"""Git operations module."""
+
