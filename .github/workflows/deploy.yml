@@ -46,10 +46,10 @@ jobs:
         working-directory: blog-content
         run: |
           mkdir -p themes
-          curl -L https://github.com/jerryc127/hexo-theme-butterfly/archive/refs/tags/v5.5.5-b1.tar.gz -o butterfly.tar.gz
+          curl -fL https://github.com/jerryc127/hexo-theme-butterfly/archive/refs/tags/5.5.5.tar.gz -o butterfly.tar.gz
           tar -xzf butterfly.tar.gz -C themes
           rm butterfly.tar.gz
-          mv themes/hexo-theme-butterfly-5.5.5-b1 themes/butterfly
+          mv themes/hexo-theme-butterfly-5.5.5 themes/butterfly
 
       - name: Install admin-dev dependencies
         working-directory: admin-dev/frontend
