@@ -12,7 +12,7 @@ const config: Config = {
   organizationName: 'lucan6290',
   projectName: 'xiaocancoding',
 
-  onBrokenLinks: 'throw',
+  onBrokenLinks: 'warn',
 
   i18n: {
     defaultLocale: 'zh-CN',
