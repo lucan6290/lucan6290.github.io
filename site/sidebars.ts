@@ -5,30 +5,6 @@ const sidebars: SidebarsConfig = {
     'intro',
   ],
 
-  techStudySidebar: [
-    {
-      type: 'category',
-      label: '技术研习',
-      collapsed: false,
-      items: [
-        {
-          type: 'category',
-          label: 'Java 面试题',
-          collapsed: false,
-          items: [
-            {
-              type: 'category',
-              label: 'Java 基础',
-              collapsed: false,
-              items: [
-              ],
-            },
-          ],
-        },
-      ],
-    },
-  ],
-
   projectPracticeSidebar: [
     {
       type: 'category',
@@ -47,22 +23,9 @@ const sidebars: SidebarsConfig = {
     },
   ],
 
-  resourceSharingSidebar: [
-    {
-      type: 'category',
-      label: '资源分享',
-      collapsed: false,
-      items: [
-        {
-          type: 'category',
-          label: '测试',
-          collapsed: false,
-          items: [
-          ],
-        },
-      ],
-    },
-  ],
+  // 以下分类为占位结构，待补充对应文档后取消注释启用：
+  // techStudySidebar（技术研习 / Java 面试题 / Java 基础）
+  // resourceSharingSidebar（资源分享 / 测试）
 };
 
 export default sidebars;
