@@ -1,0 +1,124 @@
+.page {
+  min-height: calc(100vh - var(--ifm-navbar-height));
+  background:
+    linear-gradient(180deg, rgba(247, 249, 252, 0.95), #fff 42%),
+    radial-gradient(circle at 82% 16%, rgba(29, 78, 216, 0.12), transparent 30%);
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  gap: 48px;
+  align-items: center;
+  width: min(1080px, calc(100% - 48px));
+  min-height: 500px;
+  margin: 0 auto;
+  padding: 56px 0 40px;
+}
+
+.kicker {
+  margin: 0 0 14px;
+  color: #2563eb;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.heroText h1 {
+  margin: 0;
+  color: #111827;
+  font-size: clamp(2.7rem, 6.2vw, 4.8rem);
+  line-height: 1.02;
+  letter-spacing: 0;
+}
+
+.lead {
+  max-width: 620px;
+  margin: 22px 0 0;
+  color: #374151;
+  font-size: 1.06rem;
+  line-height: 1.8;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 28px;
+}
+
+.heroPanel {
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+  padding: 20px;
+}
+
+.panelHeader {
+  margin-bottom: 18px;
+  color: #64748b;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.86rem;
+}
+
+.panelLine {
+  border-top: 1px solid #edf1f7;
+  padding: 14px 0;
+  color: #1f2937;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.88rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  width: min(1080px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 0 0 80px;
+}
+
+.entry {
+  display: block;
+  min-height: 154px;
+  border: 1px solid #dfe6f0;
+  border-radius: 8px;
+  background: #fff;
+  padding: 22px;
+  color: inherit;
+  text-decoration: none;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.entry:hover {
+  border-color: #93b4ef;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+  transform: translateY(-2px);
+  text-decoration: none;
+}
+
+.entry h2 {
+  margin: 0 0 12px;
+  font-size: 1.2rem;
+  letter-spacing: 0;
+}
+
+.entry p {
+  margin: 0;
+  color: #4b5563;
+  line-height: 1.75;
+}
+
+@media (max-width: 900px) {
+  .hero {
+    grid-template-columns: 1fr;
+    min-height: auto;
+    padding-top: 56px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

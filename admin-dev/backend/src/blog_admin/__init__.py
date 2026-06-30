@@ -1,2 +1,0 @@
-"""Blog admin backend package."""
-

@@ -1,2 +1,0 @@
-"""Article index module."""
-

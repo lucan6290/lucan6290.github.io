@@ -1,92 +1,59 @@
-# 系统文件
-.DS_Store
-Thumbs.db
-Desktop.ini
+# ===== 依赖 =====
+node_modules/
+.pnp
+.pnp.js
 
-# 日志
+# ===== Docusaurus =====
+.docusaurus/
+build/
+.cache-loader/
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ===== 虚拟环境 =====
+.venv/
+venv/
+env/
+ENV/
+
+# ===== 日志 =====
 *.log
 logs/
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
 
-# Node.js 依赖和缓存
-node_modules/
-**/node_modules/
-.npm/
-.pnpm-store/
+# ===== 构建产物 =====
+dist/
+dist-ssr/
+*.local
 
-# Hexo 生成文件和部署目录
-blog-content/db.json
-blog-content/public/
-blog-content/.deploy*/
-blog-content/.hexo/
-blog-content/.cache/
-blog-content/.temp/
-blog-content/_multiconfig.yml
+# ===== 临时/调试 =====
+.codex-tmp/
+*.tmp
+*.bak
 
-# 管理后台前端构建产物
-admin-dev/frontend/dist/
-admin-dev/frontend/dist-ssr/
-admin-dev/frontend/.vite/
-admin-dev/frontend/.cache/
-
-# 管理后台运行时产物
-admin-dev/.cache/
-admin-dev/backend/git-platform-history.json
-
-# 主题代码（不提交到 git，通过配置文件管理）
-themes/landscape/
-themes/butterfly/
-blog-content/themes/landscape/
-blog-content/themes/butterfly/
-
-# 环境变量和本地密钥
+# ===== 环境变量（含密钥）=====
 .env
 .env.local
-.env.production
 .env.*.local
-admin-dev/frontend/.env
-admin-dev/frontend/.env.local
-admin-dev/frontend/.env.production
-admin-dev/backend/.env
-admin-dev/backend/.env.local
-admin-dev/backend/.env.production
-!.env.example
-!.env.development
-!admin-dev/frontend/.env.example
-!admin-dev/frontend/.env.development
-!admin-dev/backend/.env.example
-!admin-dev/backend/.env.development
 
-# Python 虚拟环境、缓存和测试产物
-.venv/
-venv/
-env/
-__pycache__/
-*.py[cod]
-*$py.class
-.pytest_cache/
-.ruff_cache/
-.mypy_cache/
-.coverage
-coverage.xml
-htmlcov/
-
-# IDE 和编辑器配置
+# ===== 编辑器/系统 =====
+.vscode/*
+!.vscode/extensions.json
 .idea/
-.trae/
-.vscode/
+.DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-
-# AI 工具本地配置
-.claude/
-.codex/
-.superpowers/
-.supervisor/

@@ -1,0 +1,406 @@
+.page {
+  min-height: calc(100vh - var(--ifm-navbar-height));
+  background:
+    linear-gradient(135deg, rgba(31, 111, 235, 0.08) 0 1px, transparent 1px 28px),
+    linear-gradient(180deg, #f7fafc 0%, #ffffff 38%, #f8fbff 100%);
+  color: #111827;
+  padding: 70px 24px 96px;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.72fr);
+  gap: 46px;
+  align-items: stretch;
+  width: min(1120px, 100%);
+  margin: 0 auto;
+}
+
+.heroCopy {
+  position: relative;
+  border-left: 4px solid #1f6feb;
+  padding: 10px 0 12px 30px;
+}
+
+.heroCopy::before {
+  position: absolute;
+  top: 0;
+  right: 7%;
+  width: 126px;
+  height: 126px;
+  border: 1px solid rgba(31, 111, 235, 0.22);
+  background:
+    linear-gradient(90deg, transparent 48%, rgba(31, 111, 235, 0.16) 50%, transparent 52%),
+    linear-gradient(0deg, transparent 48%, rgba(245, 158, 11, 0.18) 50%, transparent 52%);
+  content: "";
+  transform: rotate(10deg);
+}
+
+.eyebrow {
+  margin: 0 0 14px;
+  color: #1f6feb;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  position: relative;
+  max-width: 760px;
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(2.45rem, 5vw, 4.4rem);
+  line-height: 1.06;
+  letter-spacing: 0;
+  text-wrap: balance;
+}
+
+.lead {
+  max-width: 690px;
+  margin: 24px 0 0;
+  color: #364152;
+  font-size: 1.06rem;
+  line-height: 1.92;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 30px;
+}
+
+.profilePanel {
+  display: flex;
+  min-height: 410px;
+  border: 1px solid #d9e3f0;
+  border-radius: 8px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(239, 247, 255, 0.9)),
+    repeating-linear-gradient(90deg, transparent 0 18px, rgba(31, 111, 235, 0.04) 18px 19px);
+  box-shadow: 0 24px 58px rgba(15, 23, 42, 0.09);
+  padding: 26px;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.panelTop {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.panelTop > img {
+  display: grid;
+  width: 62px;
+  height: 62px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #ffffff;
+  object-fit: cover;
+  padding: 4px;
+}
+
+.panelTop strong {
+  display: block;
+  color: #111827;
+  font-size: 1.25rem;
+}
+
+.panelTop small {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+}
+
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid #dbe5f1;
+  border-bottom: 1px solid #dbe5f1;
+}
+
+.metricGrid div {
+  padding: 20px 10px;
+  text-align: center;
+}
+
+.metricGrid div + div {
+  border-left: 1px solid #dbe5f1;
+}
+
+.metricGrid strong {
+  display: block;
+  color: #0f172a;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.metricGrid span {
+  display: block;
+  margin-top: 8px;
+  color: #526173;
+  font-size: 0.84rem;
+}
+
+.stackList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.stackList span {
+  border: 1px solid #d4dfed;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.76);
+  color: #243244;
+  padding: 7px 12px;
+  font-size: 0.9rem;
+  line-height: 1.2;
+}
+
+.sectionHeader {
+  width: min(1120px, 100%);
+  margin: 76px auto 20px;
+}
+
+.sectionHeader h2,
+.contactSection h2 {
+  margin: 0;
+  color: #111827;
+  font-size: clamp(1.75rem, 3vw, 2.4rem);
+  line-height: 1.18;
+  letter-spacing: 0;
+}
+
+.focusGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  width: min(1120px, 100%);
+  margin: 0 auto;
+}
+
+.focusCard {
+  border: 1px solid #dfe7f2;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 22px;
+  transition: transform 170ms ease, border-color 170ms ease, box-shadow 170ms ease;
+}
+
+.focusCard:hover {
+  border-color: #9db9e8;
+  box-shadow: 0 18px 34px rgba(15, 23, 42, 0.08);
+  transform: translateY(-3px);
+}
+
+.cardIndex {
+  color: #d97706;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.focusCard h3 {
+  margin: 16px 0 10px;
+  color: #0f172a;
+  font-size: 1.15rem;
+  letter-spacing: 0;
+}
+
+.focusCard p {
+  margin: 0;
+  color: #4b5563;
+  font-size: 0.96rem;
+  line-height: 1.78;
+}
+
+.contactSection {
+  display: grid;
+  grid-template-columns: minmax(0, 0.86fr) minmax(360px, 1.14fr);
+  gap: 36px;
+  align-items: start;
+  width: min(1120px, 100%);
+  margin: 72px auto 0;
+  border-top: 1px solid #dfe7f2;
+  padding-top: 36px;
+}
+
+.contactSection p {
+  max-width: 520px;
+  margin: 18px 0 0;
+  color: #4b5563;
+  line-height: 1.86;
+}
+
+.contactGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.contactItem {
+  display: block;
+  border: 1px solid #dfe7f2;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 18px;
+  color: inherit;
+  text-decoration: none;
+  transition: transform 170ms ease, border-color 170ms ease, background 170ms ease;
+}
+
+.contactItem:hover {
+  border-color: #1f6feb;
+  background: #f7fbff;
+  transform: translateY(-2px);
+  text-decoration: none;
+}
+
+.contactItem span {
+  display: block;
+  color: #64748b;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.contactItem strong {
+  display: block;
+  overflow-wrap: anywhere;
+  margin-top: 8px;
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+:global(html[data-theme='dark']) .page {
+  background:
+    linear-gradient(135deg, rgba(125, 179, 255, 0.1) 0 1px, transparent 1px 28px),
+    linear-gradient(180deg, #0f172a 0%, #111827 48%, #0b1220 100%);
+  color: #e5e7eb;
+}
+
+:global(html[data-theme='dark']) .heroCopy {
+  border-left-color: #7db3ff;
+}
+
+:global(html[data-theme='dark']) .heroCopy::before {
+  border-color: rgba(125, 179, 255, 0.26);
+}
+
+:global(html[data-theme='dark']) .hero h1,
+:global(html[data-theme='dark']) .sectionHeader h2,
+:global(html[data-theme='dark']) .contactSection h2,
+:global(html[data-theme='dark']) .panelTop strong,
+:global(html[data-theme='dark']) .metricGrid strong,
+:global(html[data-theme='dark']) .focusCard h3,
+:global(html[data-theme='dark']) .contactItem strong {
+  color: #f8fafc;
+}
+
+:global(html[data-theme='dark']) .lead,
+:global(html[data-theme='dark']) .focusCard p,
+:global(html[data-theme='dark']) .contactSection p {
+  color: #cbd5e1;
+}
+
+:global(html[data-theme='dark']) .profilePanel,
+:global(html[data-theme='dark']) .focusCard,
+:global(html[data-theme='dark']) .contactItem {
+  border-color: #263244;
+  background: rgba(17, 24, 39, 0.86);
+  box-shadow: none;
+}
+
+:global(html[data-theme='dark']) .metricGrid {
+  border-color: #263244;
+}
+
+:global(html[data-theme='dark']) .metricGrid div + div {
+  border-left-color: #263244;
+}
+
+:global(html[data-theme='dark']) .panelTop small,
+:global(html[data-theme='dark']) .metricGrid span,
+:global(html[data-theme='dark']) .contactItem span {
+  color: #94a3b8;
+}
+
+:global(html[data-theme='dark']) .stackList span {
+  border-color: #334155;
+  background: rgba(15, 23, 42, 0.76);
+  color: #dbeafe;
+}
+
+:global(html[data-theme='dark']) .contactSection {
+  border-top-color: #263244;
+}
+
+:global(html[data-theme='dark']) .contactItem:hover {
+  border-color: #7db3ff;
+  background: rgba(125, 179, 255, 0.1);
+}
+
+@media (max-width: 980px) {
+  .hero,
+  .contactSection {
+    grid-template-columns: 1fr;
+  }
+
+  .profilePanel {
+    min-height: 320px;
+  }
+
+  .focusGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 46px 18px 72px;
+  }
+
+  .heroCopy {
+    border-left-width: 3px;
+    padding-left: 18px;
+  }
+
+  .heroCopy::before {
+    display: none;
+  }
+
+  .actions,
+  .contactGrid,
+  .focusGrid,
+  .metricGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    display: grid;
+  }
+
+  .profilePanel {
+    padding: 20px;
+  }
+
+  .metricGrid div + div {
+    border-top: 1px solid #dbe5f1;
+    border-left: 0;
+  }
+
+  :global(html[data-theme='dark']) .metricGrid div + div {
+    border-top-color: #263244;
+  }
+
+  .contactSection {
+    margin-top: 54px;
+  }
+}

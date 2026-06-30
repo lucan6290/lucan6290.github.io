@@ -1,1 +1,0 @@
-var f="2.44.1";function l({componentPrefix:r="N",components:u=[]}={}){const i=[];function e(t,n,s){t.component(r+n)||t.component(r+n,s)}function a(t){i.includes(t)||(i.push(t),u.forEach(n=>{const{name:s,alias:o}=n;e(t,s,n),o&&o.forEach(c=>{e(t,c,n)})}))}return{version:f,componentPrefix:r,install:a}}export{l as t};

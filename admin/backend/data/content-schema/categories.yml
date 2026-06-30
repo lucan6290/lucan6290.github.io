@@ -1,0 +1,338 @@
+categories:
+- type: docs
+  slug: tech-study
+  path:
+  - tech-study
+  label: 技术研习
+  aliases:
+  - 技术学习
+  - ts
+  description: 长期技术学习笔记、知识体系沉淀与专题研习。
+  cover: /img/covers/tech-study.svg
+  sort_order: 10
+  enabled: true
+- type: docs
+  slug: java-interview
+  path:
+  - tech-study
+  - java-interview
+  label: Java 面试
+  aliases:
+  - Java面试
+  - 面试复习
+  description: Java 面试知识点、题库与复习路线。
+  cover: null
+  sort_order: 20
+  enabled: true
+- type: docs
+  slug: java-basic
+  path:
+  - tech-study
+  - java-interview
+  - java-basic
+  label: Java 基础
+  aliases:
+  - Java基础
+  description: Java 基础语法、集合、并发、JVM 等核心知识。
+  cover: null
+  sort_order: 30
+  enabled: true
+- type: docs
+  slug: project-practice
+  path:
+  - project-practice
+  label: 项目实战
+  aliases:
+  - 项目实践
+  - pp
+  description: 项目建设、工程规范、功能实现与实践复盘。
+  cover: /img/covers/project-practice.svg
+  sort_order: 30
+  enabled: true
+- type: docs
+  slug: development-standards
+  path:
+  - project-practice
+  - development-standards
+  label: 开发规范
+  aliases:
+  - Development_Specifications
+  - development-specifications
+  - 开发规范
+  description: 后端、前端、文档与工程协作规范。
+  cover: null
+  sort_order: 10
+  enabled: true
+- type: docs
+  slug: resource-sharing
+  path:
+  - resource-sharing
+  label: 资源分享
+  aliases:
+  - rs
+  description: 工具、素材、学习资料与可复用资源整理。
+  cover: /img/covers/resource-sharing.svg
+  sort_order: 50
+  enabled: true
+- type: blog
+  slug: tech-study
+  path:
+  - tech-study
+  label: 技术研习
+  aliases:
+  - 技术学习
+  - ts
+  description: 技术学习、工具实践与专题探索类博客。
+  cover: /img/covers/tech-study.svg
+  sort_order: 10
+  enabled: true
+- type: blog
+  slug: ai-exploration
+  path:
+  - tech-study
+  - ai-exploration
+  label: AI 探索
+  aliases:
+  - AI 探索
+  - AI探索
+  - AI
+  - claude
+  - ai
+  - model
+  - AI编程
+  - AI编程工具
+  description: AI 模型、Agent、AI 编程与工具体验。
+  cover: null
+  sort_order: 1
+  enabled: true
+- type: blog
+  slug: jetson-orin-nano
+  path:
+  - tech-study
+  - jetson-orin-nano
+  label: Jetson Orin Nano
+  aliases:
+  - Jetson_Orin_NANO
+  - jetson
+  description: Jetson Orin Nano 相关实践记录。
+  cover: null
+  sort_order: 2
+  enabled: true
+- type: blog
+  slug: getting-started
+  path:
+  - tech-study
+  - getting-started
+  label: 入门笔记
+  aliases:
+  - 入门笔记
+  - git
+  description: 技术工具和基础能力的入门记录。
+  cover: null
+  sort_order: 3
+  enabled: true
+- type: blog
+  slug: pitfall-review
+  path:
+  - pitfall-review
+  label: 踩坑复盘
+  aliases:
+  - 踩坑复盘
+  - pr
+  - 问题排查
+  - 经验复盘
+  description: 问题定位、修复过程与经验教训。
+  cover: /img/covers/pitfall-review.svg
+  sort_order: 20
+  enabled: true
+- type: blog
+  slug: environment-config
+  path:
+  - pitfall-review
+  - environment-config
+  label: 环境配置
+  aliases:
+  - 环境配置
+  - vmware
+  - VMware
+  - 虚拟机
+  - Linux
+  - 共享目录
+  description: 系统、虚拟机、开发环境和工具链配置记录。
+  cover: null
+  sort_order: 10
+  enabled: true
+- type: blog
+  slug: project-practice
+  path:
+  - project-practice
+  label: 项目实战
+  aliases:
+  - 项目实践
+  - pp
+  description: 项目建设、工程规范与功能实现记录。
+  cover: /img/covers/project-practice.svg
+  sort_order: 30
+  enabled: true
+- type: blog
+  slug: development-standards
+  path:
+  - project-practice
+  - development-standards
+  label: 开发规范
+  aliases:
+  - Development_Specifications
+  - development-specifications
+  - 开发规范
+  description: 项目开发规范、协作规范与工程规则。
+  cover: null
+  sort_order: 10
+  enabled: true
+- type: blog
+  slug: project-intro
+  path:
+  - project-practice
+  - project-intro
+  label: 项目介绍
+  aliases:
+  - 项目介绍
+  - intro
+  description: 项目背景、目标、规划与阶段总结。
+  cover: null
+  sort_order: 10
+  enabled: true
+- type: blog
+  slug: feature-implementation
+  path:
+  - project-practice
+  - feature-implementation
+  label: 功能实现
+  aliases:
+  - 功能实现
+  - feature
+  description: 具体功能设计、开发与落地记录。
+  cover: null
+  sort_order: 20
+  enabled: true
+- type: blog
+  slug: growth-essay
+  path:
+  - growth-essay
+  label: 成长随笔
+  aliases:
+  - 成长随笔
+  - ge
+  - 行业观察
+  description: 个人成长、行业观察、写作思考与长期复盘。
+  cover: /img/covers/growth-essay.svg
+  sort_order: 40
+  enabled: true
+- type: blog
+  slug: ai-thinking
+  path:
+  - growth-essay
+  - ai-thinking
+  label: AI 思考
+  aliases:
+  - AI 思考
+  - AI思考
+  - AI正在重构你的行业
+  description: 关于 AI、行业变化和个人工作流的思考。
+  cover: null
+  sort_order: 10
+  enabled: true
+- type: blog
+  slug: blog-building
+  path:
+  - growth-essay
+  - blog-building
+  label: 博客建设
+  aliases:
+  - 博客建设
+  - 博客搭建
+  - 博客架构
+  - 技术站
+  - 知识库
+  - blog
+  - hexo
+  - Hexo
+  - Docusaurus
+  description: 博客、技术站与知识库建设过程记录。
+  cover: null
+  sort_order: 20
+  enabled: true
+- type: blog
+  slug: writing-method
+  path:
+  - growth-essay
+  - writing-method
+  label: 写作方法
+  aliases:
+  - 写作方法
+  - 写作指南
+  - 博客写作
+  description: 写作流程、文章结构、表达方法与内容生产规范。
+  cover: null
+  sort_order: 30
+  enabled: true
+- type: blog
+  slug: automation
+  path:
+  - growth-essay
+  - automation
+  label: 自动化实践
+  aliases:
+  - 自动化
+  - 创建文章
+  - 命令记录
+  description: 自动化脚本、命令封装与效率工具实践。
+  cover: null
+  sort_order: 40
+  enabled: true
+- type: blog
+  slug: resource-sharing
+  path:
+  - resource-sharing
+  label: 资源分享
+  aliases:
+  - rs
+  description: 工具、素材、学习资料与可复用资源整理。
+  cover: /img/covers/resource-sharing.svg
+  sort_order: 50
+  enabled: true
+- type: blog
+  slug: tool-recommendation
+  path:
+  - resource-sharing
+  - tool-recommendation
+  label: 工具推荐
+  aliases:
+  - 工具推荐
+  - tool
+  description: 工具推荐、效率工具与使用体验。
+  cover: null
+  sort_order: 10
+  enabled: true
+- type: blog
+  slug: learning-resource
+  path:
+  - resource-sharing
+  - learning-resource
+  label: 学习资源
+  aliases:
+  - 学习资源
+  - resource
+  description: 学习资料、课程、文档和资源整理。
+  cover: null
+  sort_order: 20
+  enabled: true
+- type: docs
+  slug: 测试
+  path:
+  - resource-sharing
+  - 测试
+  label: 测试
+  description: null
+  cover: null
+  sort_order: 30
+  enabled: true
