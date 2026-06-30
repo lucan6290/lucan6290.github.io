@@ -35,8 +35,9 @@ pnpm-debug.log*
 dist/
 dist-ssr/
 *.local
+*.tsbuildinfo
 
-# ===== 临时/调试 =====
+# ===== 临时 / 调试 =====
 .codex-tmp/
 *.tmp
 *.bak
@@ -46,7 +47,7 @@ dist-ssr/
 .env.local
 .env.*.local
 
-# ===== 编辑器/系统 =====
+# ===== 编辑器 / 系统 =====
 .vscode/*
 !.vscode/extensions.json
 .idea/
