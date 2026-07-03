@@ -44,7 +44,7 @@ export default function About(): React.JSX.Element {
               箓川码笺用来记录学习笔记、踩坑经历、技术分享以及求职心得，让成长不只停留在当下。
             </p>
             <div className={styles.actions}>
-              <Link className="button button--primary button--lg" to="/docs/intro">
+              <Link className="button button--primary button--lg" to="/docs/">
                 进入知识库
               </Link>
               <Link className="button button--secondary button--lg" to="/blog">

@@ -7,7 +7,7 @@ const entries = [
   {
     title: '长期知识库',
     text: '沉淀技术体系、系列教程、面试复盘和可反复查阅的笔记。',
-    href: '/docs/intro',
+    href: '/docs/',
   },
   {
     title: '阶段博客',
@@ -36,7 +36,7 @@ export default function Home(): React.JSX.Element {
               将它们书写成珍贵的技术笺册，沉淀为属于自己的成长宝藏。
             </p>
             <div className={styles.actions}>
-              <Link className="button button--primary button--lg" to="/docs/intro">
+              <Link className="button button--primary button--lg" to="/docs/">
                 进入知识库
               </Link>
               <Link className="button button--secondary button--lg" to="/blog">

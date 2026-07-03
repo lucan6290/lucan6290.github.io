@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, h, ref } from 'vue'
+import { computed, h, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   NConfigProvider,
@@ -11,9 +11,13 @@ import {
   type GlobalThemeOverrides,
   type MenuOption
 } from 'naive-ui'
+import { clearAuthSession } from '@/utils/auth'
 
 const router = useRouter()
 const isAppSiderCollapsed = ref(false)
+const isCompactViewport = ref(false)
+const isLoginRoute = computed(() => router.currentRoute.value.path === '/login')
+let compactMediaQuery: MediaQueryList | null = null
 
 const themeOverrides: GlobalThemeOverrides = {
   common: {
@@ -128,13 +132,40 @@ function handleMenuClick(key: string) {
 function backToBlog() {
   window.location.href = '/'
 }
+
+function logout() {
+  clearAuthSession()
+  router.replace('/login')
+}
+
+function updateCompactViewport(event: MediaQueryList | MediaQueryListEvent) {
+  isCompactViewport.value = event.matches
+}
+
+onMounted(() => {
+  compactMediaQuery = window.matchMedia('(max-width: 1180px)')
+  updateCompactViewport(compactMediaQuery)
+  compactMediaQuery.addEventListener('change', updateCompactViewport)
+})
+
+onBeforeUnmount(() => {
+  compactMediaQuery?.removeEventListener('change', updateCompactViewport)
+})
+
+watch(isCompactViewport, (compact) => {
+  if (compact) {
+    isAppSiderCollapsed.value = true
+  }
+})
 </script>
 
 <template>
   <n-config-provider :theme-overrides="themeOverrides">
     <n-message-provider>
       <n-dialog-provider>
-        <n-layout has-sider class="admin-layout">
+        <router-view v-if="isLoginRoute" />
+
+        <n-layout v-else has-sider class="admin-layout">
           <n-layout-sider
             v-model:collapsed="isAppSiderCollapsed"
             bordered
@@ -175,8 +206,16 @@ function backToBlog() {
             <div class="sider-footer">
               <div class="sider-status">
                 <span class="status-dot"></span>
-                <span>本地管理模式</span>
+                <span>管理员模式</span>
               </div>
+              <n-button
+                size="small"
+                block
+                class="logout-button"
+                @click="logout"
+              >
+                退出登录
+              </n-button>
               <n-button
                 size="small"
                 type="primary"
@@ -208,7 +247,7 @@ function backToBlog() {
 <style scoped>
 .admin-layout {
   height: 100vh;
-  min-width: 1024px;
+  min-width: 0;
 }
 
 .app-sider {
@@ -343,6 +382,10 @@ function backToBlog() {
   font-weight: 700;
 }
 
+.logout-button {
+  margin-bottom: 8px;
+}
+
 .status-dot {
   width: 8px;
   height: 8px;
@@ -353,6 +396,7 @@ function backToBlog() {
 
 :deep(.app-content) {
   height: 100vh;
+  min-width: 0;
   overflow: auto;
 }
 
@@ -393,10 +437,10 @@ function backToBlog() {
   }
 
   .app-sider {
-    width: 72px !important;
-    min-width: 72px !important;
-    max-width: 72px !important;
-    flex: 0 0 72px !important;
+    width: 64px !important;
+    min-width: 64px !important;
+    max-width: 64px !important;
+    flex: 0 0 64px !important;
   }
 
   .sider-header {
@@ -413,8 +457,8 @@ function backToBlog() {
   }
 
   .brand-mark {
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
   }
 
   :deep(.n-menu) {

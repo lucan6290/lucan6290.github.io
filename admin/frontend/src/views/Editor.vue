@@ -51,6 +51,9 @@ const api = getAPI()
 // 文章状态
 const articlePath = ref<string>('')
 const articleFileStem = ref<string>('')
+const currentArticleType = ref<'docs' | 'blog' | undefined>(undefined)
+const currentCategoryPath = ref<string[]>([])
+const currentCategoryLabels = ref<string[]>([])
 const articleContent = ref<string>('')
 const originalContent = ref<string>('')
 const frontMatter = ref<FrontMatter>({
@@ -73,7 +76,7 @@ const dateTimestamp = ref<number>(Date.now())
 
 const categoryOptions = computed<SelectOption[]>(() =>
   categoriesStore.allCategories
-    .filter((category) => category.enabled)
+    .filter((category) => category.enabled && (!currentArticleType.value || category.type === currentArticleType.value))
     .map((category) => ({
       label: category.name,
       value: category.slug
@@ -99,8 +102,19 @@ const categorySlugToLabel = computed(() => {
 
 // 解析当前一级分类的英文 slug（兼容中文名和英文 slug）
 const primaryCategorySlug = computed(() => {
+  if (currentArticleType.value === 'blog') {
+    return currentCategoryPath.value[0] || ''
+  }
   const raw = frontMatter.value.categories?.[0] || ''
   return categoryLabelToSlug.value[raw] || raw
+})
+
+const primaryCategoryLabel = computed(() => {
+  if (currentArticleType.value === 'blog') {
+    return currentCategoryLabels.value[0] || categorySlugToLabel.value[primaryCategorySlug.value] || primaryCategorySlug.value
+  }
+  const raw = frontMatter.value.categories?.[0] || ''
+  return categorySlugToLabel.value[raw] || raw
 })
 
 // 解析当前二级分类的英文 slug（兼容中文名和英文 slug）
@@ -268,6 +282,9 @@ async function loadArticle() {
 
   try {
     const detail = await api.getPost(path) as PostDetail
+    currentArticleType.value = detail.type
+    currentCategoryPath.value = detail.categoryPath || []
+    currentCategoryLabels.value = detail.categories || []
     articleFileStem.value = detail.filename || detail.relativePath?.split('/').pop()?.replace(/\.[^.]+$/, '') || ''
     articleContent.value = detail.content || ''
     originalContent.value = detail.content || ''
@@ -716,12 +733,17 @@ function handleTitleChange(value: string) {
 
 // 一级分类变化（select 传入英文 slug，需转为中文存入 front matter）
 function handleCategoryChange(value: string) {
+  if (currentArticleType.value === 'blog') {
+    message.info('blog 分类由文件所在一级目录管理，请使用移动文章功能调整分类')
+    return
+  }
   frontMatter.value.categories = [categorySlugToLabel.value[value] || value]
   updateContent()
 }
 
 // 二级分类变化（select 传入英文 slug，需转为中文存入 front matter）
 function handleSubCategoryChange(value: string) {
+  if (currentArticleType.value === 'blog') return
   const mainZh = frontMatter.value.categories?.[0] || ''
   const subZh = subCategorySlugToZh.value[value] || value
   frontMatter.value.categories = [mainZh, subZh]
@@ -873,15 +895,15 @@ onUnmounted(() => {
       <div class="metadata-tags">
         <n-space>
           <n-tag
-            v-if="frontMatter.categories?.[0]"
+            v-if="currentArticleType === 'blog' ? primaryCategorySlug : frontMatter.categories?.[0]"
             type="primary"
-            closable
+            :closable="currentArticleType !== 'blog'"
             @close="frontMatter.categories = []"
           >
-            {{ categoryOptions.find(o => o.value === frontMatter.categories?.[0])?.label || frontMatter.categories[0] }}
+            {{ currentArticleType === 'blog' ? primaryCategoryLabel : (categoryOptions.find(o => o.value === frontMatter.categories?.[0])?.label || frontMatter.categories?.[0]) }}
           </n-tag>
           <n-tag
-            v-if="frontMatter.categories?.[1]"
+            v-if="currentArticleType !== 'blog' && frontMatter.categories?.[1]"
             type="info"
             closable
             @close="frontMatter.categories = [frontMatter.categories[0]]"
@@ -917,23 +939,15 @@ onUnmounted(() => {
           </n-form-item>
           <n-form-item label="更新日期">
             <n-date-picker
-              :value="frontMatter.updated ? new Date(frontMatter.updated.replace(' ', 'T')).getTime() : null"
+              :value="frontMatter.last_update?.date ? new Date(frontMatter.last_update.date.replace(' ', 'T')).getTime() : null"
               type="datetime"
               format="yyyy-MM-dd HH:mm:ss"
               style="width: 240px;"
-              clearable
-              @update:value="(v: number | null) => {
-                if (v) {
-                  const d = new Date(v)
-                  frontMatter.updated = d.toISOString().replace('T', ' ').slice(0, 19)
-                } else {
-                  frontMatter.updated = undefined
-                }
-                updateContent()
-              }"
+              disabled
+              placeholder="保存时自动更新"
             />
           </n-form-item>
-          <n-form-item label="一级分类">
+          <n-form-item v-if="currentArticleType === 'docs'" label="一级分类">
             <n-select
               :value="primaryCategorySlug || null"
               :options="categoryOptions"
@@ -941,13 +955,21 @@ onUnmounted(() => {
               @update:value="handleCategoryChange"
             />
           </n-form-item>
-          <n-form-item label="二级分类">
+          <n-form-item v-if="currentArticleType === 'docs'" label="二级分类">
             <n-select
               :value="frontMatter.categories?.[1] ? (subCategoryOptions.find(o => o.label === frontMatter.categories[1])?.value ?? frontMatter.categories[1]) : null"
               :options="subCategoryOptions"
               style="width: 200px;"
               clearable
               @update:value="handleSubCategoryChange"
+            />
+          </n-form-item>
+          <n-form-item v-else label="一级分类">
+            <n-input
+              :value="primaryCategoryLabel"
+              style="width: 240px;"
+              disabled
+              placeholder="由文件所在目录决定"
             />
           </n-form-item>
           <n-form-item label="标签">
@@ -1270,6 +1292,15 @@ onUnmounted(() => {
   color: #1f2d26;
   font-size: 15px;
   line-height: 1.8;
+}
+
+.editor-wrapper :deep(.markdown-body img) {
+  display: block;
+  margin: 16px auto;
+  max-width: 70%;
+  max-height: 480px;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(21, 35, 29, 0.1);
 }
 
 .editor-wrapper :deep(.bytemd-mermaid) {

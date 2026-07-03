@@ -10,7 +10,9 @@ import type {
   ArticleMoveOptions,
   AssetCleanupResult,
   CategoryCreateDTO,
+  CategoryDeleteOptions,
   CategoryDTO,
+  CategoryRenameOptions,
   ContentSchemaDTO,
   FetchWebRequestDTO,
   FetchWebResultDTO,
@@ -39,6 +41,7 @@ import type {
   SearchResultDTO,
   SidebarStatusDTO,
   SiteValidationResultDTO,
+  DocusaurusConfigStatusDTO,
   TagCreateDTO,
   TagDTO,
   TagSyncResultDTO
@@ -63,6 +66,7 @@ import type {
 import { resolveIssueStatus } from '@/utils/postDisplay'
 import { LocalAPIErrorCode as ErrorCode } from '@/types/local'
 import { parseFrontMatter, stripLeadingBom } from '@/utils/frontmatter'
+import { clearAuthSession, getAuthToken } from '@/utils/auth'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:18000'
 const API_PREFIX = '/api/v1'
@@ -95,6 +99,11 @@ interface ArticleSummaryDTO {
   type_label?: string
   title: string | null
   description: string | null
+  date?: string | null
+  last_update?: {
+    date?: string
+    author?: string
+  } | null
   relative_path: string
   route: string
   slug: string
@@ -170,6 +179,13 @@ interface TaskDTO {
   exit_code?: number | null
   logs?: string
   error?: Record<string, unknown> | null
+}
+
+interface LoginResponseDTO {
+  access_token: string
+  token_type: string
+  expires_at: number
+  username: string
 }
 
 function createAPIError(
@@ -329,7 +345,8 @@ function mapSummaryToPost(article: ArticleSummaryDTO, categoryLabelMap?: Map<str
     categories: categoryLabels.length > 0 ? categoryLabels : [article.category_label || article.type],
     tags: article.tags || [],
     authors: article.authors || [],
-    date: article.updated_at,
+    date: article.date || article.updated_at,
+    lastUpdate: article.last_update || undefined,
     status: displayStatus.value === 'error' ? 'wip' : 'published',
     description: article.description || undefined,
     lastModified: article.updated_at,
@@ -500,10 +517,24 @@ class LocalAPIClient {
     this.client = axios.create(LOCAL_API_CONFIG)
     this.retryConfig = DEFAULT_RETRY_CONFIG
 
+    this.client.interceptors.request.use(config => {
+      const token = getAuthToken()
+      if (token) {
+        config.headers = {
+          ...config.headers,
+          Authorization: `Bearer ${token}`
+        } as typeof config.headers
+      }
+      return config
+    })
+
     this.client.interceptors.response.use(
       response => response,
       (error: AxiosError | LocalAPIError) => {
         if (axios.isAxiosError(error)) {
+          if (error.response?.status === 401) {
+            clearAuthSession()
+          }
           return Promise.reject(extractErrorFromAxios(error))
         }
         return Promise.reject(error)
@@ -524,6 +555,17 @@ class LocalAPIClient {
       includeCounts: false
     })
     return buildCategoryLabelMap(categories)
+  }
+
+  async loginAdmin(username: string, password: string): Promise<LoginResponseDTO> {
+    return this.request<LoginResponseDTO>({
+      method: 'POST',
+      url: apiPath('/auth/login'),
+      data: {
+        username,
+        password
+      }
+    })
   }
 
   async getPosts(): Promise<PostInfo[]> {
@@ -588,11 +630,12 @@ class LocalAPIClient {
         slug: sanitizePathSegment(options?.slug || fallbackSlug),
         description: options?.description || null,
         body: content || '',
-        category_path: type === 'docs' ? categoryPath : [],
+        category_path: categoryPath,
         sidebar_position: options?.sidebarPosition ?? null,
         authors: type === 'blog' ? authors : [],
-        tags: type === 'blog' ? tags.length ? tags : ['note'] : [],
-        date: type === 'blog' ? options?.date || null : null
+        tags: type === 'blog' ? tags : [],
+        date: options?.date || null,
+        last_update: type === 'blog' ? options?.lastUpdate || null : null
       }
     })
     this.loadedVersions.set(detail.id, detail.version)
@@ -773,6 +816,28 @@ class LocalAPIClient {
     })
   }
 
+  async renameCategory(categoryId: string, options: CategoryRenameOptions): Promise<MutationPlanDTO> {
+    return this.request<MutationPlanDTO>({
+      method: 'POST',
+      url: apiPath(`/categories/${encodeURIComponent(categoryId)}/rename`),
+      data: {
+        target_slug: options.targetSlug,
+        target_label: options.targetLabel ?? null,
+        replace_links: options.replaceLinks ?? true,
+        dry_run: options.dryRun ?? true,
+        confirm: options.confirm ?? false
+      }
+    })
+  }
+
+  async deleteCategory(categoryId: string, options?: CategoryDeleteOptions): Promise<MutationPlanDTO> {
+    return this.request<MutationPlanDTO>({
+      method: 'DELETE',
+      url: apiPath(`/categories/${encodeURIComponent(categoryId)}`),
+      params: mutationParams(options)
+    })
+  }
+
   async getCategoryRegistry(): Promise<CategoryRegistryItem[]> {
     const categories = await this.getCategories({
       includeEmpty: true,
@@ -830,6 +895,40 @@ class LocalAPIClient {
       url: apiPath('/sidebars/sync'),
       data: {
         mode: options?.mode || 'append_missing',
+        ...mutationBody(options)
+      }
+    })
+  }
+
+  async syncDocsIndex(options?: MutationOptions): Promise<MutationPlanDTO> {
+    return this.request<MutationPlanDTO>({
+      method: 'POST',
+      url: apiPath('/sidebars/docs-index/sync'),
+      data: mutationBody(options)
+    })
+  }
+
+  async syncBlogIndex(options?: MutationOptions): Promise<MutationPlanDTO> {
+    return this.request<MutationPlanDTO>({
+      method: 'POST',
+      url: apiPath('/sidebars/blog-index/sync'),
+      data: mutationBody(options)
+    })
+  }
+
+  async getDocusaurusConfigStatus(): Promise<DocusaurusConfigStatusDTO> {
+    return this.request<DocusaurusConfigStatusDTO>({
+      method: 'GET',
+      url: apiPath('/docusaurus-config/status')
+    })
+  }
+
+  async syncDocusaurusConfig(options?: MutationOptions & { mode?: 'append_missing_top' | 'remove_broken' | 'all' | string }): Promise<MutationPlanDTO> {
+    return this.request<MutationPlanDTO>({
+      method: 'POST',
+      url: apiPath('/docusaurus-config/sync'),
+      data: {
+        mode: options?.mode || 'all',
         ...mutationBody(options)
       }
     })

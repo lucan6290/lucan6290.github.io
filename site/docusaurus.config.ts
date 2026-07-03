@@ -34,8 +34,10 @@ const config: Config = {
           path: 'blog',
           routeBasePath: 'blog',
           showReadingTime: true,
+          exclude: ['**/_*.{js,jsx,ts,tsx,md,mdx}', '**/_*/**', '**/index.{md,mdx}'],
           onUntruncatedBlogPosts: 'ignore',
           postsPerPage: 8,
+          blogListComponent: '@site/src/components/BlogHomePage',
           blogSidebarTitle: '博客目录',
           blogSidebarCount: 'ALL',
           blogTitle: '博客',
@@ -46,6 +48,10 @@ const config: Config = {
         },
       } satisfies Preset.Options,
     ],
+  ],
+
+  plugins: [
+    './plugins/blog-category-pages',
   ],
 
   themeConfig: {
@@ -63,22 +69,23 @@ const config: Config = {
           position: 'left',
           items: [
             {
-              label: '知识库首页',
-              to: '/docs/intro',
+              label: '首页',
+              to: '/docs/',
             },
             {
               label: '技术研习',
-              to: '/docs/tech-study/java-interview/java-basic/java-vs-cpp',
+              to: '/docs/tech-study',
             },
             {
               label: '项目实战',
-              to: '/docs/project-practice/site-build',
+              to: '/docs/project-practice',
             },
             {
               label: '资源分享',
-              to: '/docs/resource-sharing/toolbox',
+              to: '/docs/resource-sharing',
             },
-          ],
+          
+],
         },
         {
           type: 'dropdown',
@@ -90,36 +97,12 @@ const config: Config = {
               to: '/blog',
             },
             {
-              label: 'AI 编程工具真实体验',
-              to: '/blog/AI编程工具真实体验',
+              label: 'AI观察',
+              to: '/blog/AI观察',
             },
             {
-              label: 'AI 正在重构行业',
-              to: '/blog/AI正在重构你的行业',
-            },
-            {
-              label: '博客架构与长期规划',
-              to: '/blog/博客架构与长期发展规划',
-            },
-            {
-              label: '博客写作完整指南',
-              to: '/blog/博客写作完整指南',
-            },
-            {
-              label: '定制创建文章命令',
-              to: '/blog/定制创建文章命令记录',
-            },
-            {
-              label: 'Hexo 博客搭建记录',
-              to: '/blog/Hexo博客搭建记录',
-            },
-            {
-              label: '重建个人技术站',
-              to: '/blog/重建个人技术站',
-            },
-            {
-              label: '虚拟机配置共享目录',
-              to: '/blog/虚拟机配置共享目录',
+              label: '随笔感想',
+              to: '/blog/随笔感想',
             },
           ],
         },
@@ -134,7 +117,7 @@ const config: Config = {
             },
             {
               label: '个人技术站',
-              to: '/docs/project-practice/site-build',
+              to: '/docs/project-practice',
             },
           ],
         },
@@ -170,7 +153,7 @@ const config: Config = {
         {
           title: '内容',
           items: [
-            {label: '知识库', to: '/docs/intro'},
+            {label: '知识库', to: '/docs/'},
             {label: '博客', to: '/blog'},
             {label: '项目', to: '/projects'},
           ],

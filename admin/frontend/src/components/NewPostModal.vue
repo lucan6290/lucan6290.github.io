@@ -43,7 +43,7 @@ const slug = ref('')
 const description = ref('')
 const primaryCategory = ref('')
 const secondaryCategory = ref('')
-const sidebarPosition = ref<number | null>(null)
+const sidebarPosition = ref<number | null>(1)
 const authorsText = ref('lucan')
 const tagValues = ref<string[]>([])
 const tagOptions = ref<SelectOption[]>([])
@@ -99,10 +99,17 @@ const categoryPath = computed(() =>
     .filter(Boolean)
 )
 
+const articleCategoryPath = computed(() => {
+  if (articleType.value === 'blog') {
+    return primaryCategory.value.trim() ? [primaryCategory.value.trim()] : []
+  }
+  return categoryPath.value
+})
+
 const categoryError = computed(() => {
-  if (articleType.value !== 'docs') return ''
   if (!primaryCategory.value.trim()) return '请选择或输入一级分类'
-  for (const item of categoryPath.value) {
+  if (articleType.value === 'blog' && secondaryCategory.value.trim()) return 'blog 只允许一级分类'
+  for (const item of articleCategoryPath.value) {
     const error = validatePathSegment(item, '分类不能为空')
     if (error) return `分类名称不合法：${item}（${error}）`
   }
@@ -120,7 +127,6 @@ const tags = computed(() =>
 const blogError = computed(() => {
   if (articleType.value !== 'blog') return ''
   if (authors.value.length === 0) return 'blog 文章必须填写作者'
-  if (tags.value.length === 0) return 'blog 文章必须填写标签'
   if (!date.value || !/^\d{4}-\d{2}-\d{2}/.test(date.value)) return '请选择发布时间'
   return ''
 })
@@ -134,7 +140,7 @@ const targetPath = computed(() => {
   if (articleType.value === 'docs') {
     return [...categoryPath.value, `${slug.value.trim()}.md`].join('/')
   }
-  return `${date.value || 'YYYY-MM-DD'}-${slug.value.trim()}.md`
+  return [...articleCategoryPath.value, `${slug.value.trim()}.md`].join('/')
 })
 
 watch(
@@ -172,7 +178,7 @@ function resetForm() {
   description.value = ''
   primaryCategory.value = ''
   secondaryCategory.value = ''
-  sidebarPosition.value = null
+  sidebarPosition.value = 1
   authorsText.value = 'lucan'
   tagValues.value = []
   dateTimestamp.value = Date.now()
@@ -198,6 +204,60 @@ function validatePathSegment(value: string, emptyMessage: string): string {
   if (/[.\s]$/.test(normalized)) return '不能以空格或点号结尾'
   if (normalized.length > 120) return '不能超过 120 个字符'
   return ''
+}
+
+function categoryAlreadyExists(error: unknown): boolean {
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === 'object' && error && 'message' in error
+      ? String((error as { message?: unknown }).message || '')
+      : String(error || '')
+  return message.includes('分类已存在') || message.includes('category_already_exists')
+}
+
+async function ensureArticleCategoryPath(api: ReturnType<typeof getAPI>, type: 'docs' | 'blog', path: string[]): Promise<void> {
+  if (!path.length) return
+  if (!api.createCategory) {
+    throw new Error('当前 API 不支持自动创建分类')
+  }
+
+  await categoriesStore.fetchRegistry(true)
+  const primarySlug = path[0]
+  const secondarySlug = path[1]
+  const primary = categoriesStore.allCategories.find(
+    category => category.type === type && category.slug === primarySlug
+  )
+
+  if (!primary) {
+    try {
+      await api.createCategory({
+        type,
+        path: [primarySlug],
+        label: primarySlug
+      })
+    } catch (error) {
+      if (!categoryAlreadyExists(error)) throw error
+    }
+    await categoriesStore.fetchRegistry(true)
+  }
+
+  if (type === 'blog' || !secondarySlug) return
+
+  const latestPrimary = categoriesStore.allCategories.find(
+    category => category.type === type && category.slug === primarySlug
+  )
+  const secondaryExists = latestPrimary?.subCategories.some(sub => sub.slug === secondarySlug)
+  if (secondaryExists) return
+
+  try {
+    await api.createCategory({
+      type,
+      path: [primarySlug, secondarySlug],
+      label: secondarySlug
+    })
+  } catch (error) {
+    if (!categoryAlreadyExists(error)) throw error
+  }
 }
 
 function formatLocalDateTime(timestamp: number): string {
@@ -246,22 +306,29 @@ async function handleCreate() {
   loading.value = true
   try {
     const api = getAPI()
+    const targetCategoryPath = articleCategoryPath.value
+    await ensureArticleCategoryPath(api, articleType.value, targetCategoryPath)
+
     const detail = await api.createPost('', '', {
       type: articleType.value,
       title: title.value.trim(),
       slug: slug.value.trim(),
       description: description.value.trim() || null,
-      categoryPath: articleType.value === 'docs' ? categoryPath.value : [],
+      categoryPath: targetCategoryPath,
       sidebarPosition: articleType.value === 'docs' ? sidebarPosition.value : null,
-      authors: articleType.value === 'blog' ? authors.value : [],
+      authors: authors.value,
       tags: articleType.value === 'blog' ? tags.value : [],
-      date: articleType.value === 'blog' ? date.value || null : null
+      date: date.value || null,
+      lastUpdate: articleType.value === 'blog'
+        ? {
+            date: date.value || undefined,
+            author: authors.value[0] || 'lucan'
+          }
+        : null
     }) as PostDetail
 
     message.success('文章创建成功')
-    if (articleType.value === 'docs') {
-      categoriesStore.fetchRegistry(true).catch(() => undefined)
-    }
+    categoriesStore.fetchRegistry(true).catch(() => undefined)
     handleClose()
     router.push({
       path: '/editor',
@@ -297,13 +364,13 @@ async function handleCreate() {
           <NInputNumber v-model:value="sidebarPosition" :min="1" clearable placeholder="可选" />
         </NFormItem>
 
-        <NFormItem v-if="articleType === 'blog'" label="发布时间">
+        <NFormItem :label="articleType === 'blog' ? '发布时间' : '创建时间'">
           <NDatePicker
             :value="dateTimestamp"
             type="datetime"
             clearable
             format="yyyy-MM-dd HH:mm"
-            placeholder="选择发布时间"
+            :placeholder="articleType === 'blog' ? '选择发布时间' : '选择创建时间'"
             @update:value="handleDateChange"
           />
         </NFormItem>
@@ -322,10 +389,9 @@ async function handleCreate() {
       </NFormItem>
 
       <NFormItem
-        v-if="articleType === 'docs'"
         label="一级分类"
         :validation-status="categoryError ? 'error' : undefined"
-        :feedback="categoryError || '可选择现有分类，也可直接输入新分类'"
+        :feedback="categoryError || (articleType === 'blog' ? 'blog 只使用一级分类目录' : '可选择现有分类，也可直接输入新分类')"
       >
         <NSelect
           v-model:value="primaryCategory"
@@ -354,16 +420,14 @@ async function handleCreate() {
         />
       </NFormItem>
 
-      <NFormItem v-if="articleType === 'blog'" label="作者" required>
-        <NInput v-model:value="authorsText" placeholder="多个作者用逗号分隔" clearable />
+      <NFormItem :required="articleType === 'blog'" label="作者">
+        <NInput v-model:value="authorsText" placeholder="默认 lucan，多个作者用逗号分隔" clearable />
       </NFormItem>
 
       <NFormItem
         v-if="articleType === 'blog'"
         label="标签"
-        required
-        :validation-status="blogError ? 'error' : undefined"
-        :feedback="blogError || undefined"
+        feedback="可选；用于横向主题关联"
       >
         <NSelect
           v-model:value="tagValues"

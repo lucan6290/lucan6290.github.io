@@ -12,30 +12,47 @@ categories:
   sort_order: 10
   enabled: true
 - type: docs
-  slug: java-interview
+  slug: AI 探索
   path:
   - tech-study
-  - java-interview
-  label: Java 面试
+  - AI 探索
+  label: AI 探索
   aliases:
-  - Java面试
-  - 面试复习
-  description: Java 面试知识点、题库与复习路线。
+  - AI 探索
+  - AI探索
+  - AI
+  - claude
+  - ai
+  - model
+  description: AI 模型、Agent、AI 编程与工具体验。
   cover: null
-  sort_order: 20
+  sort_order: 1
   enabled: true
 - type: docs
-  slug: java-basic
+  slug: Jetson Orin Nano
   path:
   - tech-study
-  - java-interview
-  - java-basic
-  label: Java 基础
+  - Jetson Orin Nano
+  label: Jetson Orin Nano
   aliases:
-  - Java基础
-  description: Java 基础语法、集合、并发、JVM 等核心知识。
+  - Jetson_Orin_NANO
+  - jetson
+  description: Jetson Orin Nano 相关实践记录。
   cover: null
-  sort_order: 30
+  sort_order: 2
+  enabled: true
+- type: docs
+  slug: 开发工具入门
+  path:
+  - tech-study
+  - 开发工具入门
+  label: 开发工具入门
+  aliases:
+  - 入门笔记
+  - git
+  description: 技术工具与基础能力的入门记录。
+  cover: null
+  sort_order: 3
   enabled: true
 - type: docs
   slug: project-practice
@@ -50,10 +67,10 @@ categories:
   sort_order: 30
   enabled: true
 - type: docs
-  slug: development-standards
+  slug: 开发规范
   path:
   - project-practice
-  - development-standards
+  - 开发规范
   label: 开发规范
   aliases:
   - Development_Specifications
@@ -327,12 +344,22 @@ categories:
   sort_order: 20
   enabled: true
 - type: docs
-  slug: 测试
+  slug: 博客建设
   path:
-  - resource-sharing
-  - 测试
-  label: 测试
+  - project-practice
+  - 博客建设
+  label: 博客建设
   description: null
   cover: null
   sort_order: 30
   enabled: true
+- type: docs
+  path:
+  - resource-sharing
+  - 测试资源分享
+  slug: 测试资源分享
+  label: 测试资源分享
+  enabled: true
+  description: null
+  cover: null
+  sort_order: 40

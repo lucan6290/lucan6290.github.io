@@ -31,13 +31,23 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
   const lines = yaml.split(/\r?\n/)
   let currentKey = ''
   let currentList: unknown[] = []
+  let currentNestedObj: Record<string, unknown> | null = null
 
-  function flushList() {
-    if (currentKey && currentList.length > 0) {
-      result[currentKey] = currentList
-      currentKey = ''
+  // 收尾：currentKey 下可能是列表（tags/categories）或嵌套对象（last_update）
+  function flushPending() {
+    if (!currentKey) {
       currentList = []
+      currentNestedObj = null
+      return
     }
+    if (currentList.length > 0) {
+      result[currentKey] = currentList
+    } else if (currentNestedObj && Object.keys(currentNestedObj).length > 0) {
+      result[currentKey] = currentNestedObj
+    }
+    currentKey = ''
+    currentList = []
+    currentNestedObj = null
   }
 
   for (const rawLine of lines) {
@@ -47,55 +57,56 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
     // 列表项：  - value 或  - [a, b]
     const listMatch = rawLine.match(/^(\s+)-\s+(.*)$/)
     if (listMatch) {
-      let val: unknown = listMatch[2].trim()
-      // 嵌套数组格式：[a, b]
-      const arrMatch = (val as string).match(/^\[(.*)\]$/)
-      if (arrMatch) {
-        val = arrMatch[1].split(',').map(s => s.trim())
-      }
-      // 自动转换布尔值和数字
-      else if (val === 'true') val = true
-      else if (val === 'false') val = false
-      else if (/^\d+$/.test(val as string)) val = Number(val)
-      // 去除引号
-      else {
-        val = unwrapQuotes(val as string)
-      }
-      currentList.push(val)
+      currentList.push(parseScalarOrArray(listMatch[2].trim()))
       continue
     }
 
-    // 新的 key: value 行，先 flush 之前的列表
-    flushList()
+    // 嵌套对象子属性：缩进的 key: value（如 last_update 下的 date/author）
+    const nestedMatch = rawLine.match(/^(\s{2,})([a-zA-Z_][a-zA-Z0-9_]*)\s*:\s*(.+)$/)
+    if (nestedMatch && currentKey) {
+      if (currentNestedObj === null) currentNestedObj = {}
+      currentNestedObj[nestedMatch[2]] = parseScalarOrArray(nestedMatch[3].trim())
+      continue
+    }
+
+    // 新的顶层 key: value 行，先 flush 之前的列表/嵌套对象
+    flushPending()
 
     const kvMatch = rawLine.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*:\s*(.*)$/)
     if (kvMatch) {
       const key = kvMatch[1]
-      let val = kvMatch[2].trim()
+      const val = kvMatch[2].trim()
       if (val === '') {
-        // 空 value → 后面跟列表
+        // 空 value → 后面跟列表或嵌套对象，待首个子行决定
         currentKey = key
         currentList = []
+        currentNestedObj = null
         continue
       }
-      // 自动转换类型
-      if (val === 'true') result[key] = true
-      else if (val === 'false') result[key] = false
-      else if (/^\d+$/.test(val)) result[key] = Number(val)
-      else {
-        // 内联数组格式：[a, b, c]
-        const inlineArrMatch = val.match(/^\[(.*)\]$/)
-        if (inlineArrMatch) {
-          result[key] = inlineArrMatch[1].split(',').map(s => unwrapQuotes(s.trim()))
-        } else {
-          result[key] = unwrapQuotes(val)
-        }
-      }
+      result[key] = parseScalarOrArray(val)
     }
   }
 
-  flushList()
+  flushPending()
   return result
+}
+
+/**
+ * 解析标量或内联数组：复用于顶层值、列表项、嵌套子属性
+ * 支持 [a, b] 内联数组、布尔、数字（去引号字符串）
+ */
+function parseScalarOrArray(raw: string): unknown {
+  // 嵌套数组格式：[a, b]
+  const arrMatch = raw.match(/^\[(.*)\]$/)
+  if (arrMatch) {
+    return arrMatch[1].split(',').map(s => unwrapQuotes(s.trim()))
+  }
+  // 自动转换布尔值和数字
+  if (raw === 'true') return true
+  if (raw === 'false') return false
+  if (/^\d+$/.test(raw)) return Number(raw)
+  // 去除引号
+  return unwrapQuotes(raw)
 }
 
 /**
@@ -135,127 +146,38 @@ export function parseFrontMatter(content: string): {
 
 /**
  * 序列化 Front Matter 为 YAML 格式
+ * 通用实现：只输出传入对象实际拥有的字段，不注入任何默认值（避免 Hexo 风格污染）
  * @param frontMatter Front Matter 对象
  * @returns YAML 格式的字符串（不包含 --- 分隔符）
  */
 export function serializeFrontMatter(frontMatter: Partial<FrontMatter>): string {
   const lines: string[] = []
 
-  // 标题（必须）
-  lines.push(`title: ${escapeYamlString(frontMatter.title || '未命名文章')}`)
+  for (const [key, value] of Object.entries(frontMatter)) {
+    if (value === undefined || value === null) continue
 
-  // 日期（必须）
-  const dateStr = frontMatter.date || new Date().toISOString().replace('T', ' ').slice(0, 19)
-  lines.push(`date: ${dateStr}`)
-
-  // 更新日期（可选）
-  if (frontMatter.updated) {
-    lines.push(`updated: ${frontMatter.updated}`)
-  }
-
-  lines.push('')
-
-  // 分类（必须）— 嵌套数组格式 [[一级, 二级]]
-  lines.push('categories:')
-  if (Array.isArray(frontMatter.categories) && frontMatter.categories.length > 0) {
-    // 如果已有嵌套数组格式（categories[0] 是数组），直接使用
-    if (Array.isArray(frontMatter.categories[0])) {
-      for (const cat of frontMatter.categories) {
-        const catArr = cat as unknown as string[]
-        lines.push(`  - [${catArr.map(c => escapeYamlString(c)).join(', ')}]`)
+    if (Array.isArray(value)) {
+      lines.push(`${key}:`)
+      value.forEach((item) => {
+        if (Array.isArray(item)) {
+          // 嵌套数组 [[a, b]] →  - [a, b]
+          lines.push(`  - [${item.map(c => escapeYamlString(String(c))).join(', ')}]`)
+        } else {
+          lines.push(`  - ${escapeYamlString(String(item))}`)
+        }
+      })
+    } else if (typeof value === 'object' && value !== null) {
+      // 嵌套对象（如 last_update）→ 块样式多行 YAML
+      lines.push(`${key}:`)
+      for (const [subKey, subVal] of Object.entries(value)) {
+        if (subVal === undefined || subVal === null) continue
+        lines.push(`  ${subKey}: ${escapeYamlString(String(subVal))}`)
       }
+    } else if (typeof value === 'string') {
+      lines.push(`${key}: ${escapeYamlString(value)}`)
     } else {
-      // 扁平列表格式，转换为嵌套数组 [[一级, 二级]]
-      const cats = frontMatter.categories as string[]
-      lines.push(`  - [${cats.map(c => escapeYamlString(c)).join(', ')}]`)
-    }
-  } else {
-    lines.push('  - [未分类]')
-  }
-
-  lines.push('')
-
-  // 标签（可选）
-  lines.push('tags:')
-  if (Array.isArray(frontMatter.tags) && frontMatter.tags.length > 0) {
-    frontMatter.tags.forEach((tag) => {
-      lines.push(`  - ${escapeYamlString(tag)}`)
-    })
-  }
-
-  // 描述（可选）
-  if (frontMatter.description) {
-    lines.push('')
-    lines.push(`description: ${escapeYamlString(frontMatter.description)}`)
-  }
-
-  // 布局（可选）
-  if (frontMatter.layout) {
-    lines.push('')
-    lines.push(`layout: ${frontMatter.layout}`)
-  }
-
-  // 评论（可选）
-  if (frontMatter.comments !== undefined) {
-    lines.push('')
-    lines.push(`comments: ${frontMatter.comments}`)
-  }
-
-  // 永久链接（可选）
-  if (frontMatter.permalink) {
-    lines.push('')
-    lines.push(`permalink: ${frontMatter.permalink}`)
-  }
-
-  // 摘录（可选）
-  if (frontMatter.excerpt) {
-    lines.push('')
-    lines.push(`excerpt: ${escapeYamlString(frontMatter.excerpt)}`)
-  }
-
-  // 发布状态（可选）
-  if (frontMatter.published !== undefined) {
-    lines.push('')
-    lines.push(`published: ${frontMatter.published}`)
-  }
-
-  // 语言（可选）
-  if (frontMatter.lang) {
-    lines.push('')
-    lines.push(`lang: ${frontMatter.lang}`)
-  }
-
-  // 封面图（可选）
-  if (frontMatter.cover) {
-    lines.push('')
-    lines.push(`cover: ${frontMatter.cover}`)
-  }
-
-  // 置顶（可选）
-  if (frontMatter.sticky !== undefined) {
-    lines.push('')
-    lines.push(`sticky: ${frontMatter.sticky}`)
-  }
-
-  // Slug（可选）
-  if (frontMatter.slug) {
-    lines.push('')
-    lines.push(`slug: ${frontMatter.slug}`)
-  }
-
-  // 状态（可选）
-  if (frontMatter.status) {
-    lines.push('')
-    lines.push(`status: ${frontMatter.status}`)
-  }
-
-  // 系列（可选）
-  if (frontMatter.series) {
-    lines.push('')
-    lines.push(`series: ${escapeYamlString(frontMatter.series)}`)
-
-    if (frontMatter.series_order !== undefined) {
-      lines.push(`series_order: ${frontMatter.series_order}`)
+      // 数字、布尔直接输出
+      lines.push(`${key}: ${value}`)
     }
   }
 
@@ -319,16 +241,17 @@ export function validateFrontMatter(frontMatter: Partial<FrontMatter>): {
 
   // 日期格式验证
   if (frontMatter.date) {
-    const dateRegex = /^\d{4}-\d{2}-\d{2}(\s+\d{2}:\d{2}:\d{2})?$/
+    const dateRegex = /^\d{4}-\d{2}-\d{2}([T\s]+\d{2}:\d{2}:\d{2})?([+-]\d{2}:\d{2}|Z)?$/
     if (!dateRegex.test(frontMatter.date)) {
       errors.push('日期格式无效，应为 YYYY-MM-DD 或 YYYY-MM-DD HH:mm:ss')
     }
   }
 
-  // 更新日期格式验证
-  if (frontMatter.updated) {
-    const dateRegex = /^\d{4}-\d{2}-\d{2}(\s+\d{2}:\d{2}:\d{2})?$/
-    if (!dateRegex.test(frontMatter.updated)) {
+  // 更新日期格式验证（Docusaurus 原生 last_update.date）
+  const lastUpdateDate = frontMatter.last_update?.date
+  if (lastUpdateDate) {
+    const dateRegex = /^\d{4}-\d{2}-\d{2}([T\s]+\d{2}:\d{2}:\d{2})?([+-]\d{2}:\d{2}|Z)?$/
+    if (!dateRegex.test(lastUpdateDate)) {
       errors.push('更新日期格式无效，应为 YYYY-MM-DD 或 YYYY-MM-DD HH:mm:ss')
     }
   }
@@ -358,34 +281,13 @@ export function updateFrontMatter(
   const { frontMatter, body } = parseFrontMatter(content)
   const updated = { ...frontMatter, ...updates }
 
-  // 如果有更新，自动设置 updated 时间
-  if (Object.keys(updates).length > 0 && !updates.updated) {
-    updated.updated = new Date().toISOString().replace('T', ' ').slice(0, 19)
+  // 如果有更新，自动刷新 last_update.date（Docusaurus 原生字段）；author 保留既有值，缺省 lucan
+  if (Object.keys(updates).length > 0 && !updates.last_update) {
+    updated.last_update = {
+      date: new Date().toISOString().replace('T', ' ').slice(0, 19),
+      author: frontMatter.last_update?.author || 'lucan'
+    }
   }
 
   return buildMarkdown(updated, body)
-}
-
-/**
- * 获取默认 Front Matter
- * @param title 文章标题
- * @param categories 分类
- * @returns 默认 Front Matter 对象
- */
-export function getDefaultFrontMatter(
-  title: string = '未命名文章',
-  categories: string[] = ['未分类']
-): FrontMatter {
-  const now = new Date()
-  const dateStr = now.toISOString().replace('T', ' ').slice(0, 19)
-
-  return {
-    title,
-    date: dateStr,
-    categories,
-    tags: [],
-    description: '',
-    lang: 'zh-CN',
-    comments: true
-  }
 }

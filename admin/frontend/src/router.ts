@@ -1,7 +1,13 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { isAuthenticated } from '@/utils/auth'
 
 const routes: RouteRecordRaw[] = [
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/Login.vue')
+  },
   {
     path: '/',
     name: 'Dashboard',
@@ -63,6 +69,22 @@ const routes: RouteRecordRaw[] = [
 const router = createRouter({
   history: createWebHashHistory('/admin/'),
   routes
+})
+
+router.beforeEach((to) => {
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+  if (requiresAuth && !isAuthenticated()) {
+    return {
+      path: '/login',
+      query: {
+        redirect: to.fullPath
+      }
+    }
+  }
+
+  if (to.path === '/login' && isAuthenticated()) {
+    return { path: '/' }
+  }
 })
 
 export default router
