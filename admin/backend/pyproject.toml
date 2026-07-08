@@ -1,0 +1,45 @@
+[project]
+name = "xiaocancoding-admin-backend"
+version = "0.1.0"
+description = "Local Docusaurus content management backend."
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi==0.115.0",
+    "uvicorn[standard]==0.30.6",
+    "pydantic==2.12.2",
+    "PyYAML==6.0.3",
+    "python-multipart==0.0.20",
+    "langchain==1.3.11",
+    "langchain-openai==1.3.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4,<9",
+    "ruff>=0.6,<1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-ra"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "F",
+    "UP",
+    "B",
+    "SIM",
+]
+ignore = [
+    "B008",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"

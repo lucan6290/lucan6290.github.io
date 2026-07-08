@@ -174,7 +174,7 @@ function openEditModel(model: AIModelConfig) {
   modelForm.value = {
     name: model.name,
     baseUrl: model.baseUrl,
-    apiKey: model.apiKey,
+    apiKey: '',
     modelId: model.modelId,
     provider: model.provider || 'custom',
     apiFormat: model.apiFormat || 'openai',
@@ -215,23 +215,25 @@ function handlePresetSelect(value: string) {
 }
 
 // 保存模型
-function saveModel() {
-  if (!modelForm.value.name || !modelForm.value.baseUrl || !modelForm.value.apiKey || !modelForm.value.modelId) {
+async function saveModel() {
+  if (!modelForm.value.name || !modelForm.value.baseUrl || !modelForm.value.modelId || (!editingModel.value && !modelForm.value.apiKey)) {
     message.warning('请填写所有必填字段')
     return
   }
 
-  if (editingModel.value) {
-    // 更新
-    settingsStore.updateModel(editingModel.value.id, modelForm.value)
-    message.success('模型已更新')
-  } else {
-    // 添加
-    settingsStore.addModel(modelForm.value)
-    message.success('模型已添加')
-  }
+  try {
+    if (editingModel.value) {
+      await settingsStore.updateModel(editingModel.value.id, modelForm.value)
+      message.success('模型已更新')
+    } else {
+      await settingsStore.addModel(modelForm.value)
+      message.success('模型已添加')
+    }
 
-  showModelEditor.value = false
+    showModelEditor.value = false
+  } catch (error: any) {
+    message.error(`保存失败: ${error.message || error}`)
+  }
 }
 
 // 删除模型
@@ -241,9 +243,13 @@ function handleDeleteModel(id: string) {
     content: '确定要删除此模型配置吗？',
     positiveText: '确定',
     negativeText: '取消',
-    onPositiveClick: () => {
-      settingsStore.removeModel(id)
-      message.success('模型已删除')
+    onPositiveClick: async () => {
+      try {
+        await settingsStore.removeModel(id)
+        message.success('模型已删除')
+      } catch (error: any) {
+        message.error(`删除失败: ${error.message || error}`)
+      }
     }
   })
 }
@@ -265,31 +271,13 @@ async function testConnection() {
   testResult.value = null
 
   try {
-    const response = await fetch(`${currentModel.value.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${currentModel.value.apiKey}`
-      },
-        body: JSON.stringify({
-          model: currentModel.value.modelId,
-          messages: [{ role: 'user', content: 'Hi' }],
-          thinking: currentModel.value.provider === 'deepseek'
-            ? { type: currentModel.value.thinkingMode || 'disabled' }
-            : undefined,
-          reasoning_effort: currentModel.value.provider === 'deepseek' && currentModel.value.thinkingMode === 'enabled'
-            ? currentModel.value.reasoningEffort || 'high'
-            : undefined,
-          max_tokens: 5
-        })
-      })
-
-    if (response.ok) {
+    const success = await settingsStore.testModel(currentModel.value.id)
+    if (success) {
       testResult.value = 'success'
       message.success('连接测试成功')
     } else {
       testResult.value = 'failed'
-      message.error(`连接测试失败: HTTP ${response.status}`)
+      message.error('连接测试失败')
     }
   } catch (error: any) {
     testResult.value = 'failed'
@@ -306,9 +294,13 @@ function handleClearModels() {
     content: '确定要清空所有模型配置吗？',
     positiveText: '确定',
     negativeText: '取消',
-    onPositiveClick: () => {
-      settingsStore.clearModels()
-      message.success('已清空所有模型配置')
+    onPositiveClick: async () => {
+      try {
+        await settingsStore.clearModels()
+        message.success('已清空所有模型配置')
+      } catch (error: any) {
+        message.error(`清空失败: ${error.message || error}`)
+      }
     }
   })
 }
@@ -533,8 +525,13 @@ const handleCategorySortOrderChange = async (
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   categoriesStore.fetchRegistry()
+  try {
+    await settingsStore.loadAIModels()
+  } catch (error: any) {
+    message.error(`AI 模型配置加载失败: ${error.message || error}`)
+  }
 })
 
 </script>
@@ -573,7 +570,11 @@ onMounted(() => {
               <n-divider />
 
               <!-- 空状态 -->
-              <div v-if="settingsStore.aiModels.length === 0" class="empty-models">
+              <div v-if="settingsStore.isLoadingModels" class="empty-models">
+                <n-p depth="3">正在加载模型配置...</n-p>
+              </div>
+
+              <div v-else-if="settingsStore.aiModels.length === 0" class="empty-models">
                 <n-p depth="3">暂无模型配置，请点击"添加模型"按钮添加</n-p>
               </div>
 
@@ -947,12 +948,12 @@ onMounted(() => {
             placeholder="例如：https://api.openai.com/v1"
           />
         </n-form-item>
-        <n-form-item label="API Key" required>
+        <n-form-item label="API Key" :required="!editingModel">
           <n-input
             v-model:value="modelForm.apiKey"
             type="password"
             show-password-on="click"
-            placeholder="输入 API Key"
+            :placeholder="editingModel ? '留空则不修改已保存密钥' : '输入 API Key'"
           />
         </n-form-item>
         <n-form-item label="Model ID" required>

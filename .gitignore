@@ -17,6 +17,7 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+admin/backend/data/*.sqlite3
 
 # ===== 虚拟环境 =====
 .venv/

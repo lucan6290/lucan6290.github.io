@@ -1,4 +1,4 @@
-"""Sidebar 写入落点回归测试。
+﻿"""Sidebar 写入落点回归测试。
 
 验证 ``SidebarService.ensure_doc_id`` 在不同分类深度下都能把 doc_id 写到
 ``sidebars.ts`` 的正确分类层级，且不破坏括号结构。覆盖历史上出过问题的三类场景：
@@ -27,7 +27,7 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 from scr.core.config import settings  # noqa: E402
-from scr.services.content.sidebar_service import SidebarService  # noqa: E402
+from scr.services.content.sidebars.sidebar_service import SidebarService  # noqa: E402
 
 
 # 与真实 site/sidebars.ts 同构的最小样本（含 3 层嵌套与一个普通 docs 项）
@@ -39,7 +39,7 @@ const sidebars: SidebarsConfig = {
     'intro',
   ],
 
-  techStudySidebar: [
+  'tech-studySidebar': [
     {
       type: 'category',
       label: '技术研习',
@@ -80,6 +80,37 @@ export default sidebars;
 """
 
 
+STANDARD_HYPHEN_KEY_SIDEBARS = """\
+import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
+
+const sidebars: SidebarsConfig = {
+  'project-practiceSidebar': [
+    {
+      type: 'category',
+      label: '项目实战',
+      collapsed: false,
+      link: {
+        type: 'doc',
+        id: 'project-practice/index',
+      },
+      items: [
+        {
+          type: 'category',
+          label: '开发规范',
+          collapsed: false,
+          items: [
+            'project-practice/开发规范/单人全栈开发高效流程',
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+export default sidebars;
+"""
+
+
 def _enclosing_labels(content: str, doc_id: str) -> list[str]:
     """返回 doc_id 在结构上所属的分类 label 链（由内到外）。
 
@@ -109,7 +140,47 @@ def _brackets_balanced(content: str) -> bool:
     return stripped.count("[") == stripped.count("]") and stripped.count("{") == stripped.count("}")
 
 
-def _run_scenario(name: str, doc_id: str, labels: list[str], expected_chain: list[str]) -> None:
+def test_registered_doc_ids_ignore_imports_and_sidebar_group_keys() -> None:
+    original_sidebars_path = settings.sidebars_path
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            sidebar_file = Path(tmp) / "sidebars.ts"
+            sidebar_file.write_text(BASE_SIDEBARS, encoding="utf-8")
+            object.__setattr__(settings, "sidebars_path", sidebar_file)
+
+            assert SidebarService().list_registered_doc_ids() == {
+                "intro",
+                "tech-study/java-interview/java-basic/java-vs-cpp",
+                "resource-sharing/toolbox",
+            }
+    finally:
+        object.__setattr__(settings, "sidebars_path", original_sidebars_path)
+
+
+def test_ensure_category_path_reuses_standard_hyphenated_sidebar_group() -> None:
+    original_sidebars_path = settings.sidebars_path
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            sidebar_file = Path(tmp) / "sidebars.ts"
+            sidebar_file.write_text(STANDARD_HYPHEN_KEY_SIDEBARS, encoding="utf-8")
+            object.__setattr__(settings, "sidebars_path", sidebar_file)
+
+            SidebarService().ensure_category_path(
+                ["project-practice", "部署运维"],
+                ["项目实战", "部署运维"],
+            )
+
+            content = sidebar_file.read_text(encoding="utf-8")
+            assert "'project-practiceSidebar': [" in content
+            assert "projectPracticeSidebar" not in content
+            assert "label: '部署运维'" in content
+            assert content.count("label: '项目实战'") == 1
+            assert _brackets_balanced(content)
+    finally:
+        object.__setattr__(settings, "sidebars_path", original_sidebars_path)
+
+
+def _run_scenario(name: str, doc_id: str, labels: list[str], expected_chain: list[str], expected_key: str | None = None) -> None:
     original_sidebars_path = settings.sidebars_path
     try:
         with tempfile.TemporaryDirectory() as tmp:
@@ -130,12 +201,17 @@ def _run_scenario(name: str, doc_id: str, labels: list[str], expected_chain: lis
             assert _brackets_balanced(content), f"[{name}] 写入后括号不平衡"
             assert content.count(f"'{doc_id}'") == 1, f"[{name}] doc_id 出现次数不为 1"
             assert doc_id in svc.list_registered_doc_ids(), f"[{name}] doc_id 未登记"
+            if expected_key is not None:
+                assert f"'{expected_key}': [" in content, (
+                    f"[{name}] 新侧边栏 key 不符\n  期望包含: '{expected_key}': [\n  实际内容:\n{content}"
+                )
             print(f"[PASS] {name}: {' → '.join(chain)}")
     finally:
         object.__setattr__(settings, "sidebars_path", original_sidebars_path)
 
 
 def main() -> None:
+    test_ensure_category_path_reuses_standard_hyphenated_sidebar_group()
     _run_scenario(
         "已有叶子分类下追加（append 快乐路径）",
         "tech-study/java-interview/java-basic/new-doc",
@@ -159,8 +235,9 @@ def main() -> None:
         "new-top/new-doc",
         ["New Top"],
         ["New Top"],
+        expected_key="new-topSidebar",
     )
-    print("\n全部通过 ✅")
+    print("\n全部通过 [OK]")
 
 
 if __name__ == "__main__":

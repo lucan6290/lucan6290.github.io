@@ -27,6 +27,8 @@ class ArticleSummaryDTO(BaseModel):
     type_label: str  # 内容类型显示名，如 知识库 / 博客
     title: str | None = None  # 标题，取自 frontmatter.title
     description: str | None = None  # 描述，取自 frontmatter.description
+    date: str | None = None  # 发布时间，取自 frontmatter.date
+    last_update: dict[str, Any] | None = None  # 最后更新时间，取自 frontmatter.last_update
     relative_path: str  # 相对于文章根目录（docs / blog）的 posix 路径
     route: str  # 前端访问路由，如 /docs/xxx 或 /blog/xxx
     slug: str  # URL 友好的标识，docs 取 doc_id，blog 取 frontmatter.slug 或文件名
@@ -112,6 +114,7 @@ class ArticleCreateDTO(BaseModel):
     authors: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
     date: str | None = None
+    last_update: dict[str, Any] | None = None
 
     @field_validator("slug")
     @classmethod
@@ -134,10 +137,10 @@ class ArticleCreateDTO(BaseModel):
     @model_validator(mode="after")
     def validate_type_specific_fields(self) -> "ArticleCreateDTO":
         if self.type == ArticleType.blog:
+            if len(self.category_path) != 1:
+                raise ValueError("blog 文章必须选择且只能选择一个一级分类。")
             if not self.authors:
                 raise ValueError("blog 文章必须填写 authors。")
-            if not self.tags:
-                raise ValueError("blog 文章必须填写 tags。")
         return self
 
 

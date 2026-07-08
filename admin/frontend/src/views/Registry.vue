@@ -6,10 +6,12 @@ import {
   NCard,
   NDataTable,
   NDynamicTags,
+  NEmpty,
   NForm,
   NFormItem,
   NInput,
   NInputNumber,
+  NModal,
   NPopconfirm,
   NSelect,
   NSpace,
@@ -25,13 +27,18 @@ import {
 } from 'naive-ui'
 import { getAPI } from '@/api/index'
 import type {
+  CategoryDTO,
+  DocusaurusConfigStatusDTO,
+  FileChangeDTO,
+  MutationPlanDTO,
   RegistryIndexItemDTO,
   RegistryIndexListResponseDTO,
   RegistryIndexStatsDTO,
   RegistryIndexSyncResultDTO,
   RegistryDiffDTO,
   RegistryYamlEntriesDTO,
-  RegistryYamlFileDTO
+  RegistryYamlFileDTO,
+  SidebarStatusDTO
 } from '@/types/api'
 
 type EntityType = 'category' | 'tag' | 'article' | null
@@ -50,12 +57,38 @@ const isTagSyncing = ref(false)
 const isYamlLoading = ref(false)
 const isYamlSaving = ref(false)
 const isDiffLoading = ref(false)
+const isCategoryLoading = ref(false)
+const isCategoryPlanLoading = ref(false)
+const isCategoryDeleting = ref(false)
+const isCategoryRenamePlanLoading = ref(false)
+const isCategoryRenaming = ref(false)
 const yamlRegistryType = ref<RegistryType>('categories')
 const yamlFile = ref<RegistryYamlFileDTO | null>(null)
 const yamlContent = ref('')
 const yamlEntries = ref<RegistryYamlEntriesDTO | null>(null)
 const selectedEntryIndex = ref(0)
 const diffResult = ref<RegistryDiffDTO | null>(null)
+const categoryTree = ref<CategoryDTO[]>([])
+const categorySearchValue = ref('')
+const showEmptyCategories = ref(true)
+const selectedCategoryId = ref<string | null>(null)
+const expandedCategoryIds = ref<Set<string>>(new Set())
+const deleteCategoryTarget = ref<CategoryDTO | null>(null)
+const deleteCategoryPlan = ref<MutationPlanDTO | null>(null)
+const renameCategoryTarget = ref<CategoryDTO | null>(null)
+const renameCategoryPlan = ref<MutationPlanDTO | null>(null)
+const sidebarStatus = ref<SidebarStatusDTO | null>(null)
+const isSidebarLoading = ref(false)
+const isSidebarSyncing = ref(false)
+const docusaurusStatus = ref<DocusaurusConfigStatusDTO | null>(null)
+const isDocusaurusLoading = ref(false)
+const isDocusaurusSyncing = ref(false)
+
+type CategoryListItem = {
+  category: CategoryDTO
+  depth: number
+  childCount: number
+}
 
 const entryForm = reactive({
   type: 'docs',
@@ -69,6 +102,12 @@ const entryForm = reactive({
   enabled: true,
   id: '',
   body_path: ''
+})
+
+const renameCategoryForm = reactive({
+  targetSlug: '',
+  targetLabel: '',
+  replaceLinks: true
 })
 
 const filters = reactive({
@@ -245,6 +284,51 @@ const yamlEntryColumns = computed<DataTableColumns<Record<string, unknown>>>(() 
   }
 ])
 
+const allCategoryItems = computed(() => flattenCategoryItems(categoryTree.value))
+
+const categorySummary = computed(() => {
+  const items = allCategoryItems.value
+  return {
+    total: items.length,
+    empty: items.filter((item) => (item.category.article_count ?? 0) === 0).length,
+    articleCount: items.reduce((count, item) => count + (item.category.article_count ?? 0), 0)
+  }
+})
+
+const visibleCategoryItems = computed(() => {
+  const keyword = categorySearchValue.value.trim().toLowerCase()
+  const visible: CategoryListItem[] = []
+
+  const walk = (categories: CategoryDTO[], depth: number, parentVisible: boolean) => {
+    for (const category of categories) {
+      const childCount = category.children?.length || 0
+      const isEmpty = (category.article_count ?? 0) === 0
+      const matches = !keyword || categoryMatches(category, keyword) || hasMatchingDescendant(category, keyword)
+      const passesEmpty = showEmptyCategories.value || !isEmpty
+      const shouldShow = parentVisible && matches && passesEmpty
+
+      if (shouldShow) {
+        visible.push({ category, depth, childCount })
+      }
+
+      const expanded = keyword ? matches : expandedCategoryIds.value.has(category.id)
+      if (expanded && childCount > 0) {
+        walk(category.children, depth + 1, shouldShow || Boolean(keyword))
+      }
+    }
+  }
+
+  walk(categoryTree.value, 0, true)
+  return visible
+})
+
+const selectedCategory = computed(() => {
+  if (selectedCategoryId.value) {
+    return allCategoryItems.value.find((item) => item.category.id === selectedCategoryId.value)?.category || null
+  }
+  return visibleCategoryItems.value[0]?.category || null
+})
+
 async function loadStats() {
   if (!api.getRegistryIndexStats) return
   isStatsLoading.value = true
@@ -401,6 +485,233 @@ async function loadDiff() {
     message.error(errorMessage(error, '检查差异失败'))
   } finally {
     isDiffLoading.value = false
+  }
+}
+
+async function loadSidebarStatus() {
+  if (!api.getSidebarStatus) return
+  isSidebarLoading.value = true
+  try {
+    sidebarStatus.value = await api.getSidebarStatus(true)
+  } catch (error) {
+    message.error(errorMessage(error, '读取 docs 侧边栏对账状态失败'))
+  } finally {
+    isSidebarLoading.value = false
+  }
+}
+
+async function syncSidebarDocs() {
+  if (!api.syncSidebars) return
+  isSidebarSyncing.value = true
+  try {
+    const plan = await api.syncSidebars({ mode: 'append_missing', dryRun: false, confirm: true })
+    message.success(`docs 侧边栏已同步：${plan.changes.length} 项变更`)
+    await loadSidebarStatus()
+  } catch (error) {
+    message.error(errorMessage(error, '同步 docs 侧边栏失败'))
+  } finally {
+    isSidebarSyncing.value = false
+  }
+}
+
+async function loadDocusaurusStatus() {
+  if (!api.getDocusaurusConfigStatus) return
+  isDocusaurusLoading.value = true
+  try {
+    docusaurusStatus.value = await api.getDocusaurusConfigStatus()
+  } catch (error) {
+    message.error(errorMessage(error, '读取 navbar 对账状态失败'))
+  } finally {
+    isDocusaurusLoading.value = false
+  }
+}
+
+async function syncDocusaurusConfigAll() {
+  if (!api.syncDocusaurusConfig) return
+  isDocusaurusSyncing.value = true
+  try {
+    const plan = await api.syncDocusaurusConfig({ mode: 'all', dryRun: false, confirm: true })
+    message.success(`navbar 已同步：${plan.changes.length} 项变更`)
+    await loadDocusaurusStatus()
+  } catch (error) {
+    message.error(errorMessage(error, '同步 navbar 失败'))
+  } finally {
+    isDocusaurusSyncing.value = false
+  }
+}
+
+async function loadCategoryTree() {
+  if (!api.getCategories) return
+  isCategoryLoading.value = true
+  try {
+    categoryTree.value = await api.getCategories({
+      type: 'docs',
+      includeEmpty: true,
+      includeCounts: true
+    }) as CategoryDTO[]
+    syncCategorySelection()
+  } catch (error) {
+    message.error(errorMessage(error, '读取分类目录失败'))
+  } finally {
+    isCategoryLoading.value = false
+  }
+}
+
+async function openRenameCategory(category: CategoryDTO) {
+  if (!api.renameCategory) {
+    message.warning('当前后端不支持重命名分类接口')
+    return
+  }
+  renameCategoryTarget.value = category
+  renameCategoryPlan.value = null
+  renameCategoryForm.targetSlug = category.slug
+  renameCategoryForm.targetLabel = category.label
+  renameCategoryForm.replaceLinks = true
+}
+
+async function previewRenameCategory() {
+  if (!api.renameCategory || !renameCategoryTarget.value) return
+  const targetSlug = renameCategoryForm.targetSlug.trim()
+  if (!targetSlug) {
+    message.warning('请填写新的分类 slug')
+    return
+  }
+  isCategoryRenamePlanLoading.value = true
+  try {
+    renameCategoryPlan.value = await api.renameCategory(renameCategoryTarget.value.id, {
+      targetSlug,
+      targetLabel: renameCategoryForm.targetLabel.trim() || null,
+      replaceLinks: renameCategoryForm.replaceLinks,
+      dryRun: true,
+      confirm: false
+    })
+  } catch (error) {
+    message.error(errorMessage(error, '生成重命名预览失败'))
+  } finally {
+    isCategoryRenamePlanLoading.value = false
+  }
+}
+
+async function confirmRenameCategory() {
+  if (!api.renameCategory || !renameCategoryTarget.value) return
+  const targetSlug = renameCategoryForm.targetSlug.trim()
+  if (!targetSlug) {
+    message.warning('请填写新的分类 slug')
+    return
+  }
+  isCategoryRenaming.value = true
+  try {
+    await api.renameCategory(renameCategoryTarget.value.id, {
+      targetSlug,
+      targetLabel: renameCategoryForm.targetLabel.trim() || null,
+      replaceLinks: renameCategoryForm.replaceLinks,
+      dryRun: false,
+      confirm: true
+    })
+    message.success('分类及相关文件已重命名')
+    closeRenameCategoryModal()
+    if (api.rebuildRegistryIndex) {
+      await api.rebuildRegistryIndex()
+    }
+    await Promise.all([loadCategoryTree(), loadStats(), loadEntities(), loadYamlWorkspace()])
+  } catch (error) {
+    message.error(errorMessage(error, '重命名分类失败'))
+  } finally {
+    isCategoryRenaming.value = false
+  }
+}
+
+function closeRenameCategoryModal() {
+  renameCategoryTarget.value = null
+  renameCategoryPlan.value = null
+}
+
+async function openDeleteCategory(category: CategoryDTO) {
+  if (!api.deleteCategory) {
+    message.warning('当前后端不支持删除分类接口')
+    return
+  }
+  deleteCategoryTarget.value = category
+  deleteCategoryPlan.value = null
+  await previewDeleteCategory()
+}
+
+async function previewDeleteCategory() {
+  if (!api.deleteCategory || !deleteCategoryTarget.value) return
+  isCategoryPlanLoading.value = true
+  try {
+    deleteCategoryPlan.value = await api.deleteCategory(deleteCategoryTarget.value.id, {
+      dryRun: true,
+      confirm: false
+    })
+  } catch (error) {
+    message.error(errorMessage(error, '生成删除预览失败'))
+  } finally {
+    isCategoryPlanLoading.value = false
+  }
+}
+
+async function confirmDeleteCategory() {
+  if (!api.deleteCategory || !deleteCategoryTarget.value) return
+  isCategoryDeleting.value = true
+  try {
+    await api.deleteCategory(deleteCategoryTarget.value.id, {
+      dryRun: false,
+      confirm: true
+    })
+    message.success('分类及相关文件已删除')
+    closeDeleteCategoryModal()
+    if (api.rebuildRegistryIndex) {
+      await api.rebuildRegistryIndex()
+    }
+    await Promise.all([loadCategoryTree(), loadStats(), loadEntities(), loadYamlWorkspace()])
+  } catch (error) {
+    message.error(errorMessage(error, '删除分类失败'))
+  } finally {
+    isCategoryDeleting.value = false
+  }
+}
+
+function closeDeleteCategoryModal() {
+  deleteCategoryTarget.value = null
+  deleteCategoryPlan.value = null
+}
+
+function selectCategory(category: CategoryDTO) {
+  selectedCategoryId.value = category.id
+}
+
+function toggleCategory(category: CategoryDTO) {
+  const next = new Set(expandedCategoryIds.value)
+  if (next.has(category.id)) {
+    next.delete(category.id)
+  } else {
+    next.add(category.id)
+  }
+  expandedCategoryIds.value = next
+}
+
+function expandAllCategories() {
+  expandedCategoryIds.value = new Set(allCategoryItems.value.map((item) => item.category.id))
+}
+
+function collapseAllCategories() {
+  expandedCategoryIds.value = new Set(categoryTree.value.map((category) => category.id))
+}
+
+function syncCategorySelection() {
+  if (!categoryTree.value.length) {
+    selectedCategoryId.value = null
+    expandedCategoryIds.value = new Set()
+    return
+  }
+
+  if (!expandedCategoryIds.value.size) {
+    expandedCategoryIds.value = new Set(categoryTree.value.map((category) => category.id))
+  }
+
+  if (!selectedCategoryId.value || !allCategoryItems.value.some((item) => item.category.id === selectedCategoryId.value)) {
+    selectedCategoryId.value = categoryTree.value[0]?.id || null
   }
 }
 
@@ -572,8 +883,63 @@ function errorMessage(error: unknown, fallback: string): string {
   return fallback
 }
 
+function categoryPath(category: CategoryDTO): string {
+  return category.path.join('/') || category.slug
+}
+
+function renamedCategoryPath(category: CategoryDTO, targetSlug: string): string {
+  const normalizedSlug = targetSlug.trim() || category.slug
+  return [...category.path.slice(0, -1), normalizedSlug].join('/') || normalizedSlug
+}
+
+function categoryDepthLabel(category: CategoryDTO): string {
+  return `${category.path.length} 级分类`
+}
+
+function flattenCategoryItems(categories: CategoryDTO[], depth = 0): CategoryListItem[] {
+  return categories.flatMap((category) => [
+    {
+      category,
+      depth,
+      childCount: category.children?.length || 0
+    },
+    ...flattenCategoryItems(category.children || [], depth + 1)
+  ])
+}
+
+function categoryMatches(category: CategoryDTO, keyword: string): boolean {
+  return [
+    category.label,
+    category.slug,
+    categoryPath(category)
+  ].some((value) => value.toLowerCase().includes(keyword))
+}
+
+function hasMatchingDescendant(category: CategoryDTO, keyword: string): boolean {
+  return (category.children || []).some(
+    (child) => categoryMatches(child, keyword) || hasMatchingDescendant(child, keyword)
+  )
+}
+
+function formatChange(change: FileChangeDTO): string {
+  if (change.from && change.to) {
+    return `${change.description}: ${change.from} -> ${change.to}`
+  }
+  if (change.from || change.to) {
+    return `${change.description}: ${change.from || change.to}`
+  }
+  return `${change.description}: ${change.target}`
+}
+
 onMounted(async () => {
-  await Promise.all([loadStats(), loadEntities(), loadYamlWorkspace()])
+  await Promise.all([
+    loadStats(),
+    loadEntities(),
+    loadYamlWorkspace(),
+    loadCategoryTree(),
+    loadSidebarStatus(),
+    loadDocusaurusStatus()
+  ])
 })
 </script>
 
@@ -667,6 +1033,131 @@ onMounted(async () => {
             @update:page="handlePageChange"
             @update:page-size="handlePageSizeChange"
           />
+        </section>
+      </n-tab-pane>
+
+      <n-tab-pane name="categories" tab="分类目录">
+        <section class="category-manager surface-panel">
+          <div class="table-header">
+            <div>
+              <h2>分类目录</h2>
+              <p>完整 docs 分类树，包含空目录。先选中分类，再在右侧维护路径或预览删除影响。</p>
+            </div>
+            <n-space>
+              <n-button :loading="isCategoryLoading" @click="loadCategoryTree">刷新分类</n-button>
+            </n-space>
+          </div>
+
+          <div class="category-workbench">
+            <div class="category-browser">
+              <div class="category-browser-toolbar">
+                <n-input
+                  v-model:value="categorySearchValue"
+                  clearable
+                  placeholder="搜索分类名或路径"
+                />
+                <div class="category-browser-actions">
+                  <n-switch v-model:value="showEmptyCategories" size="small" />
+                  <span>空分类</span>
+                  <n-button size="small" secondary @click="expandAllCategories">展开</n-button>
+                  <n-button size="small" secondary @click="collapseAllCategories">收起</n-button>
+                </div>
+              </div>
+
+              <div class="category-stats-strip">
+                <span>全部 {{ categorySummary.total }}</span>
+                <span>空分类 {{ categorySummary.empty }}</span>
+                <span>文章引用 {{ categorySummary.articleCount }}</span>
+              </div>
+
+              <div class="category-list" :class="{ loading: isCategoryLoading }">
+                <button
+                  v-for="item in visibleCategoryItems"
+                  :key="item.category.id"
+                  type="button"
+                  class="category-row"
+                  :class="{ selected: selectedCategory?.id === item.category.id }"
+                  :style="{ '--depth-indent': `${item.depth * 22}px` }"
+                  @click="selectCategory(item.category)"
+                >
+                  <span
+                    class="category-toggle"
+                    :class="{ hidden: item.childCount === 0 }"
+                    @click.stop="toggleCategory(item.category)"
+                  >
+                    {{ expandedCategoryIds.has(item.category.id) || categorySearchValue ? '⌄' : '›' }}
+                  </span>
+                  <span class="category-row-main">
+                    <span class="category-row-title">{{ item.category.label }}</span>
+                    <span class="category-row-path mono">{{ categoryPath(item.category) }}</span>
+                  </span>
+                  <span class="category-row-meta">
+                    <span>{{ item.category.article_count ?? 0 }}</span>
+                    <span v-if="item.childCount">{{ item.childCount }} 子项</span>
+                  </span>
+                </button>
+                <n-empty
+                  v-if="!isCategoryLoading && visibleCategoryItems.length === 0"
+                  description="没有匹配的分类"
+                  class="category-empty"
+                />
+              </div>
+            </div>
+
+            <aside class="category-detail-panel">
+              <template v-if="selectedCategory">
+                <p class="detail-kicker">Selected Category</p>
+                <h3>{{ selectedCategory.label }}</h3>
+                <code class="detail-path">{{ categoryPath(selectedCategory) }}</code>
+
+                <div class="category-detail-grid">
+                  <div>
+                    <span>层级</span>
+                    <strong>{{ categoryDepthLabel(selectedCategory) }}</strong>
+                  </div>
+                  <div>
+                    <span>文章数</span>
+                    <strong>{{ selectedCategory.article_count ?? 0 }}</strong>
+                  </div>
+                  <div>
+                    <span>子分类</span>
+                    <strong>{{ selectedCategory.children.length }}</strong>
+                  </div>
+                  <div>
+                    <span>状态</span>
+                    <strong>{{ selectedCategory.enabled ? '启用' : '隐藏' }}</strong>
+                  </div>
+                </div>
+
+                <div class="category-actions">
+                  <n-button
+                    type="primary"
+                    block
+                    secondary
+                    :disabled="isCategoryLoading"
+                    @click="openRenameCategory(selectedCategory)"
+                  >
+                    重命名分类
+                  </n-button>
+
+                  <n-alert type="warning" :bordered="false" class="category-danger-note">
+                    删除会移除该目录下文章、图片资源、侧边栏登记和分类注册记录。
+                  </n-alert>
+
+                  <n-button
+                    type="error"
+                    block
+                    secondary
+                    :disabled="isCategoryLoading"
+                    @click="openDeleteCategory(selectedCategory)"
+                  >
+                    预览并删除分类
+                  </n-button>
+                </div>
+              </template>
+              <n-empty v-else description="请选择一个分类" />
+            </aside>
+          </div>
         </section>
       </n-tab-pane>
 
@@ -846,7 +1337,241 @@ onMounted(async () => {
           </div>
         </section>
       </n-tab-pane>
+
+      <n-tab-pane name="sidebars" tab="docs 侧边栏">
+        <section class="diff-panel surface-panel">
+          <div class="panel-toolbar">
+            <span class="panel-hint">检查 docs 文章是否已登记到 sidebars.ts，可一键追加缺失项（孤儿 ID 需人工核实，不会自动删除）。</span>
+            <n-button type="primary" :loading="isSidebarLoading" @click="loadSidebarStatus">重新检查</n-button>
+            <n-button
+              :loading="isSidebarSyncing"
+              :disabled="!sidebarStatus?.missing_in_sidebars.length"
+              @click="syncSidebarDocs"
+            >
+              追加缺失（{{ sidebarStatus?.missing_in_sidebars.length || 0 }}）
+            </n-button>
+          </div>
+
+          <div class="diff-summary">
+            <n-statistic label="docs 文章数" :value="sidebarStatus?.docs_count || 0" />
+            <n-statistic label="已登记" :value="sidebarStatus?.registered_count || 0" />
+            <n-statistic label="未登记" :value="sidebarStatus?.missing_count || 0" />
+            <n-statistic label="孤儿 ID" :value="sidebarStatus?.orphan_count || 0" />
+          </div>
+
+          <div class="diff-lists">
+            <div>
+              <h3>docs 有但 sidebars.ts 缺失</h3>
+              <div class="diff-list mono">
+                <span v-for="item in sidebarStatus?.missing_in_sidebars || []" :key="item">{{ item }}</span>
+                <span v-if="!sidebarStatus?.missing_in_sidebars.length" class="empty-line">无差异</span>
+              </div>
+            </div>
+            <div>
+              <h3>sidebars.ts 有但 docs 缺失（孤儿）</h3>
+              <div class="diff-list mono">
+                <span v-for="item in sidebarStatus?.orphan_sidebar_ids || []" :key="item">{{ item }}</span>
+                <span v-if="!sidebarStatus?.orphan_sidebar_ids.length" class="empty-line">无差异</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </n-tab-pane>
+
+      <n-tab-pane name="navbar" tab="navbar 配置">
+        <section class="diff-panel surface-panel">
+          <div class="panel-toolbar">
+            <span class="panel-hint">检查 docusaurus.config.ts 的 navbar 内部链接是否指向已存在内容，并补齐缺失的 docs 一级分类入口；自定义页面（/projects、/about）不校验。</span>
+            <n-button type="primary" :loading="isDocusaurusLoading" @click="loadDocusaurusStatus">重新检查</n-button>
+            <n-button
+              :loading="isDocusaurusSyncing"
+              :disabled="!docusaurusStatus?.broken_to_links.length && !docusaurusStatus?.docs_top_categories_missing_in_nav.length"
+              @click="syncDocusaurusConfigAll"
+            >
+              一键同步（{{ (docusaurusStatus?.broken_to_links.length || 0) + (docusaurusStatus?.docs_top_categories_missing_in_nav.length || 0) }}）
+            </n-button>
+          </div>
+
+          <div class="diff-summary">
+            <n-statistic label="navbar 项总数" :value="docusaurusStatus?.nav_item_total || 0" />
+            <n-statistic label="断链" :value="docusaurusStatus?.broken_to_links.length || 0" />
+            <n-statistic label="docs 一级分类" :value="docusaurusStatus?.docs_top_category_total || 0" />
+            <n-statistic label="未登记到 navbar" :value="docusaurusStatus?.docs_top_categories_missing_in_nav.length || 0" />
+          </div>
+
+          <div class="diff-lists">
+            <div>
+              <h3>断链导航项（指向已删除内容）</h3>
+              <div class="diff-list mono">
+                <span v-for="item in docusaurusStatus?.broken_to_links || []" :key="item.to">
+                  {{ item.to }}<template v-if="item.label">（{{ item.label }}）</template>
+                </span>
+                <span v-if="!docusaurusStatus?.broken_to_links.length" class="empty-line">无差异</span>
+              </div>
+            </div>
+            <div>
+              <h3>docs 一级分类未登记到知识库 navbar</h3>
+              <div class="diff-list mono">
+                <span v-for="item in docusaurusStatus?.docs_top_categories_missing_in_nav || []" :key="item.slug">
+                  {{ item.slug }}（{{ item.label }}）
+                </span>
+                <span v-if="!docusaurusStatus?.docs_top_categories_missing_in_nav.length" class="empty-line">无差异</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </n-tab-pane>
     </n-tabs>
+
+    <n-modal
+      :show="!!renameCategoryTarget"
+      preset="card"
+      title="重命名分类"
+      style="width: min(760px, calc(100vw - 32px));"
+      :mask-closable="!isCategoryRenaming"
+      @update:show="value => { if (!value) closeRenameCategoryModal() }"
+    >
+      <template v-if="renameCategoryTarget">
+        <div class="category-mutation-summary">
+          <span>当前分类</span>
+          <strong>{{ renameCategoryTarget.label }}</strong>
+          <code>{{ categoryPath(renameCategoryTarget) }}</code>
+        </div>
+
+        <n-form label-placement="left" label-width="86" class="rename-category-form">
+          <n-form-item label="新 Slug">
+            <n-input
+              v-model:value="renameCategoryForm.targetSlug"
+              placeholder="java-guide"
+              :disabled="isCategoryRenaming"
+              @keyup.enter="previewRenameCategory"
+            />
+          </n-form-item>
+          <n-form-item label="显示名">
+            <n-input
+              v-model:value="renameCategoryForm.targetLabel"
+              placeholder="Java 指南"
+              :disabled="isCategoryRenaming"
+            />
+          </n-form-item>
+          <n-form-item label="同步链接">
+            <div class="inline-control">
+              <n-switch v-model:value="renameCategoryForm.replaceLinks" :disabled="isCategoryRenaming" />
+              <span>同步替换文章内旧链接和顶部导航中命中的旧路由</span>
+            </div>
+          </n-form-item>
+        </n-form>
+
+        <div class="rename-path-preview">
+          <span>目标路径</span>
+          <code>{{ categoryPath(renameCategoryTarget) }}</code>
+          <strong>-></strong>
+          <code>{{ renamedCategoryPath(renameCategoryTarget, renameCategoryForm.targetSlug) }}</code>
+        </div>
+
+        <div v-if="renameCategoryPlan" class="mutation-plan">
+          <h3>影响预览</h3>
+          <ul>
+            <li v-for="(change, index) in renameCategoryPlan.changes" :key="`${change.target}-${index}`">
+              {{ formatChange(change) }}
+            </li>
+          </ul>
+          <p v-if="renameCategoryPlan.changes.length === 0" class="empty-line">没有文件变更。</p>
+          <n-alert
+            v-for="(warning, index) in renameCategoryPlan.warnings"
+            :key="index"
+            type="warning"
+            :bordered="false"
+            class="delete-warning"
+          >
+            {{ warning }}
+          </n-alert>
+        </div>
+      </template>
+
+      <template #footer>
+        <n-space justify="end">
+          <n-button :disabled="isCategoryRenaming" @click="closeRenameCategoryModal">取消</n-button>
+          <n-button
+            :loading="isCategoryRenamePlanLoading"
+            :disabled="isCategoryRenaming"
+            @click="previewRenameCategory"
+          >
+            预览影响
+          </n-button>
+          <n-popconfirm @positive-click="confirmRenameCategory">
+            <template #trigger>
+              <n-button
+                type="primary"
+                :loading="isCategoryRenaming"
+                :disabled="isCategoryRenamePlanLoading || !renameCategoryPlan"
+              >
+                确认重命名
+              </n-button>
+            </template>
+            确认重命名该分类并同步相关文件？
+          </n-popconfirm>
+        </n-space>
+      </template>
+    </n-modal>
+
+    <n-modal
+      :show="!!deleteCategoryTarget"
+      preset="card"
+      title="删除分类"
+      style="width: min(720px, calc(100vw - 32px));"
+      :mask-closable="!isCategoryDeleting"
+      @update:show="value => { if (!value) closeDeleteCategoryModal() }"
+    >
+      <div v-if="deleteCategoryTarget" class="delete-category-summary">
+        <span>分类</span>
+        <strong>{{ deleteCategoryTarget.label }}</strong>
+        <code>{{ categoryPath(deleteCategoryTarget) }}</code>
+      </div>
+
+      <n-alert type="error" :bordered="false" class="delete-category-alert">
+        这是不可恢复的文件删除操作。请先核对影响预览，确认无误后再执行。
+      </n-alert>
+
+      <div v-if="deleteCategoryPlan" class="delete-plan">
+        <h3>影响预览</h3>
+        <ul>
+          <li v-for="(change, index) in deleteCategoryPlan.changes" :key="`${change.target}-${index}`">
+            {{ formatChange(change) }}
+          </li>
+        </ul>
+        <n-alert
+          v-for="(warning, index) in deleteCategoryPlan.warnings"
+          :key="index"
+          type="warning"
+          :bordered="false"
+          class="delete-warning"
+        >
+          {{ warning }}
+        </n-alert>
+      </div>
+
+      <template #footer>
+        <n-space justify="end">
+          <n-button :disabled="isCategoryDeleting" @click="closeDeleteCategoryModal">取消</n-button>
+          <n-button :loading="isCategoryPlanLoading" :disabled="isCategoryDeleting" @click="previewDeleteCategory">
+            重新预览
+          </n-button>
+          <n-popconfirm @positive-click="confirmDeleteCategory">
+            <template #trigger>
+              <n-button
+                type="error"
+                :loading="isCategoryDeleting"
+                :disabled="isCategoryPlanLoading || !deleteCategoryPlan"
+              >
+                确认删除
+              </n-button>
+            </template>
+            确认删除该分类目录及相关文件？
+          </n-popconfirm>
+        </n-space>
+      </template>
+    </n-modal>
   </div>
 </template>
 
@@ -956,6 +1681,357 @@ onMounted(async () => {
 .registry-table {
   padding: 0 0 12px;
   overflow: hidden;
+}
+
+.category-manager {
+  padding-bottom: 16px;
+  overflow: hidden;
+}
+
+.category-workbench {
+  display: grid;
+  grid-template-columns: minmax(460px, 1fr) minmax(300px, 360px);
+  gap: 14px;
+  padding: 0 18px 18px;
+  align-items: start;
+}
+
+.category-browser,
+.category-detail-panel {
+  min-width: 0;
+  border: 1px solid rgba(41, 63, 52, 0.1);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.category-browser {
+  overflow: hidden;
+}
+
+.category-browser-toolbar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid rgba(41, 63, 52, 0.08);
+  background: rgba(250, 252, 247, 0.78);
+}
+
+.category-browser-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--admin-muted);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.category-stats-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(41, 63, 52, 0.08);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.category-stats-strip span {
+  padding: 4px 9px;
+  color: #40514a;
+  background: rgba(37, 107, 82, 0.08);
+  border: 1px solid rgba(37, 107, 82, 0.1);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.category-list {
+  max-height: 560px;
+  overflow: auto;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.category-row {
+  width: 100%;
+  min-height: 56px;
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px 7px calc(8px + var(--depth-indent, 0px));
+  color: #26342e;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.16s, border-color 0.16s, box-shadow 0.16s;
+}
+
+.category-row:hover {
+  background: rgba(244, 247, 241, 0.86);
+  border-color: rgba(41, 63, 52, 0.08);
+}
+
+.category-row.selected {
+  background: rgba(37, 107, 82, 0.1);
+  border-color: rgba(37, 107, 82, 0.18);
+  box-shadow: inset 3px 0 0 rgba(37, 107, 82, 0.72);
+}
+
+.category-toggle {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #53665c;
+  border-radius: 7px;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.category-toggle:hover {
+  background: rgba(37, 107, 82, 0.1);
+  color: #1d563f;
+}
+
+.category-toggle.hidden {
+  visibility: hidden;
+}
+
+.category-row-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.category-row-title {
+  overflow: hidden;
+  color: #26342e;
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.category-row-path {
+  overflow: hidden;
+  color: var(--admin-muted);
+  font-size: 12px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.category-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #53665c;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.category-row-meta span {
+  padding: 3px 8px;
+  background: rgba(244, 247, 241, 0.96);
+  border: 1px solid rgba(41, 63, 52, 0.08);
+  border-radius: 999px;
+}
+
+.category-empty {
+  padding: 40px 0;
+}
+
+.category-detail-panel {
+  position: sticky;
+  top: 14px;
+  padding: 16px;
+}
+
+.detail-kicker {
+  margin: 0 0 5px;
+  color: var(--admin-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.category-detail-panel h3 {
+  margin: 0;
+  color: #26342e;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.detail-path {
+  display: block;
+  margin-top: 8px;
+  padding: 9px 10px;
+  color: #40514a;
+  background: rgba(244, 247, 241, 0.9);
+  border: 1px solid rgba(41, 63, 52, 0.08);
+  border-radius: 8px;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.category-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.category-detail-grid div {
+  padding: 10px;
+  border: 1px solid rgba(41, 63, 52, 0.08);
+  border-radius: 8px;
+  background: rgba(250, 252, 247, 0.74);
+}
+
+.category-detail-grid span {
+  display: block;
+  color: var(--admin-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.category-detail-grid strong {
+  display: block;
+  margin-top: 4px;
+  color: #26342e;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.category-actions {
+  display: grid;
+  gap: 12px;
+}
+
+.category-danger-note {
+  margin: 0 0 12px;
+}
+
+.category-mutation-summary,
+.delete-category-summary {
+  display: grid;
+  grid-template-columns: 52px minmax(120px, 0.8fr) minmax(180px, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid rgba(41, 63, 52, 0.1);
+  border-radius: 10px;
+  background: rgba(250, 252, 247, 0.9);
+}
+
+.category-mutation-summary span,
+.delete-category-summary span {
+  color: var(--admin-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.category-mutation-summary strong,
+.delete-category-summary strong {
+  color: var(--admin-text);
+  font-size: 14px;
+}
+
+.category-mutation-summary code,
+.delete-category-summary code {
+  color: #53665c;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.rename-category-form {
+  margin-top: 14px;
+}
+
+.inline-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  color: #40514a;
+  font-size: 13px;
+}
+
+.rename-path-preview {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid rgba(37, 107, 82, 0.14);
+  border-radius: 8px;
+  background: rgba(37, 107, 82, 0.06);
+}
+
+.rename-path-preview span {
+  color: var(--admin-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.rename-path-preview strong {
+  color: #256b52;
+}
+
+.rename-path-preview code {
+  min-width: 0;
+  color: #40514a;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.delete-category-alert {
+  margin-top: 12px;
+}
+
+.mutation-plan,
+.delete-plan {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(37, 107, 82, 0.14);
+  border-radius: 10px;
+  background: rgba(250, 252, 247, 0.9);
+}
+
+.delete-plan {
+  border-color: rgba(185, 75, 75, 0.14);
+  background: rgba(255, 250, 250, 0.9);
+}
+
+.mutation-plan h3,
+.delete-plan h3 {
+  margin: 0 0 8px;
+  color: #26342e;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.mutation-plan ul,
+.delete-plan ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #40514a;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.delete-warning {
+  margin-top: 10px;
 }
 
 .table-header {

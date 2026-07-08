@@ -1,4 +1,5 @@
 import type { BytemdPlugin } from 'bytemd'
+import { getAuthToken } from '@/utils/auth'
 
 const API_PREFIX = '/api/v1'
 
@@ -43,7 +44,10 @@ function resolveLocalPreviewUrl(src: string, articlePath: string, apiBaseUrl: st
   if (parts.length !== 2) return null
 
   const imageName = safeDecodeURIComponent(parts[1])
-  return `${stripTrailingSlash(apiBaseUrl)}${API_PREFIX}/articles/${encodeURIComponent(articlePath)}/images/${encodeURIComponent(imageName)}/content`
+  const baseUrl = `${stripTrailingSlash(apiBaseUrl)}${API_PREFIX}/articles/${encodeURIComponent(articlePath)}/images/${encodeURIComponent(imageName)}/content`
+  // <img> 标签无法附加 Authorization 头，需通过 query 参数传递会话 token
+  const token = getAuthToken()
+  return token ? `${baseUrl}?access_token=${encodeURIComponent(token)}` : baseUrl
 }
 
 function rewriteImageNodes(node: HastNode, articlePathSource: ArticlePathSource, apiBaseUrl: string): void {

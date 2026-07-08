@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from scr.api.v1.router import api_router
+from scr.core.auth import admin_auth_middleware
 from scr.core.config import settings
 from scr.core.exception_handlers import register_exception_handlers
 from scr.core.logging import configure_logging
@@ -24,9 +25,10 @@ app = FastAPI(
 )
 
 # 请求上下文中间件：注入 request_id 并记录请求耗时
+app.middleware("http")(admin_auth_middleware)
 app.middleware("http")(request_context_middleware)
 
-# 跨域配置：允许前端开发端口（3000 / 5173）携带凭证访问
+# 跨域配置：允许固定管理前端端口携带凭证访问
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,

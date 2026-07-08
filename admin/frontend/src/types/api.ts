@@ -28,7 +28,11 @@ import type {
 export interface FrontMatter {
   title: string
   date?: string
-  updated?: string
+  /** Docusaurus 3.x 原生字段：最后更新时间与作者（嵌套结构） */
+  last_update?: {
+    date?: string
+    author?: string
+  }
   categories?: string[]
   tags?: string[]
   authors?: string[]
@@ -45,6 +49,7 @@ export interface FrontMatter {
   status?: 'draft' | 'wip' | 'published'
   series?: string
   series_order?: number
+  sidebar_position?: number
 }
 
 /**
@@ -101,6 +106,11 @@ export interface PostInfo {
   tags: string[]
   /** 创建日期 */
   date: string
+  /** Docusaurus 原生最后更新字段 */
+  lastUpdate?: {
+    date?: string
+    author?: string
+  }
   /** 更新日期 */
   updated?: string
   /** 旧字段兼容；列表展示请使用 displayStatus/displayStatusLabel */
@@ -204,6 +214,10 @@ export interface ArticleCreateOptions {
   authors?: string[]
   tags?: string[]
   date?: string | null
+  lastUpdate?: {
+    date?: string
+    author?: string
+  } | null
 }
 
 export interface FileChangeDTO {
@@ -275,11 +289,18 @@ export interface CategoryDTO {
 
 export interface CategoryCreateDTO {
   type: 'docs' | 'blog' | string
-  slug: string
-  label: string
-  parent_path?: string[]
+  path: string[]
+  label?: string | null
   description?: string | null
   cover?: string | null
+}
+
+export interface CategoryDeleteOptions extends MutationOptions {}
+
+export interface CategoryRenameOptions extends MutationOptions {
+  targetSlug: string
+  targetLabel?: string | null
+  replaceLinks?: boolean
 }
 
 export interface TagDTO {
@@ -305,9 +326,36 @@ export interface TagSyncResultDTO {
 }
 
 export interface SidebarStatusDTO {
+  sidebars_exists: boolean
+  docs_count: number
+  registered_count: number
+  missing_count: number
+  orphan_count: number
   registered_doc_ids: string[]
   missing_in_sidebars: string[]
   orphan_sidebar_ids: string[]
+}
+
+export interface DocusaurusConfigNavItemDTO {
+  to: string
+  label: string | null
+  dropdown_label: string | null
+  exists: boolean | null // True/False 为校验结果；null 表示不校验（自定义页面/外链）
+}
+
+export interface DocsTopCategoryNavDTO {
+  slug: string
+  label: string
+}
+
+export interface DocusaurusConfigStatusDTO {
+  config_exists: boolean
+  config_path: string
+  nav_item_total: number
+  nav_items: DocusaurusConfigNavItemDTO[]
+  broken_to_links: DocusaurusConfigNavItemDTO[]
+  docs_top_category_total: number
+  docs_top_categories_missing_in_nav: DocsTopCategoryNavDTO[]
 }
 
 export interface SiteValidationResultDTO {
@@ -346,6 +394,21 @@ export interface GitPushResultDTO {
   status: string
   remote: string
   branch: string
+}
+
+export interface DeployResultDTO {
+  status: 'success' | 'failed' | 'no_changes'
+  branch: string
+  commit?: string | null
+  pushed: boolean
+  logs: string
+  error?: Record<string, unknown> | null
+}
+
+export interface DeployOptions extends MutationOptions {
+  branch?: string
+  runBuildFirst?: boolean
+  cleanBuild?: boolean
 }
 
 export interface ContentSchemaDTO {
@@ -503,6 +566,26 @@ export interface AIRewriteResultDTO {
   article_id: string | null
 }
 
+export interface AIModelConfigDTO {
+  id: string
+  name: string
+  provider?: string
+  baseUrl: string
+  apiKey?: string
+  modelId: string
+  apiFormat?: 'openai' | 'anthropic'
+  temperature?: number
+  maxTokens?: number
+  thinkingMode?: 'enabled' | 'disabled'
+  reasoningEffort?: 'high' | 'max'
+  isDefault?: boolean
+}
+
+export interface AIModelTestResultDTO {
+  success: boolean
+  modelId: string
+}
+
 export interface FetchWebRequestDTO {
   url: string
   extract?: Array<'title' | 'summary' | 'images' | 'links' | 'markdown' | string>
@@ -606,6 +689,10 @@ export interface BlogAPI {
 
   createCategory?(payload: CategoryCreateDTO): Promise<CategoryDTO>
 
+  renameCategory?(categoryId: string, options: CategoryRenameOptions): Promise<MutationPlanDTO>
+
+  deleteCategory?(categoryId: string, options?: CategoryDeleteOptions): Promise<MutationPlanDTO>
+
   /**
    * 获取文章创建分类注册表
    */
@@ -670,6 +757,14 @@ export interface BlogAPI {
 
   syncSidebars?(options?: MutationOptions & { mode?: 'append_missing' | 'regenerate' | string }): Promise<MutationPlanDTO>
 
+  syncDocsIndex?(options?: MutationOptions): Promise<MutationPlanDTO>
+
+  syncBlogIndex?(options?: MutationOptions): Promise<MutationPlanDTO>
+
+  getDocusaurusConfigStatus?(): Promise<DocusaurusConfigStatusDTO>
+
+  syncDocusaurusConfig?(options?: MutationOptions & { mode?: 'append_missing_top' | 'remove_broken' | 'all' | string }): Promise<MutationPlanDTO>
+
   validateSite?(options?: { includeImages?: boolean; includeLinks?: boolean; includeSidebars?: boolean; type?: 'docs' | 'blog' | null }): Promise<SiteValidationResultDTO>
 
   // ==================== Git 操作 ====================
@@ -700,7 +795,7 @@ export interface BlogAPI {
    * @param message 提交信息
    * @param filePath 指定提交的文件路径（相对于仓库根目录），为空则提交所有变更
    */
-  deploy(message: string, filePath?: string, options?: MutationOptions & { runBuildFirst?: boolean; push?: boolean }): Promise<GitOperationResult | MutationPlanDTO | TaskDTO>
+  deploy(message: string, filePath?: string, options?: DeployOptions): Promise<GitOperationResult | MutationPlanDTO | TaskDTO | DeployResultDTO>
 
   getSchema?(): Promise<ContentSchemaDTO>
 
@@ -733,6 +828,14 @@ export interface BlogAPI {
   rewriteAIContent?(payload: AIRewriteRequestDTO): Promise<AIRewriteResultDTO>
 
   fetchWebMaterial?(payload: FetchWebRequestDTO): Promise<FetchWebResultDTO>
+
+  getAIModels?(): Promise<AIModelConfigDTO[]>
+
+  saveAIModel?(model: AIModelConfigDTO & { apiKey?: string }): Promise<AIModelConfigDTO>
+
+  deleteAIModel?(modelId: string): Promise<AIModelConfigDTO[]>
+
+  testAIModel?(modelId: string): Promise<AIModelTestResultDTO>
 
   /**
    * AI 对话，返回 Agent 草稿方案或 LLM 编辑操作

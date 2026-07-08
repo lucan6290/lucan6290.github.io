@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, h } from 'vue'
+import { ref, computed, onBeforeUnmount, onMounted, h, nextTick } from 'vue'
 import {
   NLayout,
   NLayoutSider,
@@ -49,6 +49,8 @@ const showNewPostModal = ref(false)
 const showRenameModal = ref(false)
 const isRenamePlanning = ref(false)
 const isRenaming = ref(false)
+const isDocsIndexSyncing = ref(false)
+const isBlogIndexSyncing = ref(false)
 const renameSource = ref<PostInfo | null>(null)
 const renamePlan = ref<MutationPlanDTO | null>(null)
 const renameForm = ref({
@@ -57,9 +59,15 @@ const renameForm = ref({
   replaceLinks: true
 })
 const siderCollapsed = ref(false)
+const tableWrapperRef = ref<HTMLElement | null>(null)
+const tableLayoutMode = ref<'full' | 'medium' | 'compact'>('full')
+let categorySiderMediaQuery: MediaQueryList | null = null
+let tableResizeObserver: ResizeObserver | null = null
 
 const typeOrder = ['docs', 'blog']
 const rootCategoryKey = '__root'
+const docsHomeCategoryKey = '__docs_home'
+const docsCategoryHomeKey = '__category_home'
 
 // 状态选项
 const statusOptions = [
@@ -122,14 +130,37 @@ function isRootCategory(post: PostInfo): boolean {
   return !(post.categoryPath && post.categoryPath.length > 0)
 }
 
+function getRelativePath(post: PostInfo): string {
+  return (post.relativePath || post.fullPath || '').replace(/\\/g, '/')
+}
+
+function isDocsHome(post: PostInfo): boolean {
+  return getArticleType(post) === 'docs' && getRelativePath(post) === 'index.md'
+}
+
+function isDocsCategoryHome(post: PostInfo): boolean {
+  const parts = getRelativePath(post).split('/').filter(Boolean)
+  return getArticleType(post) === 'docs' && parts.length === 2 && parts[1].toLowerCase() === 'index.md'
+}
+
+function getRootCategoryKey(post: PostInfo): string {
+  return isDocsHome(post) ? docsHomeCategoryKey : rootCategoryKey
+}
+
 function getPrimaryLabel(post: PostInfo, rootFallback = '未分类'): string {
+  if (isDocsHome(post)) return '知识库首页'
   if (isRootCategory(post)) return rootFallback
   return getPostPrimaryCategoryLabel(post)
 }
 
 function getSecondaryLabel(post: PostInfo, fallback = ''): string {
+  if (isDocsCategoryHome(post)) return '分类首页'
   const label = getPostSecondaryCategoryLabel(post)
   return label === '根目录' ? fallback : label
+}
+
+function getTreeSecondaryCategoryKey(post: PostInfo): string {
+  return isDocsCategoryHome(post) ? docsCategoryHomeKey : getPostSecondaryCategoryKey(post)
 }
 
 function compareCategoryKeys(a: string, b: string): number {
@@ -149,8 +180,8 @@ const treeData = computed<TreeOption[]>(() => {
 
   postsStore.posts.forEach((post) => {
     const articleType = getArticleType(post)
-    const category = isRootCategory(post) ? rootCategoryKey : getPostPrimaryCategoryKey(post)
-    const subSlug = getPostSecondaryCategoryKey(post)
+    const category = isRootCategory(post) ? getRootCategoryKey(post) : getPostPrimaryCategoryKey(post)
+    const subSlug = getTreeSecondaryCategoryKey(post)
     const subName = getSecondaryLabel(post)
 
     if (!typeGroups[articleType]) {
@@ -227,13 +258,13 @@ const filteredPosts = computed(() => {
     }
     if (selectedCategoryKey) {
       result = result.filter((post) => {
-        const categoryKey = isRootCategory(post) ? rootCategoryKey : getPostPrimaryCategoryKey(post)
+        const categoryKey = isRootCategory(post) ? getRootCategoryKey(post) : getPostPrimaryCategoryKey(post)
         return categoryKey === selectedCategoryKey
       })
     }
     if (selectedSubCategoryKey) {
       const normalizedSubCategory = selectedSubCategoryKey === rootCategoryKey ? '' : selectedSubCategoryKey
-      result = result.filter((post) => getPostSecondaryCategoryKey(post) === normalizedSubCategory)
+      result = result.filter((post) => getTreeSecondaryCategoryKey(post) === normalizedSubCategory)
     }
   }
 
@@ -256,14 +287,97 @@ const filteredPosts = computed(() => {
   return result
 })
 
+const isMediumTable = computed(() => tableLayoutMode.value === 'medium')
+const isCompactTable = computed(() => tableLayoutMode.value === 'compact')
+const tableScrollX = computed(() => {
+  if (isCompactTable.value) return 840
+  if (isMediumTable.value) return 900
+  return undefined
+})
+
+function updateTableLayoutMode(width: number) {
+  if (width < 860) {
+    tableLayoutMode.value = 'compact'
+  } else if (width < 1120) {
+    tableLayoutMode.value = 'medium'
+  } else {
+    tableLayoutMode.value = 'full'
+  }
+}
+
+function renderCategoryTags(row: PostInfo) {
+  const tags = []
+  const typeZh = getTypeLabel(getArticleType(row))
+  const primaryZh = getPrimaryLabel(row, typeZh)
+  const secondaryZh = getSecondaryLabel(row)
+  tags.push(
+    h(
+      NTag,
+      { type: 'success', size: 'small', class: 'cell-tag', title: typeZh },
+      { default: () => typeZh }
+    )
+  )
+  if (!isRootCategory(row) && primaryZh !== typeZh) {
+    tags.push(
+      h(
+        NTag,
+        { type: 'info', size: 'small', class: 'cell-tag', title: primaryZh },
+        { default: () => primaryZh }
+      )
+    )
+  }
+  if (secondaryZh) {
+    tags.push(
+      h(
+        NTag,
+        { type: 'default', size: 'small', class: 'cell-tag', title: secondaryZh },
+        { default: () => secondaryZh }
+      )
+    )
+  }
+  return h('div', { class: 'category-tags', title: [typeZh, primaryZh, secondaryZh].filter(Boolean).join(' / ') }, tags)
+}
+
+function renderTagList(row: PostInfo) {
+  if (!row.tags || row.tags.length === 0) return '-'
+  const visibleTags = row.tags.slice(0, 3)
+  const tags = visibleTags.map((tag) =>
+    h(
+      NTag,
+      { size: 'small', class: 'cell-tag', title: tag },
+      { default: () => tag }
+    )
+  )
+  if (row.tags.length > visibleTags.length) {
+    tags.push(
+      h(
+        NTag,
+        { size: 'small', class: 'cell-tag', type: 'default', bordered: false, title: row.tags.slice(visibleTags.length).join('、') },
+        { default: () => `+${row.tags.length - visibleTags.length}` }
+      )
+    )
+  }
+  return h('div', { class: 'tag-list', title: row.tags.join('、') }, tags)
+}
+
+function renderPostDate(row: PostInfo) {
+  return new Date(row.date).toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
 // 表格列定义
-const columns: DataTableColumns<PostInfo> = [
+const columns = computed<DataTableColumns<PostInfo>>(() => {
+  const tableColumns: DataTableColumns<PostInfo> = [
   {
     title: '文件名',
     key: 'filename',
-    width: 320,
-    minWidth: 260,
-    fixed: 'left',
+    width: isCompactTable.value ? 300 : isMediumTable.value ? 340 : 360,
+    minWidth: 240,
     ellipsis: {
       tooltip: true
     },
@@ -273,82 +387,41 @@ const columns: DataTableColumns<PostInfo> = [
         {
           text: true,
           type: 'primary',
+          class: 'filename-button',
           onClick: () => handleEdit(row)
         },
-        { default: () => row.filename || row.title }
+        { default: () => h('span', { class: 'filename-text', title: row.filename || row.title }, row.filename || row.title) }
       )
     }
   },
   {
     title: '分类',
     key: 'categories',
-    width: 180,
-    render(row) {
-      const tags = []
-      const typeZh = getTypeLabel(getArticleType(row))
-      const primaryZh = getPrimaryLabel(row, typeZh)
-      const secondaryZh = getSecondaryLabel(row)
-      tags.push(
-        h(
-          NTag,
-          { type: 'success', size: 'small', style: { marginRight: '4px' } },
-          { default: () => typeZh }
-        )
-      )
-      if (!isRootCategory(row) && primaryZh !== typeZh) {
-        tags.push(
-          h(
-            NTag,
-            { type: 'info', size: 'small', style: { marginRight: '4px' } },
-            { default: () => primaryZh }
-          )
-        )
-      }
-      if (secondaryZh) {
-        tags.push(
-          h(
-            NTag,
-            { type: 'default', size: 'small' },
-            { default: () => secondaryZh }
-          )
-        )
-      }
-      return tags
-    }
+    width: isCompactTable.value ? 260 : isMediumTable.value ? 270 : 240,
+    minWidth: 180,
+    render: renderCategoryTags
   },
-  {
-    title: '标签',
-    key: 'tags',
-    width: 200,
-    render(row) {
-      if (!row.tags || row.tags.length === 0) return '-'
-      return row.tags.map((tag) =>
-        h(
-          NTag,
-          { size: 'small', style: { marginRight: '4px' } },
-          { default: () => tag }
-        )
-      )
+  ...((isCompactTable.value || isMediumTable.value) ? [] : [
+    {
+      title: '标签',
+      key: 'tags',
+      width: 230,
+      minWidth: 160,
+      render: renderTagList
+    },
+    {
+      title: '日期',
+      key: 'date',
+      width: 160,
+      minWidth: 140,
+      render: renderPostDate
     }
-  },
-  {
-    title: '日期',
-    key: 'date',
-    width: 180,
-    render(row) {
-      return new Date(row.date).toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    }
-  },
+  ]),
   {
     title: '状态',
     key: 'status',
     width: 100,
+    minWidth: 88,
     render(row) {
       const status = getPostDisplayStatus(row)
       return h(
@@ -361,16 +434,18 @@ const columns: DataTableColumns<PostInfo> = [
   {
     title: '操作',
     key: 'actions',
-    width: 132,
-    fixed: 'right',
+    width: 160,
+    minWidth: 150,
     align: 'center',
     render(row) {
-      return h(NSpace, { vertical: true, size: 6, align: 'center', class: 'table-actions' }, {
+      return h(NSpace, { size: 10, align: 'center', justify: 'center', class: 'table-actions' }, {
         default: () => [
           h(
             NButton,
             {
               size: 'small',
+              text: true,
+              type: 'primary',
               onClick: () => handleEdit(row)
             },
             { default: () => '编辑' }
@@ -379,7 +454,7 @@ const columns: DataTableColumns<PostInfo> = [
             NButton,
             {
               size: 'small',
-              secondary: true,
+              text: true,
               onClick: () => openRenameModal(row)
             },
             { default: () => '重命名' }
@@ -393,7 +468,7 @@ const columns: DataTableColumns<PostInfo> = [
               trigger: () =>
                 h(
                   NButton,
-                  { size: 'small', type: 'error' },
+                  { size: 'small', type: 'error', text: true },
                   { default: () => '删除' }
                 ),
               default: () => '确定要删除这篇文章吗？'
@@ -403,7 +478,9 @@ const columns: DataTableColumns<PostInfo> = [
       })
     }
   }
-]
+  ]
+  return tableColumns
+})
 
 // 处理分类树选择
 const handleTreeSelect = (keys: Array<string | number>) => {
@@ -520,9 +597,76 @@ const loadPosts = async () => {
   }
 }
 
+const syncDocsIndex = async () => {
+  const api = getAPI()
+  if (!api.syncDocsIndex) {
+    message.warning('当前后端不支持全量更新目录接口')
+    return
+  }
+
+  try {
+    isDocsIndexSyncing.value = true
+    const plan = await api.syncDocsIndex({ dryRun: false, confirm: true })
+    await postsStore.refreshPosts()
+    message.success(plan.changes.length ? `已更新 ${plan.changes.length} 个目录页` : '目录页已是最新')
+  } catch (error) {
+    console.error('全量更新目录失败:', error)
+    message.error(error instanceof Error ? error.message : '全量更新目录失败')
+  } finally {
+    isDocsIndexSyncing.value = false
+  }
+}
+
+const syncBlogIndex = async () => {
+  const api = getAPI()
+  if (!api.syncBlogIndex) {
+    message.warning('当前后端不支持同步博客首页接口')
+    return
+  }
+
+  try {
+    isBlogIndexSyncing.value = true
+    const plan = await api.syncBlogIndex({ dryRun: false, confirm: true })
+    await postsStore.refreshPosts()
+    message.success(plan.changes.length ? `已更新 ${plan.changes.length} 个博客首页文件` : '博客首页已是最新')
+  } catch (error) {
+    console.error('同步博客首页失败:', error)
+    message.error(error instanceof Error ? error.message : '同步博客首页失败')
+  } finally {
+    isBlogIndexSyncing.value = false
+  }
+}
+
+function updateCategorySider(event: MediaQueryList | MediaQueryListEvent) {
+  if (event.matches) {
+    siderCollapsed.value = true
+  }
+}
+
+function observeTableWrapper() {
+  tableResizeObserver?.disconnect()
+  if (!tableWrapperRef.value) return
+  updateTableLayoutMode(tableWrapperRef.value.clientWidth)
+  tableResizeObserver = new ResizeObserver((entries) => {
+    const entry = entries[0]
+    if (!entry) return
+    updateTableLayoutMode(entry.contentRect.width)
+  })
+  tableResizeObserver.observe(tableWrapperRef.value)
+}
+
 // 初始化
 onMounted(() => {
+  categorySiderMediaQuery = window.matchMedia('(max-width: 1360px)')
+  updateCategorySider(categorySiderMediaQuery)
+  categorySiderMediaQuery.addEventListener('change', updateCategorySider)
+  nextTick(observeTableWrapper)
   loadPosts()
+})
+
+onBeforeUnmount(() => {
+  categorySiderMediaQuery?.removeEventListener('change', updateCategorySider)
+  tableResizeObserver?.disconnect()
 })
 </script>
 
@@ -585,24 +729,30 @@ onMounted(() => {
             <h2>文章管理</h2>
             <span>{{ filteredPosts.length }} / {{ postsStore.posts.length }} 篇文章</span>
           </div>
-          <n-space class="toolbar-filters">
+          <div class="toolbar-filters">
             <n-input
               v-model:value="searchValue"
               placeholder="搜索文章标题..."
               clearable
-              style="width: 320px"
+              class="toolbar-search"
             />
             <n-select
               v-model:value="statusFilter"
               :options="statusOptions"
               placeholder="状态筛选"
               clearable
-              style="width: 120px"
+              class="toolbar-status"
             />
-          </n-space>
+          </div>
           <div class="toolbar-actions">
             <n-button @click="loadPosts">
               刷新
+            </n-button>
+            <n-button :loading="isDocsIndexSyncing" @click="syncDocsIndex">
+              全量更新目录
+            </n-button>
+            <n-button :loading="isBlogIndexSyncing" @click="syncBlogIndex">
+              同步博客首页
             </n-button>
             <n-button type="primary" @click="showNewPostModal = true">
               新建文章
@@ -611,14 +761,14 @@ onMounted(() => {
         </div>
 
         <!-- 文章列表 -->
-        <div class="table-wrapper">
+        <div ref="tableWrapperRef" class="table-wrapper">
           <n-data-table
             :columns="columns"
             :data="filteredPosts"
             :bordered="false"
             :loading="isLoading"
             :pagination="false"
-            :scroll-x="1160"
+            :scroll-x="tableScrollX"
           >
             <template #empty>
               <n-empty description="暂无文章" />
@@ -713,8 +863,8 @@ onMounted(() => {
 
 <style scoped>
 .posts-page {
-  --posts-right-safe-space: 36px;
   height: 100%;
+  min-width: 0;
   overflow: hidden;
   position: relative;
 }
@@ -815,12 +965,13 @@ onMounted(() => {
 }
 
 .toolbar {
-  width: calc(100% - var(--posts-right-safe-space));
-  max-width: calc(100% - var(--posts-right-safe-space));
+  width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
   margin-bottom: 16px;
   padding: 16px 18px;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   flex-shrink: 0;
@@ -828,14 +979,36 @@ onMounted(() => {
 }
 
 .toolbar-filters {
-  flex: 1;
+  min-width: 260px;
+  display: flex;
+  flex: 1 1 360px;
+  flex-wrap: wrap;
+  gap: 10px;
   justify-content: flex-end;
+}
+
+.toolbar-search {
+  width: min(320px, 100%);
+  flex: 1 1 220px;
+}
+
+.toolbar-status {
+  width: 130px;
+  flex: 0 0 130px;
 }
 
 .toolbar-actions {
   display: flex;
   align-items: center;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
   gap: 10px;
+  justify-content: flex-end;
+}
+
+.toolbar-title {
+  min-width: 172px;
+  flex: 1 1 180px;
 }
 
 .toolbar-title h2 {
@@ -855,9 +1028,10 @@ onMounted(() => {
 }
 
 .table-wrapper {
-  width: calc(100% - var(--posts-right-safe-space));
+  width: 100%;
   flex: 1;
-  max-width: calc(100% - var(--posts-right-safe-space));
+  max-width: 100%;
+  min-width: 0;
   min-height: 0;
   overflow: auto;
   padding: 3px;
@@ -873,13 +1047,13 @@ onMounted(() => {
   min-height: 100%;
 }
 
-.table-wrapper :deep(.n-data-table-th--fixed-right),
-.table-wrapper :deep(.n-data-table-td--fixed-right) {
-  background: rgba(255, 255, 255, 0.96);
+.table-wrapper :deep(.n-data-table-base-table) {
+  min-width: 100%;
 }
 
 .table-wrapper :deep(.table-actions) {
   width: 100%;
+  flex-wrap: nowrap;
 }
 
 .table-wrapper :deep(.n-data-table-th) {
@@ -904,9 +1078,54 @@ onMounted(() => {
   max-width: 100%;
 }
 
+.table-wrapper :deep(.filename-button) {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.table-wrapper :deep(.filename-text) {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.category-tags,
+.tag-list {
+  max-width: 100%;
+  min-width: 0;
+  max-height: 52px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
 .table-wrapper :deep(.n-tag) {
   font-size: 12px;
   font-weight: 500;
+}
+
+.table-wrapper :deep(.cell-tag) {
+  max-width: 100%;
+  min-width: 0;
+  flex: 0 1 auto;
+  margin-right: 0 !important;
+}
+
+.table-wrapper :deep(.cell-tag .n-tag__content) {
+  display: block;
+  max-width: 112px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tag-list :deep(.cell-tag .n-tag__content) {
+  max-width: 96px;
 }
 
 .posts-page :deep(.n-tree-node-content) {
@@ -997,10 +1216,6 @@ onMounted(() => {
 }
 
 @media (max-width: 900px) {
-  .posts-page {
-    --posts-right-safe-space: 0px;
-  }
-
   .toolbar {
     align-items: flex-start;
     flex-direction: column;
@@ -1010,6 +1225,10 @@ onMounted(() => {
   .toolbar-actions {
     width: 100%;
     justify-content: flex-start;
+  }
+
+  .toolbar-title {
+    width: 100%;
   }
 }
 
@@ -1023,9 +1242,28 @@ onMounted(() => {
     padding: 16px !important;
   }
 
+  .toolbar-filters {
+    min-width: 0;
+    flex-direction: column;
+  }
+
+  .toolbar-search,
+  .toolbar-status,
   .toolbar-filters :deep(.n-input),
   .toolbar-filters :deep(.n-select) {
-    width: 100% !important;
+    width: 100%;
+    flex-basis: auto;
+  }
+
+  .toolbar-actions :deep(.n-button) {
+    min-width: 128px;
+    flex: 1 1 calc(50% - 8px);
+  }
+}
+
+@media (max-width: 520px) {
+  .toolbar-actions :deep(.n-button) {
+    flex-basis: 100%;
   }
 }
 </style>

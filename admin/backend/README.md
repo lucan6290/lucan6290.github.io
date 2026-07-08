@@ -1,7 +1,23 @@
 # Admin Backend
 
 本地优先的 Docusaurus 内容管理后端，基于 FastAPI + Pydantic v2。
-详细设计与接口契约见 `admin/docs/管理员后端技术设计.md` 与 `admin/docs/管理员后端接口文档.md`。
+详细设计与接口契约见 `admin/docs/管理员后端技术设计.md`、`admin/docs/管理员后端接口文档.md` 与 `admin/docs/内容工作流接口说明.md`。
+
+## 架构分层
+
+后端按职责分为 API、应用编排、领域服务与基础设施适配四层：
+
+| 目录 | 职责 |
+| --- | --- |
+| `scr/api` | FastAPI 路由层，只处理请求参数、响应模型与 HTTP 语义。 |
+| `scr/application/content/workflows` | 应用编排层，组合多个领域服务完成文章创建、分类创建等跨文件业务流程，并负责失败回滚。 |
+| `scr/services/content` | 内容领域服务层，维护文章、分类、博客、侧边栏、Docusaurus 配置与校验等核心业务规则。 |
+| `scr/infrastructure/filesystem` | 文件系统适配层，封装 Markdown 解析、路径解析和项目相对路径等本地文件能力。 |
+| `scr/infrastructure/registry` | 注册表基础设施层，封装 YAML 注册表、SQLite 查询索引、索引器与仓储读写。 |
+| `scr/core` | 横切基础能力，包括配置、日志、中间件、异常处理和路径安全校验。 |
+| `scr/schemas` / `scr/models` | Pydantic DTO 与领域枚举模型。 |
+
+新增代码时按依赖方向组织：`api -> application -> services -> infrastructure/core`。业务规则优先放在 `services/content`，跨多个服务的完整用例放在 `application/content/workflows`，本地文件和 SQLite 这类外部资源访问放在 `infrastructure`。
 
 ## 1. 环境要求
 
@@ -15,10 +31,24 @@ cd E:\A-Code\xiaocancoding\admin\backend
 python -m pip install -r requirements.txt
 ```
 
+依赖版本以 `pyproject.toml` 为权威来源；`requirements.txt` 是本地运行的便捷镜像，更新运行依赖时需要同步维护两处。开发工具依赖通过 `pyproject.toml` 的 `dev` extra 管理：
+
+```powershell
+python -m pip install -e ".[dev]"
+```
+
 ## 3. 启动服务
 
 > **关键：必须在 `admin/backend/` 目录下、以模块方式（`-m`）启动。**
 > `scr` 是 src-layout 包，代码中大量使用 `from scr...` 的包级绝对导入，只有以 `-m` 方式启动、并位于 `admin/backend/` 时，`scr` 包才能被正确解析。
+> 本地开发端口固定为 `18000`，不要临时改成其他端口。
+
+启动前建议确认端口未被旧进程占用：
+
+```powershell
+netstat -ano | Select-String ':18000'
+Stop-Process -Id <PID> -Force
+```
 
 推荐方式（支持热重载）：
 
@@ -41,7 +71,18 @@ python -m scr.main
 | http://127.0.0.1:18000/docs | OpenAPI 交互文档 |
 | http://127.0.0.1:18000/openapi.json | OpenAPI Schema |
 
-## 4. 常见问题
+## 4. 测试与质量检查
+
+```powershell
+cd E:\A-Code\xiaocancoding\admin\backend
+python -m compileall -q scr
+python -m ruff check .
+python -m pytest
+```
+
+`pyproject.toml` 统一维护 `pytest` 与 `ruff` 的基础规则。当前 lint 门禁聚焦未使用代码、明显可读性问题和潜在 bug；FastAPI 常见的 `Query/File/Form` 参数默认值告警已按项目实际忽略。
+
+## 5. 常见问题
 
 ### `ModuleNotFoundError: No module named 'scr'`
 
@@ -57,7 +98,7 @@ python -m scr.main
 
 未安装依赖，执行 `python -m pip install -r requirements.txt`。
 
-## 5. 配置项
+## 6. 配置项
 
 通过环境变量覆盖默认值：
 
@@ -66,7 +107,7 @@ python -m scr.main
 | `LUCHUAN_PROJECT_ROOT` | 自动从源码位置回溯 4 层 | 项目根目录 |
 | `LUCHUAN_ENV` | `local` | 运行环境，用于 `/health` 的 `environment` 字段 |
 | `LUCHUAN_LOG_LEVEL` | `INFO` | 日志级别 |
-| `LUCHUAN_CORS_ORIGINS` | admin 前端 14000 / Vite 5173 / Next 3000 等 6 个本地源 | 允许跨域的前端来源（逗号分隔），覆盖默认白名单 |
+| `LUCHUAN_CORS_ORIGINS` | `http://localhost:14000,http://127.0.0.1:14000` | 允许跨域的前端来源（逗号分隔），覆盖默认白名单 |
 | `LUCHUAN_REGISTRY_INDEX_PATH` | `admin/backend/data/registry_index.sqlite3` | SQLite 注册表索引库路径；YAML/Markdown 仍是源文件，SQLite 仅用于后台搜索、分页、排序和统计 |
 
 PowerShell 下设置环境变量示例（仅当前会话生效）：
@@ -76,9 +117,11 @@ $env:LUCHUAN_ENV = "dev"
 python -m uvicorn scr.main:app --reload
 ```
 
-## 6. SQLite 注册表索引
+## 7. SQLite 注册表索引
 
 后台提供可重建的 SQLite 管理索引，不取代 `admin/backend/data/content-schema/*.yml` 和 Markdown 源文件。需要搜索、分页、排序、统计时，先同步索引：
+
+`admin/backend/data/*.sqlite3` 属于本地派生数据，不提交到版本库；删除后可通过同步接口重新生成。
 
 ```powershell
 Invoke-RestMethod -Method Post http://127.0.0.1:18000/api/v1/registry-index/sync

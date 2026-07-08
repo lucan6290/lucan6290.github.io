@@ -1,0 +1,18 @@
+{
+  "models": [
+    {
+      "id": "deepseek-v4-flash-1783150521742",
+      "name": "DeepSeek V4 Flash",
+      "provider": "deepseek",
+      "baseUrl": "https://api.deepseek.com",
+      "modelId": "deepseek-v4-flash",
+      "apiFormat": "openai",
+      "temperature": 0.3,
+      "maxTokens": 8192,
+      "thinkingMode": "enabled",
+      "reasoningEffort": "high",
+      "isDefault": false,
+      "apiKey": "sk-643315aef5e94578829a21e259906ef5"
+    }
+  ]
+}
