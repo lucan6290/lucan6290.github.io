@@ -39,7 +39,7 @@ const sidebars: SidebarsConfig = {
     'intro',
   ],
 
-  techStudySidebar: [
+  'tech-studySidebar': [
     {
       type: 'category',
       label: '技术研习',
@@ -71,6 +71,37 @@ const sidebars: SidebarsConfig = {
       collapsed: false,
       items: [
         'resource-sharing/toolbox',
+      ],
+    },
+  ],
+};
+
+export default sidebars;
+"""
+
+
+STANDARD_HYPHEN_KEY_SIDEBARS = """\
+import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
+
+const sidebars: SidebarsConfig = {
+  'project-practiceSidebar': [
+    {
+      type: 'category',
+      label: '项目实战',
+      collapsed: false,
+      link: {
+        type: 'doc',
+        id: 'project-practice/index',
+      },
+      items: [
+        {
+          type: 'category',
+          label: '开发规范',
+          collapsed: false,
+          items: [
+            'project-practice/开发规范/单人全栈开发高效流程',
+          ],
+        },
       ],
     },
   ],
@@ -126,6 +157,29 @@ def test_registered_doc_ids_ignore_imports_and_sidebar_group_keys() -> None:
         object.__setattr__(settings, "sidebars_path", original_sidebars_path)
 
 
+def test_ensure_category_path_reuses_standard_hyphenated_sidebar_group() -> None:
+    original_sidebars_path = settings.sidebars_path
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            sidebar_file = Path(tmp) / "sidebars.ts"
+            sidebar_file.write_text(STANDARD_HYPHEN_KEY_SIDEBARS, encoding="utf-8")
+            object.__setattr__(settings, "sidebars_path", sidebar_file)
+
+            SidebarService().ensure_category_path(
+                ["project-practice", "部署运维"],
+                ["项目实战", "部署运维"],
+            )
+
+            content = sidebar_file.read_text(encoding="utf-8")
+            assert "'project-practiceSidebar': [" in content
+            assert "projectPracticeSidebar" not in content
+            assert "label: '部署运维'" in content
+            assert content.count("label: '项目实战'") == 1
+            assert _brackets_balanced(content)
+    finally:
+        object.__setattr__(settings, "sidebars_path", original_sidebars_path)
+
+
 def _run_scenario(name: str, doc_id: str, labels: list[str], expected_chain: list[str], expected_key: str | None = None) -> None:
     original_sidebars_path = settings.sidebars_path
     try:
@@ -157,6 +211,7 @@ def _run_scenario(name: str, doc_id: str, labels: list[str], expected_chain: lis
 
 
 def main() -> None:
+    test_ensure_category_path_reuses_standard_hyphenated_sidebar_group()
     _run_scenario(
         "已有叶子分类下追加（append 快乐路径）",
         "tech-study/java-interview/java-basic/new-doc",
@@ -182,7 +237,7 @@ def main() -> None:
         ["New Top"],
         expected_key="new-topSidebar",
     )
-    print("\n全部通过 ✅")
+    print("\n全部通过 [OK]")
 
 
 if __name__ == "__main__":

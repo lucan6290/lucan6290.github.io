@@ -5,7 +5,7 @@ const sidebars: SidebarsConfig = {
     'index',
   ],
 
-  projectPracticeSidebar: [
+  'project-practiceSidebar': [
     {
       type: 'category',
       label: '项目实战',
@@ -31,6 +31,14 @@ const sidebars: SidebarsConfig = {
             'project-practice/博客建设/新增文章同步维护规范',
           ],
         },
+        {
+          type: 'category',
+          label: '部署运维',
+          collapsed: false,
+          items: [
+            'project-practice/部署运维/腾讯云服务器部署个人博客前后端完整流程',
+          ],
+        },
       ],
     },
   ],
@@ -45,19 +53,11 @@ const sidebars: SidebarsConfig = {
         id: 'resource-sharing/index',
       },
       items: [
-        {
-          type: 'category',
-          label: '测试资源分享',
-          collapsed: false,
-          items: [
-            'resource-sharing/测试资源分享/测试资源分享',
-          ],
-        },
       ],
     },
   ],
 
-  techStudySidebar: [
+  'tech-studySidebar': [
     {
       type: 'category',
       label: '技术研习',
@@ -114,9 +114,18 @@ const sidebars: SidebarsConfig = {
             'tech-study/开发工具入门/帮我写一篇hexo博客迁移成Docusaurus的方案',
           ],
         },
+        {
+          type: 'category',
+          label: 'leetcode热题100刷题笔记',
+          collapsed: false,
+          items: [
+            'tech-study/leetcode热题100刷题笔记/001-哈希-两数之和',
+          ],
+        },
       ],
     },
   ],
+
 
 };
 

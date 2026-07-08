@@ -3,6 +3,8 @@ import type { AxiosInstance, AxiosRequestConfig } from 'axios'
 import type {
   AIDraftRequestDTO,
   AIDraftResultDTO,
+  AIModelConfigDTO,
+  AIModelTestResultDTO,
   AIRewriteRequestDTO,
   AIRewriteResultDTO,
   ArticleDeleteOptions,
@@ -14,6 +16,8 @@ import type {
   CategoryDTO,
   CategoryRenameOptions,
   ContentSchemaDTO,
+  DeployOptions,
+  DeployResultDTO,
   FetchWebRequestDTO,
   FetchWebResultDTO,
   GitOperationResult,
@@ -49,12 +53,15 @@ import type {
 import type {
   AgentCommitRequest,
   AgentCommitResponse,
+  AgentRunResponse,
   AgentPlanRequest,
   AgentPlanResponse,
   AIDraftPlan,
+  ApprovalResumeRequest,
   ArticleIndexScanResult,
   ArticleIndexSummary,
   CategoryRegistryItem,
+  EditorAgentRunRequest,
   KnowledgeQARequest,
   KnowledgeQAResponse
 } from '@/types/ai-writing'
@@ -1025,17 +1032,18 @@ class LocalAPIClient {
     return result
   }
 
-  async deploy(message: string, _filePath?: string, options?: MutationOptions & { runBuildFirst?: boolean; push?: boolean }): Promise<GitOperationResult | MutationPlanDTO | TaskDTO> {
-    const result = await this.request<MutationPlanDTO | TaskDTO>({
+  async deploy(message: string, _filePath?: string, options?: DeployOptions): Promise<GitOperationResult | MutationPlanDTO | TaskDTO | DeployResultDTO> {
+    const result = await this.request<MutationPlanDTO | TaskDTO | DeployResultDTO>({
       method: 'POST',
       url: apiPath('/deploy'),
       data: {
+        branch: options?.branch || 'develop',
         run_build_first: options?.runBuildFirst ?? true,
+        clean_build: options?.cleanBuild ?? false,
         commit_message: message,
-        push: options?.push ?? true,
         ...mutationBody(options)
       },
-      timeout: 120000
+      timeout: 900000
     })
     return result
   }
@@ -1293,6 +1301,51 @@ class LocalAPIClient {
     return this.request<AIRewriteResultDTO>({
       method: 'POST',
       url: apiPath('/ai/rewrite'),
+      data: payload
+    })
+  }
+
+  async getAIModels(): Promise<AIModelConfigDTO[]> {
+    return this.request<AIModelConfigDTO[]>({
+      method: 'GET',
+      url: apiPath('/ai/models')
+    })
+  }
+
+  async saveAIModel(model: AIModelConfigDTO & { apiKey?: string }): Promise<AIModelConfigDTO> {
+    return this.request<AIModelConfigDTO>({
+      method: 'PUT',
+      url: apiPath(`/ai/models/${encodeURIComponent(model.id)}`),
+      data: model
+    })
+  }
+
+  async deleteAIModel(modelId: string): Promise<AIModelConfigDTO[]> {
+    return this.request<AIModelConfigDTO[]>({
+      method: 'DELETE',
+      url: apiPath(`/ai/models/${encodeURIComponent(modelId)}`)
+    })
+  }
+
+  async testAIModel(modelId: string): Promise<AIModelTestResultDTO> {
+    return this.request<AIModelTestResultDTO>({
+      method: 'POST',
+      url: apiPath(`/ai/models/${encodeURIComponent(modelId)}/test`)
+    })
+  }
+
+  async runEditorAgent(payload: EditorAgentRunRequest): Promise<AgentRunResponse> {
+    return this.request<AgentRunResponse>({
+      method: 'POST',
+      url: apiPath('/agents/editor/runs'),
+      data: payload
+    })
+  }
+
+  async resumeAgentApproval(approvalId: string, payload: ApprovalResumeRequest): Promise<AgentRunResponse> {
+    return this.request<AgentRunResponse>({
+      method: 'POST',
+      url: apiPath(`/agent-approvals/${encodeURIComponent(approvalId)}/resume`),
       data: payload
     })
   }

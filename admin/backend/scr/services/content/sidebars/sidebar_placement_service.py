@@ -140,7 +140,12 @@ class SidebarPlacementService:
             child = self.parser.find_category_block(content, label, within=current_block)
             if child is None:
                 content = self.insert_into_category_items(content, current_block, self.empty_category_item_text(label))
-                current_block = self.parser.find_nested_category_block(content, labels[:index])
+                group = self.parser.find_sidebar_group(content, top_slug)
+                current_block = (
+                    self.parser.find_nested_category_block(content, labels[:index], within=group)
+                    if group is not None
+                    else None
+                )
                 if current_block is None:
                     raise BadRequestError("sidebars.ts 分类写入失败。", code="sidebars_parse_failed")
                 child = self.parser.find_category_block(content, label, within=current_block)

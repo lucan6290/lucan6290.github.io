@@ -409,6 +409,9 @@ function formatWarnings(items: string[] | undefined): string {
 }
 
 onMounted(() => {
+  settings.loadAIModels().catch((error: any) => {
+    message.error(`AI 模型配置加载失败：${error.message || error}`)
+  })
   aiWriting.fetchCategoryRegistry()
   knowledge.loadIndex()
 })

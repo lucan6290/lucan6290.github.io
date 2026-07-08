@@ -355,11 +355,21 @@ categories:
   enabled: true
 - type: docs
   path:
-  - resource-sharing
-  - 测试资源分享
-  slug: 测试资源分享
-  label: 测试资源分享
+  - project-practice
+  - 部署运维
+  slug: 部署运维
+  label: 部署运维
   enabled: true
   description: null
   cover: null
-  sort_order: 40
+  sort_order: 60
+- type: docs
+  path:
+  - tech-study
+  - leetcode热题100刷题笔记
+  slug: leetcode热题100刷题笔记
+  label: leetcode热题100刷题笔记
+  enabled: true
+  description: null
+  cover: null
+  sort_order: 70

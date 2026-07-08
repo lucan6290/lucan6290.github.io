@@ -67,8 +67,12 @@ class SidebarParserService:
                 return (block_start, block_end)
         return None
 
-    def find_nested_category_block(self, content: str, labels: list[str]) -> tuple[int, int] | None:
-        within: tuple[int, int] | None = None
+    def find_nested_category_block(
+        self,
+        content: str,
+        labels: list[str],
+        within: tuple[int, int] | None = None,
+    ) -> tuple[int, int] | None:
         block: tuple[int, int] | None = None
         for label in labels:
             block = self.find_category_block(content, label, within=within)

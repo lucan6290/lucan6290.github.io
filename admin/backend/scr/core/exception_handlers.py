@@ -26,7 +26,9 @@ def register_exception_handlers(app: FastAPI) -> None:
         """处理业务异常：按 exc 携带的 status_code 与 code 返回。"""
         request_id = getattr(request.state, "request_id", None)
         logger.warning(
-            "Handled application error",
+            "Handled application error [%s] %s",
+            exc.code,
+            exc.message,
             extra={
                 "request_id": request_id,
                 "error_code": exc.code,

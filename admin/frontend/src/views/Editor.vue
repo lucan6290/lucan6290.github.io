@@ -12,6 +12,9 @@ import {
   NFormItem,
   NDatePicker,
   NInputNumber,
+  NCheckbox,
+  NRadioButton,
+  NRadioGroup,
   NSpace,
   NIcon,
   NModal,
@@ -30,7 +33,7 @@ import 'bytemd/dist/index.css'
 import 'highlight.js/styles/github.css'
 import 'katex/dist/katex.css'
 import { getAPI } from '@/api'
-import type { PostDetail, FrontMatter, ImageInfo } from '@/types/api'
+import type { DeployResultDTO, PostDetail, FrontMatter, ImageInfo } from '@/types/api'
 import { parseFrontMatter, buildMarkdown, validateFrontMatter } from '@/utils/frontmatter'
 import { postAssetPreview } from '@/plugins/postAssetPreview'
 import AIAssistant from '@/components/AIAssistant.vue'
@@ -70,6 +73,27 @@ const isCleaningAssets = ref(false)
 const isUploadingEditorImage = ref(false)
 const saveStatus = ref<'idle' | 'saving' | 'saved'>('idle')
 const unusedImages = ref<ImageInfo[]>([])
+const showPublishModal = ref(false)
+const publishBranchMode = ref<'develop' | 'main' | 'custom'>('develop')
+const publishCustomBranch = ref('')
+const publishCommitMessage = ref('')
+const publishRunBuild = ref(true)
+const publishCleanBuild = ref(false)
+const publishLogs = ref('')
+const publishResult = ref<DeployResultDTO | null>(null)
+const publishErrorMessage = ref('')
+
+const publishTargetBranch = computed(() => (
+  publishBranchMode.value === 'custom'
+    ? publishCustomBranch.value.trim()
+    : publishBranchMode.value
+))
+
+const canStartPublish = computed(() => (
+  !isPublishing.value &&
+  publishTargetBranch.value.length > 0 &&
+  publishCommitMessage.value.trim().length > 0
+))
 
 // 日期时间戳（用于日期选择器）
 const dateTimestamp = ref<number>(Date.now())
@@ -323,14 +347,14 @@ async function loadArticle() {
 async function saveArticle(cleanupAssets = true) {
   if (!articlePath.value) {
     message.error('文章路径不存在')
-    return
+    return false
   }
 
   // 验证 Front Matter
   const validation = validateFrontMatter(frontMatter.value)
   if (!validation.valid) {
     message.error(validation.errors[0])
-    return
+    return false
   }
 
   isSaving.value = true
@@ -359,10 +383,12 @@ async function saveArticle(cleanupAssets = true) {
         saveStatus.value = 'idle'
       }
     }, 3000)
+    return true
   } catch (error) {
     console.error('保存失败:', error)
     message.error('保存失败')
     saveStatus.value = 'idle'
+    return false
   } finally {
     isSaving.value = false
   }
@@ -423,30 +449,90 @@ async function openAssetCleanup() {
   }
 }
 
+function isDeployResult(value: unknown): value is DeployResultDTO {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'status' in value &&
+    'branch' in value &&
+    'logs' in value &&
+    'pushed' in value
+  )
+}
+
+function resetPublishForm() {
+  publishBranchMode.value = 'develop'
+  publishCustomBranch.value = ''
+  publishCommitMessage.value = `publish: ${frontMatter.value.title || getArticleStem() || '更新文章'}`
+  publishRunBuild.value = true
+  publishCleanBuild.value = false
+  publishLogs.value = ''
+  publishResult.value = null
+  publishErrorMessage.value = ''
+}
+
 // 发布文章
 async function publishArticle() {
-  dialog.warning({
-    title: '确认发布',
-    content: '发布后将触发博客部署，确定要发布吗？',
-    positiveText: '发布',
-    negativeText: '取消',
-    onPositiveClick: async () => {
-      isPublishing.value = true
+  const saved = await saveArticle(false)
+  if (!saved) return
 
-      try {
-        // 先保存到本地
-        await saveArticle(false)
+  resetPublishForm()
+  showPublishModal.value = true
+}
 
-        await api.deploy(`发布文章: ${frontMatter.value.title}`)
-        message.success('发布成功，博客正在部署中...')
-      } catch (error) {
-        console.error('发布失败:', error)
-        message.error('发布失败，请手动部署')
-      } finally {
-        isPublishing.value = false
-      }
+async function executePublish() {
+  if (!canStartPublish.value) {
+    message.error('请填写目标分支和提交信息')
+    return
+  }
+
+  isPublishing.value = true
+  publishResult.value = null
+  publishErrorMessage.value = ''
+  publishLogs.value = [
+    '$ 准备发布',
+    `目标分支：${publishTargetBranch.value}`,
+    `提交信息：${publishCommitMessage.value.trim()}`
+  ].join('\n')
+
+  try {
+    const result = await api.deploy(publishCommitMessage.value.trim(), undefined, {
+      branch: publishTargetBranch.value,
+      runBuildFirst: publishRunBuild.value,
+      cleanBuild: publishCleanBuild.value
+    })
+
+    if (!isDeployResult(result)) {
+      publishLogs.value = JSON.stringify(result, null, 2)
+      message.warning('发布接口返回了未识别的结果')
+      return
     }
-  })
+
+    publishResult.value = result
+    publishLogs.value = result.logs || ''
+
+    if (result.status === 'success') {
+      message.success(`发布成功，已推送到 ${result.branch}`)
+    } else if (result.status === 'no_changes') {
+      message.info('没有可发布的变更')
+    } else {
+      const errorMessage = typeof result.error?.message === 'string' ? result.error.message : '发布失败'
+      publishErrorMessage.value = errorMessage
+      message.error(errorMessage)
+    }
+  } catch (error) {
+    console.error('发布失败:', error)
+    const apiError = error as { message?: string; details?: string }
+    publishErrorMessage.value = apiError.message || '发布失败，请查看终端日志'
+    publishLogs.value = [
+      publishLogs.value,
+      apiError.message || '发布请求失败',
+      apiError.details || ''
+    ].filter(Boolean).join('\n\n')
+    message.error(publishErrorMessage.value)
+  } finally {
+    isPublishing.value = false
+  }
 }
 
 // 返回上一页
@@ -1093,6 +1179,90 @@ onUnmounted(() => {
       <n-text>加载中...</n-text>
     </div>
 
+    <!-- 发布对话框 -->
+    <n-modal
+      v-model:show="showPublishModal"
+      preset="card"
+      title="发布到 GitHub"
+      class="publish-modal"
+      style="width: min(760px, calc(100vw - 32px));"
+      :mask-closable="!isPublishing"
+      :closable="!isPublishing"
+    >
+      <div class="publish-panel">
+        <n-form label-placement="top" class="publish-form">
+          <n-form-item label="目标分支">
+            <n-radio-group v-model:value="publishBranchMode" name="publish-branch">
+              <n-radio-button value="develop">develop</n-radio-button>
+              <n-radio-button value="main">main</n-radio-button>
+              <n-radio-button value="custom">新分支</n-radio-button>
+            </n-radio-group>
+          </n-form-item>
+          <n-form-item v-if="publishBranchMode === 'custom'" label="新分支名">
+            <n-input
+              v-model:value="publishCustomBranch"
+              placeholder="feature/new-post"
+              :disabled="isPublishing"
+            />
+          </n-form-item>
+          <n-form-item label="提交信息">
+            <n-input
+              v-model:value="publishCommitMessage"
+              placeholder="publish: 文章标题"
+              :disabled="isPublishing"
+            />
+          </n-form-item>
+          <div class="publish-options">
+            <n-checkbox v-model:checked="publishRunBuild" :disabled="isPublishing">
+              发布前执行 npm run build
+            </n-checkbox>
+            <n-checkbox
+              v-model:checked="publishCleanBuild"
+              :disabled="isPublishing || !publishRunBuild"
+            >
+              构建前清理 site/build
+            </n-checkbox>
+          </div>
+        </n-form>
+
+        <div class="publish-terminal" aria-live="polite">
+          <pre>{{ publishLogs || '$ 等待发布命令执行' }}</pre>
+        </div>
+
+        <div
+          v-if="publishResult"
+          class="publish-result"
+          :class="publishResult.status"
+        >
+          <span v-if="publishResult.status === 'success'">
+            发布成功：{{ publishResult.branch }} · {{ publishResult.commit }}
+          </span>
+          <span v-else-if="publishResult.status === 'no_changes'">
+            没有可发布的变更
+          </span>
+          <span v-else>
+            {{ publishErrorMessage || '发布失败' }}
+          </span>
+        </div>
+      </div>
+
+      <template #footer>
+        <n-space justify="end">
+          <n-button :disabled="isPublishing" @click="showPublishModal = false">
+            关闭
+          </n-button>
+          <n-button
+            type="primary"
+            :loading="isPublishing"
+            :disabled="!canStartPublish"
+            @click="executePublish"
+          >
+            发布
+          </n-button>
+        </n-space>
+      </template>
+    </n-modal>
+
     <!-- 标签编辑对话框 -->
     <n-modal
       v-model:show="showTagEditor"
@@ -1320,5 +1490,65 @@ onUnmounted(() => {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.publish-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.publish-form {
+  display: grid;
+  gap: 4px;
+}
+
+.publish-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+}
+
+.publish-terminal {
+  min-height: 220px;
+  max-height: 360px;
+  overflow: auto;
+  border: 1px solid rgba(37, 107, 82, 0.18);
+  border-radius: 8px;
+  background: #151816;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.publish-terminal pre {
+  margin: 0;
+  padding: 14px 16px;
+  color: #d7eadf;
+  font-size: 12px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: "Cascadia Mono", Consolas, "Liberation Mono", monospace;
+}
+
+.publish-result {
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.publish-result.success {
+  color: #1f6b4f;
+  background: rgba(37, 107, 82, 0.1);
+}
+
+.publish-result.no_changes {
+  color: #486b86;
+  background: rgba(72, 107, 134, 0.1);
+}
+
+.publish-result.failed {
+  color: #8a3b2c;
+  background: rgba(187, 77, 48, 0.12);
 }
 </style>

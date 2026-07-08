@@ -27,6 +27,7 @@ const config: Config = {
           path: 'docs',
           routeBasePath: 'docs',
           sidebarPath: './sidebars.ts',
+          numberPrefixParser: false,
           showLastUpdateTime: false,
           showLastUpdateAuthor: false,
         },

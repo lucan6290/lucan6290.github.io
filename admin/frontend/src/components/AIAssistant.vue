@@ -348,6 +348,20 @@ function appendAgentEvents(events: AgentEvent[] | undefined): void {
   agentEvents.value.push(...events)
 }
 
+function errorMessage(error: any): string {
+  const messageText = error?.message || String(error)
+  if (!error?.details) return messageText
+
+  try {
+    const details = typeof error.details === 'string' ? JSON.parse(error.details) : error.details
+    const errors = details?.errors
+    if (Array.isArray(errors) && errors.length > 0) return `${messageText}: ${errors.join('；')}`
+  } catch {
+    return `${messageText}: ${error.details}`
+  }
+  return `${messageText}: ${error.details}`
+}
+
 async function generateStructuredEdit(userInput: string) {
   const api = getAPI()
   if (!api.runEditorAgent) return
@@ -370,7 +384,7 @@ async function generateStructuredEdit(userInput: string) {
       articlePath: props.articlePath,
       approvalMode: approvalMode.value,
       command: 'plan_current_article_edit',
-      model,
+      modelConfigId: currentModel.value?.id,
       userInput,
       selection: hasSelection.value ? { text: props.selectedText } : undefined,
       context: { scope: hasSelection.value ? 'selection' : 'document' }
@@ -387,6 +401,11 @@ async function generateStructuredEdit(userInput: string) {
     if (!operation) {
       throw new Error('Agent 没有返回可执行的编辑操作')
     }
+    const validationErrors = result.validationErrors || result.preview?.validationErrors || []
+    if (validationErrors.length > 0) {
+      generatedContent.value = operationPreview(operation)
+      throw new Error(`编辑方案不合法：${validationErrors.join('；')}`)
+    }
     currentOperation.value = operation
     const preview = result.preview || {}
     currentContentHash.value = preview?.beforeHash || currentContentHash.value || null
@@ -394,7 +413,7 @@ async function generateStructuredEdit(userInput: string) {
     chatHistory.value.push({ role: 'assistant', content: generatedContent.value })
   } catch (error: any) {
     console.error('结构化编辑生成失败:', error)
-    message.error(`生成失败: ${error.message || error}`)
+    message.error(`生成失败: ${errorMessage(error)}`)
   } finally {
     isGenerating.value = false
   }
@@ -574,7 +593,7 @@ async function applyStructuredEdit() {
     currentOperation.value = null
     emit('applied')
   } catch (error: any) {
-    message.error(`应用失败: ${error.message || error}`)
+    message.error(`应用失败: ${errorMessage(error)}`)
   } finally {
     isGenerating.value = false
   }
@@ -622,7 +641,7 @@ function openEditModel(model: AIModelConfig) {
   modelForm.value = {
     name: model.name,
     baseUrl: model.baseUrl,
-    apiKey: model.apiKey,
+    apiKey: '',
     modelId: model.modelId,
     provider: model.provider || 'custom',
     apiFormat: model.apiFormat || 'openai',
@@ -663,28 +682,34 @@ function handlePresetSelect(value: string) {
   }
 }
 
-function saveModel() {
-  if (!modelForm.value.name || !modelForm.value.baseUrl || !modelForm.value.apiKey || !modelForm.value.modelId) {
+async function saveModel() {
+  if (!modelForm.value.name || !modelForm.value.baseUrl || !modelForm.value.modelId || (!editingModel.value && !modelForm.value.apiKey)) {
     message.warning('请填写所有必填字段')
     return
   }
 
-  if (editingModel.value) {
-    // 更新
-    settingsStore.updateModel(editingModel.value.id, modelForm.value)
-    message.success('模型已更新')
-  } else {
-    // 添加
-    settingsStore.addModel(modelForm.value)
-    message.success('模型已添加')
-  }
+  try {
+    if (editingModel.value) {
+      await settingsStore.updateModel(editingModel.value.id, modelForm.value)
+      message.success('模型已更新')
+    } else {
+      await settingsStore.addModel(modelForm.value)
+      message.success('模型已添加')
+    }
 
-  showModelEditor.value = false
+    showModelEditor.value = false
+  } catch (error: any) {
+    message.error(`保存失败: ${error.message || error}`)
+  }
 }
 
-function deleteModel(id: string) {
-  settingsStore.removeModel(id)
-  message.success('模型已删除')
+async function deleteModel(id: string) {
+  try {
+    await settingsStore.removeModel(id)
+    message.success('模型已删除')
+  } catch (error: any) {
+    message.error(`删除失败: ${error.message || error}`)
+  }
 }
 
 // 切换模型
@@ -712,31 +737,13 @@ async function testConnection() {
   testResult.value = null
 
   try {
-    const response = await fetch(`${currentModel.value.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${currentModel.value.apiKey}`
-      },
-        body: JSON.stringify({
-          model: currentModel.value.modelId,
-          messages: [{ role: 'user', content: 'Hi' }],
-          thinking: currentModel.value.provider === 'deepseek'
-            ? { type: currentModel.value.thinkingMode || 'disabled' }
-            : undefined,
-          reasoning_effort: currentModel.value.provider === 'deepseek' && currentModel.value.thinkingMode === 'enabled'
-            ? currentModel.value.reasoningEffort || 'high'
-            : undefined,
-          max_tokens: 5
-        })
-      })
-
-    if (response.ok) {
+    const success = await settingsStore.testModel(currentModel.value.id)
+    if (success) {
       testResult.value = 'success'
       message.success('连接测试成功')
     } else {
       testResult.value = 'failed'
-      message.error(`连接测试失败: HTTP ${response.status}`)
+      message.error('连接测试失败')
     }
   } catch (error: any) {
     testResult.value = 'failed'
@@ -755,6 +762,12 @@ function toggleDrawer() {
 defineExpose({
   toggleDrawer,
   handleQuickMenu
+})
+
+onMounted(() => {
+  settingsStore.loadAIModels().catch((error: any) => {
+    message.error(`AI 模型配置加载失败: ${error.message || error}`)
+  })
 })
 </script>
 
@@ -969,7 +982,11 @@ defineExpose({
 
             <n-divider />
 
-            <div v-if="settingsStore.aiModels.length === 0" class="empty-models">
+            <div v-if="settingsStore.isLoadingModels" class="empty-models">
+              <n-empty description="正在加载模型配置" />
+            </div>
+
+            <div v-else-if="settingsStore.aiModels.length === 0" class="empty-models">
               <n-empty description="暂无模型配置" />
             </div>
 
@@ -1063,12 +1080,12 @@ defineExpose({
             placeholder="例如：https://api.openai.com/v1"
           />
         </n-form-item>
-        <n-form-item label="API Key" required>
+        <n-form-item label="API Key" :required="!editingModel">
           <n-input
             v-model:value="modelForm.apiKey"
             type="password"
             show-password-on="click"
-            placeholder="输入 API Key"
+            :placeholder="editingModel ? '留空则不修改已保存密钥' : '输入 API Key'"
           />
         </n-form-item>
         <n-form-item label="Model ID" required>

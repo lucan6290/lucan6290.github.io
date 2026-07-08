@@ -282,6 +282,7 @@ export interface EditorAgentRunRequest {
   userInput?: string
   approvalMode: AIApprovalMode
   confirmed?: boolean
+  modelConfigId?: string
   model?: AIModelPayload
   context?: Record<string, unknown>
   articlePath?: string
@@ -305,6 +306,7 @@ export interface WritingAgentRunRequest {
   userInput?: string
   approvalMode: AIApprovalMode
   confirmed?: boolean
+  modelConfigId?: string
   model?: AIModelPayload
   context?: Record<string, unknown>
   command: 'plan_draft' | 'create_draft'
@@ -315,6 +317,7 @@ export interface KnowledgeAgentRunRequest {
   sessionId?: string
   userInput?: string
   approvalMode?: AIApprovalMode
+  modelConfigId?: string
   model?: AIModelPayload
   context?: Record<string, unknown>
   question?: string

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onBeforeUnmount, onMounted, h } from 'vue'
+import { ref, computed, onBeforeUnmount, onMounted, h, nextTick } from 'vue'
 import {
   NLayout,
   NLayoutSider,
@@ -59,9 +59,10 @@ const renameForm = ref({
   replaceLinks: true
 })
 const siderCollapsed = ref(false)
-const isCompactTable = ref(false)
+const tableWrapperRef = ref<HTMLElement | null>(null)
+const tableLayoutMode = ref<'full' | 'medium' | 'compact'>('full')
 let categorySiderMediaQuery: MediaQueryList | null = null
-let compactTableMediaQuery: MediaQueryList | null = null
+let tableResizeObserver: ResizeObserver | null = null
 
 const typeOrder = ['docs', 'blog']
 const rootCategoryKey = '__root'
@@ -286,7 +287,23 @@ const filteredPosts = computed(() => {
   return result
 })
 
-const tableScrollX = computed(() => (isCompactTable.value ? 820 : 1180))
+const isMediumTable = computed(() => tableLayoutMode.value === 'medium')
+const isCompactTable = computed(() => tableLayoutMode.value === 'compact')
+const tableScrollX = computed(() => {
+  if (isCompactTable.value) return 840
+  if (isMediumTable.value) return 900
+  return undefined
+})
+
+function updateTableLayoutMode(width: number) {
+  if (width < 860) {
+    tableLayoutMode.value = 'compact'
+  } else if (width < 1120) {
+    tableLayoutMode.value = 'medium'
+  } else {
+    tableLayoutMode.value = 'full'
+  }
+}
 
 function renderCategoryTags(row: PostInfo) {
   const tags = []
@@ -359,9 +376,8 @@ const columns = computed<DataTableColumns<PostInfo>>(() => {
   {
     title: '文件名',
     key: 'filename',
-    width: isCompactTable.value ? 300 : 340,
-    minWidth: 260,
-    fixed: 'left',
+    width: isCompactTable.value ? 300 : isMediumTable.value ? 340 : 360,
+    minWidth: 240,
     ellipsis: {
       tooltip: true
     },
@@ -381,23 +397,23 @@ const columns = computed<DataTableColumns<PostInfo>>(() => {
   {
     title: '分类',
     key: 'categories',
-    width: isCompactTable.value ? 210 : 220,
+    width: isCompactTable.value ? 260 : isMediumTable.value ? 270 : 240,
     minWidth: 180,
     render: renderCategoryTags
   },
-  ...(isCompactTable.value ? [] : [
+  ...((isCompactTable.value || isMediumTable.value) ? [] : [
     {
       title: '标签',
       key: 'tags',
-      width: 240,
-      minWidth: 180,
+      width: 230,
+      minWidth: 160,
       render: renderTagList
     },
     {
       title: '日期',
       key: 'date',
-      width: 170,
-      minWidth: 150,
+      width: 160,
+      minWidth: 140,
       render: renderPostDate
     }
   ]),
@@ -418,17 +434,18 @@ const columns = computed<DataTableColumns<PostInfo>>(() => {
   {
     title: '操作',
     key: 'actions',
-    width: 136,
-    minWidth: 132,
-    fixed: 'right',
+    width: 160,
+    minWidth: 150,
     align: 'center',
     render(row) {
-      return h(NSpace, { vertical: true, size: 6, align: 'center', class: 'table-actions' }, {
+      return h(NSpace, { size: 10, align: 'center', justify: 'center', class: 'table-actions' }, {
         default: () => [
           h(
             NButton,
             {
               size: 'small',
+              text: true,
+              type: 'primary',
               onClick: () => handleEdit(row)
             },
             { default: () => '编辑' }
@@ -437,7 +454,7 @@ const columns = computed<DataTableColumns<PostInfo>>(() => {
             NButton,
             {
               size: 'small',
-              secondary: true,
+              text: true,
               onClick: () => openRenameModal(row)
             },
             { default: () => '重命名' }
@@ -451,7 +468,7 @@ const columns = computed<DataTableColumns<PostInfo>>(() => {
               trigger: () =>
                 h(
                   NButton,
-                  { size: 'small', type: 'error' },
+                  { size: 'small', type: 'error', text: true },
                   { default: () => '删除' }
                 ),
               default: () => '确定要删除这篇文章吗？'
@@ -626,24 +643,30 @@ function updateCategorySider(event: MediaQueryList | MediaQueryListEvent) {
   }
 }
 
-function updateCompactTable(event: MediaQueryList | MediaQueryListEvent) {
-  isCompactTable.value = event.matches
+function observeTableWrapper() {
+  tableResizeObserver?.disconnect()
+  if (!tableWrapperRef.value) return
+  updateTableLayoutMode(tableWrapperRef.value.clientWidth)
+  tableResizeObserver = new ResizeObserver((entries) => {
+    const entry = entries[0]
+    if (!entry) return
+    updateTableLayoutMode(entry.contentRect.width)
+  })
+  tableResizeObserver.observe(tableWrapperRef.value)
 }
 
 // 初始化
 onMounted(() => {
-  categorySiderMediaQuery = window.matchMedia('(max-width: 1120px)')
-  compactTableMediaQuery = window.matchMedia('(max-width: 960px)')
+  categorySiderMediaQuery = window.matchMedia('(max-width: 1360px)')
   updateCategorySider(categorySiderMediaQuery)
-  updateCompactTable(compactTableMediaQuery)
   categorySiderMediaQuery.addEventListener('change', updateCategorySider)
-  compactTableMediaQuery.addEventListener('change', updateCompactTable)
+  nextTick(observeTableWrapper)
   loadPosts()
 })
 
 onBeforeUnmount(() => {
   categorySiderMediaQuery?.removeEventListener('change', updateCategorySider)
-  compactTableMediaQuery?.removeEventListener('change', updateCompactTable)
+  tableResizeObserver?.disconnect()
 })
 </script>
 
@@ -738,7 +761,7 @@ onBeforeUnmount(() => {
         </div>
 
         <!-- 文章列表 -->
-        <div class="table-wrapper">
+        <div ref="tableWrapperRef" class="table-wrapper">
           <n-data-table
             :columns="columns"
             :data="filteredPosts"
@@ -840,7 +863,6 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .posts-page {
-  --posts-right-safe-space: 36px;
   height: 100%;
   min-width: 0;
   overflow: hidden;
@@ -1029,13 +1051,9 @@ onBeforeUnmount(() => {
   min-width: 100%;
 }
 
-.table-wrapper :deep(.n-data-table-th--fixed-right),
-.table-wrapper :deep(.n-data-table-td--fixed-right) {
-  background: rgba(255, 255, 255, 0.96);
-}
-
 .table-wrapper :deep(.table-actions) {
   width: 100%;
+  flex-wrap: nowrap;
 }
 
 .table-wrapper :deep(.n-data-table-th) {
@@ -1198,10 +1216,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 900px) {
-  .posts-page {
-    --posts-right-safe-space: 0px;
-  }
-
   .toolbar {
     align-items: flex-start;
     flex-direction: column;

@@ -396,6 +396,21 @@ export interface GitPushResultDTO {
   branch: string
 }
 
+export interface DeployResultDTO {
+  status: 'success' | 'failed' | 'no_changes'
+  branch: string
+  commit?: string | null
+  pushed: boolean
+  logs: string
+  error?: Record<string, unknown> | null
+}
+
+export interface DeployOptions extends MutationOptions {
+  branch?: string
+  runBuildFirst?: boolean
+  cleanBuild?: boolean
+}
+
 export interface ContentSchemaDTO {
   categories: CategoryDTO[]
   tags: TagDTO[]
@@ -549,6 +564,26 @@ export interface AIRewriteResultDTO {
   requires_approval: boolean
   applied: boolean
   article_id: string | null
+}
+
+export interface AIModelConfigDTO {
+  id: string
+  name: string
+  provider?: string
+  baseUrl: string
+  apiKey?: string
+  modelId: string
+  apiFormat?: 'openai' | 'anthropic'
+  temperature?: number
+  maxTokens?: number
+  thinkingMode?: 'enabled' | 'disabled'
+  reasoningEffort?: 'high' | 'max'
+  isDefault?: boolean
+}
+
+export interface AIModelTestResultDTO {
+  success: boolean
+  modelId: string
 }
 
 export interface FetchWebRequestDTO {
@@ -760,7 +795,7 @@ export interface BlogAPI {
    * @param message 提交信息
    * @param filePath 指定提交的文件路径（相对于仓库根目录），为空则提交所有变更
    */
-  deploy(message: string, filePath?: string, options?: MutationOptions & { runBuildFirst?: boolean; push?: boolean }): Promise<GitOperationResult | MutationPlanDTO | TaskDTO>
+  deploy(message: string, filePath?: string, options?: DeployOptions): Promise<GitOperationResult | MutationPlanDTO | TaskDTO | DeployResultDTO>
 
   getSchema?(): Promise<ContentSchemaDTO>
 
@@ -793,6 +828,14 @@ export interface BlogAPI {
   rewriteAIContent?(payload: AIRewriteRequestDTO): Promise<AIRewriteResultDTO>
 
   fetchWebMaterial?(payload: FetchWebRequestDTO): Promise<FetchWebResultDTO>
+
+  getAIModels?(): Promise<AIModelConfigDTO[]>
+
+  saveAIModel?(model: AIModelConfigDTO & { apiKey?: string }): Promise<AIModelConfigDTO>
+
+  deleteAIModel?(modelId: string): Promise<AIModelConfigDTO[]>
+
+  testAIModel?(modelId: string): Promise<AIModelTestResultDTO>
 
   /**
    * AI 对话，返回 Agent 草稿方案或 LLM 编辑操作

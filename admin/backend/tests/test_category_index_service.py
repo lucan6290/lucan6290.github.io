@@ -19,7 +19,7 @@ BASE_SIDEBARS = """\
 import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
 
 const sidebars: SidebarsConfig = {
-  projectPracticeSidebar: [
+  'project-practiceSidebar': [
     {
       type: 'category',
       label: '项目实战',

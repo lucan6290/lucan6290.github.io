@@ -69,6 +69,7 @@ class Settings:
     docusaurus_config_path: Path  # Docusaurus 配置文件（site/docusaurus.config.ts）
     content_schema_dir: Path  # 内容校验 schema 目录（admin/backend/data/content-schema）
     registry_index_path: Path  # 管理后台 SQLite 索引库路径
+    ai_model_config_path: Path  # AI 模型配置文件路径
     cors_origins: list[str]  # 允许跨域的前端来源列表
     admin_username: str  # 管理员登录账号
     admin_password: str  # 管理员登录密码，本地默认值仅用于开发
@@ -103,6 +104,9 @@ def load_settings() -> Settings:
         content_schema_dir=project_root / "admin" / "backend" / "data" / "content-schema",
         registry_index_path=Path(
             os.getenv("LUCHUAN_REGISTRY_INDEX_PATH", project_root / "admin" / "backend" / "data" / "registry_index.sqlite3")
+        ).resolve(),
+        ai_model_config_path=Path(
+            os.getenv("LUCHUAN_AI_MODEL_CONFIG_PATH", project_root / "admin" / "backend" / "data" / "ai-models.json")
         ).resolve(),
         cors_origins=_load_cors_origins(),
         admin_username=admin_username,
