@@ -101,10 +101,10 @@ const config: Config = {
               label: 'AI观察',
               to: '/blog/AI观察',
             },
-            {
-              label: '随笔感想',
-              to: '/blog/随笔感想',
-            },
+{
+  label: '随笔感想',
+  to: '/blog/随笔感想',
+},
           ],
         },
         {

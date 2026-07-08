@@ -373,3 +373,10 @@ categories:
   description: null
   cover: null
   sort_order: 70
+- type: blog
+  path:
+  - 随笔感想
+  slug: 随笔感想
+  label: 随笔感想
+  enabled: true
+  sort_order: 60

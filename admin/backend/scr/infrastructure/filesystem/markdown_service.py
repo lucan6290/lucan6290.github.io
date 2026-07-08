@@ -5,11 +5,28 @@
 """
 
 from dataclasses import dataclass, field
+from datetime import date, datetime
 from typing import Any
 
 import yaml
 
 from scr.schemas.article import ValidationIssueDTO
+
+
+class FrontMatterDumper(yaml.SafeDumper):
+    """YAML dumper tuned for Docusaurus front matter."""
+
+
+def _represent_datetime(dumper: yaml.SafeDumper, value: datetime) -> yaml.Node:
+    return dumper.represent_scalar("tag:yaml.org,2002:timestamp", value.isoformat(timespec="seconds"))
+
+
+def _represent_date(dumper: yaml.SafeDumper, value: date) -> yaml.Node:
+    return dumper.represent_scalar("tag:yaml.org,2002:timestamp", value.isoformat())
+
+
+FrontMatterDumper.add_representer(datetime, _represent_datetime)
+FrontMatterDumper.add_representer(date, _represent_date)
 
 
 @dataclass(frozen=True)
@@ -32,8 +49,9 @@ class MarkdownService:
 
         保留键顺序、允许 Unicode、使用块样式；正文为空时仅输出 Front Matter。
         """
-        yaml_text = yaml.safe_dump(
-            frontmatter,
+        yaml_text = yaml.dump(
+            self._normalize_frontmatter_dates(frontmatter),
+            Dumper=FrontMatterDumper,
             allow_unicode=True,
             sort_keys=False,
             default_flow_style=False,
@@ -114,3 +132,29 @@ class MarkdownService:
             raw_content=normalized,
             issues=issues,
         )
+
+    def _normalize_frontmatter_dates(self, value: Any, key: str | None = None) -> Any:
+        """Convert ISO strings under ``date`` keys to YAML timestamps for Docusaurus."""
+        if isinstance(value, dict):
+            return {
+                item_key: self._normalize_frontmatter_dates(item_value, str(item_key))
+                for item_key, item_value in value.items()
+            }
+        if isinstance(value, list):
+            return [self._normalize_frontmatter_dates(item) for item in value]
+        if key == "date" and isinstance(value, str):
+            parsed = self._parse_iso_datetime(value)
+            return parsed or value
+        return value
+
+    @staticmethod
+    def _parse_iso_datetime(value: str) -> datetime | None:
+        normalized = value.strip()
+        if not normalized:
+            return None
+        if normalized.endswith("Z"):
+            normalized = f"{normalized[:-1]}+00:00"
+        try:
+            return datetime.fromisoformat(normalized)
+        except ValueError:
+            return None
