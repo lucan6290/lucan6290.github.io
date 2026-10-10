@@ -1,0 +1,77 @@
+:root {
+  /* ========== Primary / Accent ========== */
+  --ifm-color-primary: #1f6feb;
+  --ifm-color-primary-dark: #1557c0;
+  --ifm-color-primary-darker: #134da9;
+  --ifm-color-primary-darkest: #103f8b;
+  --ifm-color-primary-light: #3b82f6;
+  --ifm-color-primary-lighter: #60a5fa;
+  --ifm-color-primary-lightest: #bfdbfe;
+
+  /* ========== Surfaces / Text ========== */
+  --ifm-background-color: #ffffff;
+  --site-background: #ffffff;
+  --site-surface: #ffffff;
+  --site-text: #111827;
+  --site-text-secondary: #374151;
+  --site-text-muted: #6b7280;
+  --site-on-accent: #ffffff;
+  --site-border: #e5e7eb;
+  --site-shadow: rgba(17, 24, 39, 0.08);
+
+  /* ========== Semantic accents (首页 notebook/garden) ========== */
+  --site-accent: #1f6feb;
+  --site-accent-soft: rgba(31, 111, 235, 0.12);
+  --site-warm: #f59e0b;
+  --site-warm-soft: rgba(245, 158, 11, 0.14);
+  --site-cool: #0ea5e9;
+  --site-cool-soft: rgba(14, 165, 233, 0.14);
+
+  /* ========== Typography ========== */
+  --ifm-font-family-base: "LXGW WenKai Screen", "Microsoft YaHei", "PingFang SC", sans-serif;
+  --ifm-font-family-monospace: "JetBrains Mono", "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+  --site-font-literary: "LXGW WenKai Screen", "KaiTi", serif;
+  --ifm-font-size-base: 16px;
+  --ifm-line-height-base: 1.78;
+  --ifm-heading-font-weight: 800;
+
+  /* ========== Layout ========== */
+  --ifm-navbar-height: 54px;
+  --ifm-global-radius: 8px;
+  --doc-sidebar-width: clamp(280px, 22vw, 340px);
+
+  /* ========== Scrollbar ========== */
+  --site-scrollbar-thumb: rgba(100, 116, 139, 0.68);
+  --site-scrollbar-thumb-hover: rgba(71, 85, 105, 0.82);
+  --site-scrollbar-track: transparent;
+}
+
+html[data-theme='dark'] {
+  --ifm-color-primary: #60a5fa;
+  --ifm-color-primary-dark: #3b82f6;
+  --ifm-color-primary-darker: #2563eb;
+  --ifm-color-primary-darkest: #1d4ed8;
+  --ifm-color-primary-light: #93c5fd;
+  --ifm-color-primary-lighter: #bfdbfe;
+  --ifm-color-primary-lightest: #dbeafe;
+
+  --ifm-background-color: #18181b;
+  --site-background: #18181b;
+  --site-surface: #27272a;
+  --site-text: #f4f4f5;
+  --site-text-secondary: #d4d4d8;
+  --site-text-muted: #a1a1aa;
+  --site-on-accent: #0f172a;
+  --site-border: #27272a;
+  --site-shadow: rgba(0, 0, 0, 0.4);
+
+  --site-accent: #60a5fa;
+  --site-accent-soft: rgba(96, 165, 250, 0.14);
+  --site-warm: #fbbf24;
+  --site-warm-soft: rgba(251, 191, 36, 0.16);
+  --site-cool: #38bdf8;
+  --site-cool-soft: rgba(56, 189, 248, 0.16);
+
+  --site-scrollbar-thumb: rgba(113, 113, 122, 0.5);
+  --site-scrollbar-thumb-hover: rgba(161, 161, 170, 0.7);
+}

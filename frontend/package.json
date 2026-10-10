@@ -1,0 +1,39 @@
+{
+  "name": "xiaocancoding-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "predev": "node scripts/build-content.mjs",
+    "dev": "vite --host 127.0.0.1 --port 3400",
+    "prebuild": "node scripts/build-content.mjs",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 3400",
+    "build:content": "node scripts/build-content.mjs"
+  },
+  "dependencies": {
+    "@bytemd/plugin-breaks": "^1.22.0",
+    "@bytemd/plugin-frontmatter": "^1.22.0",
+    "@bytemd/plugin-gfm": "^1.22.0",
+    "@bytemd/plugin-highlight": "^1.22.0",
+    "@bytemd/plugin-math": "^1.22.0",
+    "@bytemd/plugin-mermaid": "^1.22.0",
+    "@bytemd/vue-next": "^1.22.0",
+    "bytemd": "^1.22.0",
+    "highlight.js": "^11.11.1",
+    "katex": "^0.16.25",
+    "mermaid": "^11.4.1",
+    "minisearch": "^7.1.1",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "chokidar": "^4.0.3",
+    "gray-matter": "^4.0.3",
+    "typescript": "~5.6.3",
+    "vite": "^6.0.5",
+    "vue-tsc": "^2.2.0"
+  }
+}

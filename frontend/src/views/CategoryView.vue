@@ -1,0 +1,103 @@
+<template>
+  <div class="category-layout">
+    <aside class="sidebar-container">
+      <TreeSidebar :nodes="treeNodes" :active-path="path" :root="root" />
+    </aside>
+    <main class="category-main">
+      <Breadcrumb :path="path" :root="root" />
+      <header class="category-header">
+        <h1>{{ title }}</h1>
+        <SortToggle :mode="sortMode" @toggle="toggleSort" />
+      </header>
+      <ArticleList :articles="articles" />
+    </main>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed, watchEffect } from 'vue';
+import { useContent } from '@/composables/useContent';
+import TreeSidebar from '@/components/sidebar/TreeSidebar.vue';
+import Breadcrumb from '@/components/list/Breadcrumb.vue';
+import SortToggle from '@/components/list/SortToggle.vue';
+import ArticleList from '@/components/list/ArticleList.vue';
+
+const props = defineProps<{ root: string; path: string }>();
+
+const { ready, findNodeByPath, getArticlesUnder, sortMode, toggleSort, manifest } = useContent();
+
+const treeNodes = computed(() => {
+  if (!manifest.value) return [];
+  // 取 root 对应的子树
+  const seg = props.root.replace(/^\/+/, '');
+  const top = manifest.value.tree.find((n) => n.name === seg || n.path === props.root);
+  return top ? top.children : [];
+});
+
+const currentNode = computed(() => {
+  if (props.path === props.root) return null;
+  return findNodeByPath(props.path.replace(/^\//, ''));
+});
+
+const articles = computed(() => {
+  if (!ready.value) return [];
+  if (props.path === props.root) {
+    // 根分类：列出直属子分类 + 直属文章
+    return getArticlesUnder({ name: '', label: '', path: props.root, sortKey: null, children: treeNodes.value });
+  }
+  return getArticlesUnder(currentNode.value);
+});
+
+const title = computed(() => {
+  if (props.path === props.root) return props.root === '/blog' ? '博客' : '知识库';
+  return currentNode.value?.label || props.path.split('/').pop() || '';
+});
+
+watchEffect(() => {
+  document.title = `${title.value} - 箓川码笺`;
+});
+</script>
+
+<style scoped>
+.category-layout {
+  display: grid;
+  grid-template-columns: var(--doc-sidebar-width) minmax(0, 1fr);
+  min-height: calc(100vh - var(--ifm-navbar-height));
+}
+.sidebar-container {
+  position: sticky;
+  top: var(--ifm-navbar-height);
+  height: calc(100vh - var(--ifm-navbar-height));
+  overflow-y: auto;
+  border-right: 1px solid var(--site-border);
+  background: var(--site-surface);
+  padding: 20px 16px 96px 12px;
+}
+.category-main {
+  padding: 32px 56px 96px;
+  max-width: 920px;
+  margin: 0 auto;
+}
+.category-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--site-border);
+}
+.category-header h1 { font-size: 32px; line-height: 1.25; }
+
+@media (max-width: 996px) {
+  .category-layout { display: block; }
+  .sidebar-container {
+    position: static;
+    height: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--site-border);
+    padding: 24px 20px;
+  }
+  .category-main { padding: 24px 20px 72px; }
+}
+</style>
