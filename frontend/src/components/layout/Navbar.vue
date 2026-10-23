@@ -6,6 +6,7 @@
       </router-link>
 
       <nav id="section-navigation" class="navbar__items navbar__items--left" :class="{ 'navbar__items--open': mobileOpen }" aria-label="顶部栏目">
+        <router-link class="navbar__link navbar__home" to="/" @click="mobileOpen = false">首页</router-link>
         <div
           v-for="entry in navEntries"
           :key="entry.key"
@@ -109,6 +110,7 @@ function close(key: string) {
   background: transparent;
 }
 .navbar__link:hover { color: var(--ifm-color-primary); background: var(--site-accent-soft); }
+.navbar__home.router-link-exact-active { color: var(--ifm-color-primary); background: var(--site-accent-soft); }
 
 .caret {
   display: inline-block;
