@@ -38,7 +38,7 @@ import SortToggle from '@/components/list/SortToggle.vue';
 import ArticleList from '@/components/list/ArticleList.vue';
 import MarkdownRenderer from '@/components/article/MarkdownRenderer.vue';
 import { sectionLabel } from '@/config/nav';
-import { contentHref } from '@/composables/contentPaths';
+import { contentHref, sidebarNodes } from '@/composables/contentPaths';
 
 const props = defineProps<{ root: string; path: string }>();
 const isKnowledgeHome = computed(() => props.root === '/knowledge' && props.path === '/knowledge');
@@ -50,7 +50,7 @@ const treeNodes = computed(() => {
   // 取 root 对应的子树
   const seg = props.root.replace(/^\/+/, '');
   const top = manifest.value.tree.find((n) => n.name === seg || n.path === props.root);
-  return top ? top.children : [];
+  return top ? sidebarNodes(top.children, props.root, props.path) : [];
 });
 
 const currentNode = computed(() => findNodeByPath(props.path));

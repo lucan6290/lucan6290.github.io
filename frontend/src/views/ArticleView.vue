@@ -28,6 +28,7 @@
 import { computed, watchEffect } from 'vue';
 import type { ArticleMeta } from '@/types/content';
 import { useContent } from '@/composables/useContent';
+import { sidebarNodes } from '@/composables/contentPaths';
 import TreeSidebar from '@/components/sidebar/TreeSidebar.vue';
 import MarkdownRenderer from '@/components/article/MarkdownRenderer.vue';
 import ReadingProgress from '@/components/article/ReadingProgress.vue';
@@ -47,7 +48,7 @@ const treeNodes = computed(() => {
   if (!manifest.value) return [];
   const seg = root.value.replace(/^\/+/, '');
   const top = manifest.value.tree.find((n) => n.name === seg || n.path === root.value);
-  return top ? top.children : [];
+  return top ? sidebarNodes(top.children, root.value, props.article.path) : [];
 });
 
 watchEffect(() => {

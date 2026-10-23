@@ -1,8 +1,20 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createMemoryHistory, createRouter } from 'vue-router';
-import { CONTENT_ROUTE_PATH, contentHref, contentPath, resolveContentUrl } from '../../src/composables/contentPaths.ts';
+import { CONTENT_ROUTE_PATH, contentHref, contentPath, resolveContentUrl, sidebarNodes } from '../../src/composables/contentPaths.ts';
 import { createNavEntries } from '../../src/config/nav.ts';
+
+test('知识库分类与文章侧栏只展示所属一级目录，其他栏目维持原样', () => {
+  const tree = [
+    { name: 'project-practice', path: '/knowledge/project-practice', children: [] },
+    { name: 'tech-study', path: '/knowledge/tech-study', children: [] },
+  ];
+  assert.deepEqual(sidebarNodes(tree, '/knowledge', '/knowledge/tech-study'), [tree[1]]);
+  assert.deepEqual(sidebarNodes(tree, '/knowledge', '/knowledge/tech-study/子分类/文章'), [tree[1]]);
+  assert.deepEqual(sidebarNodes(tree, '/knowledge', '/knowledge/project-practice/文章'), [tree[0]]);
+  assert.deepEqual(sidebarNodes(tree, '/blog', '/blog/随笔/文章'), tree);
+  assert.deepEqual(sidebarNodes(tree, '/knowledge', '/knowledge/tech-study-more/文章'), []);
+});
 
 test('任意栏目路由保留分区前缀与中文目录', () => {
   const router = createRouter({ history: createMemoryHistory(), routes: [
