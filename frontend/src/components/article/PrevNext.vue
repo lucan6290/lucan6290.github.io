@@ -1,11 +1,11 @@
 <template>
   <nav class="prev-next" aria-label="上一篇/下一篇">
-    <router-link v-if="prev" class="pn-link pn-prev" :to="prev.path">
+    <router-link v-if="prev" class="pn-link pn-prev" :to="contentHref(prev.path)">
       <span class="sublabel">← 上一篇</span>
       <span class="label">{{ prev.title }}</span>
     </router-link>
     <span v-else />
-    <router-link v-if="next" class="pn-link pn-next" :to="next.path">
+    <router-link v-if="next" class="pn-link pn-next" :to="contentHref(next.path)">
       <span class="sublabel">下一篇 →</span>
       <span class="label">{{ next.title }}</span>
     </router-link>
@@ -13,6 +13,7 @@
 </template>
 
 <script setup lang="ts">
+import { contentHref } from '@/composables/contentPaths';
 defineProps<{
   prev: { path: string; title: string } | null;
   next: { path: string; title: string } | null;

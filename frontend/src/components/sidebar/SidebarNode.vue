@@ -3,14 +3,14 @@
     <div v-if="hasChildren" class="menu__list-item-collapsible" @click="toggle">
       <router-link
         class="menu__link menu__link--sublist"
-        :to="node.path"
+        :to="contentHref(node.path)"
         @click.stop
       >{{ node.label }}</router-link>
       <button class="menu__caret" type="button" aria-label="折叠">
         <span class="caret-icon" :class="{ collapsed: !expanded }" aria-hidden="true" />
       </button>
     </div>
-    <router-link v-else class="menu__link" :to="node.path">{{ node.label }}</router-link>
+    <router-link v-else class="menu__link" :to="contentHref(node.path)">{{ node.label }}</router-link>
 
     <ul v-if="hasChildren && expanded" class="menu__list">
       <SidebarNode
@@ -27,6 +27,7 @@
 <script setup lang="ts">
 import { computed, ref, watchEffect } from 'vue';
 import type { TreeNode } from '@/types/content';
+import { contentHref } from '@/composables/contentPaths';
 
 const props = defineProps<{ node: TreeNode; activePath: string; depth: number }>();
 

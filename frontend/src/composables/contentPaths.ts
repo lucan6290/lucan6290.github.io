@@ -1,3 +1,9 @@
+export const CONTENT_ROUTE_PATH = '/:section/:pathMatch(.*)*';
+
+export function contentHref(path: string) {
+  return path.split('/').map(encodeURIComponent).join('/');
+}
+
 export function contentPath(root: string, segments: string | string[] = []) {
   const parts = Array.isArray(segments) ? segments : [segments];
   return [root, ...parts.filter(Boolean)].join('/');

@@ -9,7 +9,8 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import type { BytemdPlugin } from 'bytemd';
-import { resolveContentUrl } from '@/composables/contentPaths';
+import { contentPath, resolveContentUrl } from '@/composables/contentPaths';
+import { useContent } from '@/composables/useContent';
 import { Viewer } from '@bytemd/vue-next';
 import gfm from '@bytemd/plugin-gfm';
 import highlight from '@bytemd/plugin-highlight';
@@ -23,6 +24,7 @@ import 'katex/dist/katex.css';
 
 const props = defineProps<{ content: string; relativePath: string; title?: string }>();
 const router = useRouter();
+const { findNodeByPath, getArticle } = useContent();
 
 const resourceModules = import.meta.glob<string>('/content/**/*.{png,PNG,jpg,JPG,jpeg,JPEG,gif,GIF,svg,SVG,webp,WEBP,avif,AVIF,bmp,BMP,ico,ICO,pdf,PDF}', {
   query: '?url', import: 'default', eager: true,
@@ -73,7 +75,11 @@ function navigate(event: MouseEvent) {
   const anchor = (event.target as Element).closest<HTMLAnchorElement>('a[href]');
   if (!anchor || anchor.target || anchor.hasAttribute('download')) return;
   const url = new URL(anchor.href);
-  if (url.origin !== location.origin || !/^\/(knowledge|blog)(\/|$)/.test(url.pathname)) return;
+  if (url.origin !== location.origin) return;
+  const target = router.resolve(url.pathname + url.search + url.hash);
+  if (target.name !== 'content') return;
+  const path = contentPath('/' + String(target.params.section), target.params.pathMatch);
+  if (!getArticle(path) && !findNodeByPath(path)) return;
   event.preventDefault();
   void router.push(url.pathname + url.search + url.hash);
 }

@@ -42,7 +42,7 @@ const pn = computed(() => getPrevNext(props.article.path));
 // 原文直接从 manifest 读取（构建期已写入），无需运行时 IO
 const rawContent = computed(() => props.article.rawContent ?? '');
 
-const root = computed(() => props.article.path.startsWith('/blog') ? '/blog' : '/knowledge');
+const root = computed(() => '/' + props.article.path.split('/')[1]);
 const treeNodes = computed(() => {
   if (!manifest.value) return [];
   const seg = root.value.replace(/^\/+/, '');

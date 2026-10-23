@@ -15,7 +15,7 @@
         :content="currentNode.introduction.rawContent"
         :relative-path="currentNode.introduction.relativePath"
       />
-      <ArticleList :articles="articles" />
+      <ArticleList v-if="articles.length || !currentNode?.introduction" :articles="articles" />
     </main>
   </div>
 </template>
@@ -28,6 +28,7 @@ import Breadcrumb from '@/components/list/Breadcrumb.vue';
 import SortToggle from '@/components/list/SortToggle.vue';
 import ArticleList from '@/components/list/ArticleList.vue';
 import MarkdownRenderer from '@/components/article/MarkdownRenderer.vue';
+import { sectionLabel } from '@/config/nav';
 
 const props = defineProps<{ root: string; path: string }>();
 
@@ -53,7 +54,7 @@ const articles = computed(() => {
 });
 
 const title = computed(() => {
-  if (props.path === props.root) return props.root === '/blog' ? '博客' : '知识库';
+  if (props.path === props.root) return sectionLabel(props.root.slice(1));
   return currentNode.value?.label || props.path.split('/').pop() || '';
 });
 

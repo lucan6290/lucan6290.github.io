@@ -5,6 +5,22 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { build } from './buildContent.mjs';
 
+test('一级空目录成为栏目，隐藏和资源目录不成为栏目', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'notes-sections-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const contentDir = path.join(root, 'content');
+  for (const name of ['knowledge', 'blog', 'projects', 'about', '学习路线', '.hidden', '_草稿', 'images', 'assets', '配图-imgs']) {
+    fs.mkdirSync(path.join(contentDir, name), { recursive: true });
+  }
+  fs.mkdirSync(path.join(contentDir, 'knowledge', '空子目录'));
+  const options = { contentDir, outDir: path.join(root, 'generated') };
+  const result = build(options);
+  assert.deepEqual(result.tree.map(n => n.name).sort(), ['about', 'blog', 'knowledge', 'projects', '学习路线'].sort());
+  assert.deepEqual(result.tree.find(n => n.name === 'knowledge').children, []);
+  fs.rmdirSync(path.join(contentDir, '学习路线'));
+  assert.equal(build(options).tree.some(n => n.name === '学习路线'), false);
+});
+
 test('复制笔记文件夹后生成标题、分类介绍，过滤资源目录', (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'notes-content-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

@@ -10,7 +10,7 @@
             <h3>{{ y }}-{{ m }}</h3>
             <ul>
               <li v-for="path in archive[y][m]" :key="path">
-                <router-link :to="path">{{ titleOf(path) }}</router-link>
+                <router-link :to="contentHref(path)">{{ titleOf(path) }}</router-link>
               </li>
             </ul>
           </div>
@@ -24,6 +24,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useContent } from '@/composables/useContent';
+import { contentHref } from '@/composables/contentPaths';
 
 const { getArchive, manifest } = useContent();
 const archive = computed(() => getArchive());

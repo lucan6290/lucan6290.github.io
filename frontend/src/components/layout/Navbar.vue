@@ -5,9 +5,9 @@
         <span class="navbar__title">箓川码笺</span>
       </router-link>
 
-      <nav class="navbar__items navbar__items--left">
+      <nav id="section-navigation" class="navbar__items navbar__items--left" :class="{ 'navbar__items--open': mobileOpen }" aria-label="顶部栏目">
         <div
-          v-for="entry in NAV_ENTRIES"
+          v-for="entry in navEntries"
           :key="entry.key"
           class="navbar__item dropdown"
           @mouseenter="open(entry.key)"
@@ -15,7 +15,7 @@
           @focusin="open(entry.key)"
           @focusout="close(entry.key)"
         >
-          <button class="navbar__link" type="button" aria-haspopup="true" :aria-expanded="active === entry.key">
+          <button class="navbar__link" type="button" aria-haspopup="true" :aria-expanded="active === entry.key" @click="open(entry.key)" @keydown.esc="active = null">
             {{ entry.label }}
             <span class="caret" aria-hidden="true" />
           </button>
@@ -26,11 +26,10 @@
           </ul>
         </div>
 
-        <router-link class="navbar__link" to="/projects">项目</router-link>
-        <router-link class="navbar__link" to="/about">关于</router-link>
       </nav>
 
       <div class="navbar__items navbar__items--right">
+        <button class="navbar__link mobile-nav-toggle" type="button" aria-controls="section-navigation" :aria-expanded="mobileOpen" @click="mobileOpen = !mobileOpen">栏目</button>
         <button class="theme-toggle" type="button" title="切换主题" @click="toggle">
           <span v-if="theme === 'light'" aria-hidden="true">🌙</span>
           <span v-else aria-hidden="true">☀️</span>
@@ -42,12 +41,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { NAV_ENTRIES } from '@/config/nav';
+import { computed, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
+import { createNavEntries } from '@/config/nav';
+import { useContent } from '@/composables/useContent';
 import { useTheme } from '@/composables/useTheme';
 
 const { theme, toggle } = useTheme();
+const { manifest } = useContent();
+const navEntries = computed(() => createNavEntries(manifest.value.tree));
+const mobileOpen = ref(false);
+const route = useRoute();
 const active = ref<string | null>(null);
+watch(() => route.fullPath, () => { mobileOpen.value = false; active.value = null; });
 let timer: number | null = null;
 
 function open(key: string) {
@@ -153,7 +159,28 @@ function close(key: string) {
 }
 .theme-toggle:hover { background: var(--site-border); }
 
+.mobile-nav-toggle { display: none; }
+
 @media (max-width: 996px) {
   .navbar__items--left { display: none; }
+  .navbar__inner { gap: 12px; padding: 0 12px; }
+  .navbar__items--right { margin-left: auto; gap: 4px; }
+  .navbar__items--right > a { display: none; }
+  .mobile-nav-toggle { display: inline-flex; }
+  .navbar__items--left.navbar__items--open {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    position: fixed;
+    top: var(--ifm-navbar-height);
+    left: 0;
+    right: 0;
+    max-height: calc(100vh - var(--ifm-navbar-height));
+    overflow-y: auto;
+    padding: 12px;
+    background: var(--site-surface);
+    border-bottom: 1px solid var(--site-border);
+  }
+  .dropdown__menu { position: static; box-shadow: none; margin: 0 8px 8px; }
 }
 </style>

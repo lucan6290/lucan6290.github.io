@@ -1,34 +1,32 @@
-import type { NavEntry } from '@/types/content';
+import type { NavEntry, TreeNode } from '@/types/content';
+import { contentHref } from '../composables/contentPaths.ts';
 
-/**
- * 顶部导航栏 ↔ 内容树根节点映射。
- * 新增分区只需在此追加一条；CategoryView 根据 route.params 自动定位子树。
- */
-export const NAV_ENTRIES: NavEntry[] = [
-  {
-    key: 'knowledge',
-    label: '知识库',
-    rootPath: '/knowledge',
-    items: [
-      { label: '首页', to: '/knowledge' },
-      { label: '技术研习', to: '/knowledge/tech-study' },
-      { label: '项目实战', to: '/knowledge/project-practice' },
-      { label: '资源分享', to: '/knowledge/resource-sharing' },
-    ],
-  },
-  {
-    key: 'blog',
-    label: '博客',
-    rootPath: '/blog',
-    items: [
-      { label: '博客首页', to: '/blog' },
-      { label: 'AI观察', to: '/blog/AI观察' },
-      { label: '随笔感想', to: '/blog/随笔感想' },
-    ],
-  },
+// 仅保留四个既有栏目的名称与顺序；栏目是否存在由 content 一级目录决定。
+const KNOWN_SECTIONS = [
+  { key: 'knowledge', label: '知识库' },
+  { key: 'blog', label: '博客' },
+  { key: 'projects', label: '项目' },
+  { key: 'about', label: '关于' },
 ];
 
-export const STATIC_NAV_ITEMS = [
-  { label: '项目展示', to: '/projects' },
-  { label: '关于本站', to: '/about' },
-] as const;
+export function sectionLabel(name: string) {
+  return KNOWN_SECTIONS.find((section) => section.key === name)?.label || name.replace(/^\d+[-_]/, '');
+}
+
+export function createNavEntries(tree: TreeNode[]): NavEntry[] {
+  const rank = (name: string) => {
+    const index = KNOWN_SECTIONS.findIndex((section) => section.key === name);
+    return index < 0 ? KNOWN_SECTIONS.length : index;
+  };
+  return tree.filter((node) => !node.article)
+    .sort((a, b) => rank(a.name) - rank(b.name))
+    .map((node) => ({
+      key: node.name,
+      label: sectionLabel(node.name),
+      rootPath: node.path,
+      items: [
+        { label: `${sectionLabel(node.name)}首页`, to: contentHref(node.path) },
+        ...node.children.map((child) => ({ label: child.label, to: contentHref(child.path) })),
+      ],
+    }));
+}

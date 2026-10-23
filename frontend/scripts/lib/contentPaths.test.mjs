@@ -1,18 +1,30 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createMemoryHistory, createRouter } from 'vue-router';
-import { contentPath, resolveContentUrl } from '../../src/composables/contentPaths.ts';
+import { CONTENT_ROUTE_PATH, contentHref, contentPath, resolveContentUrl } from '../../src/composables/contentPaths.ts';
+import { createNavEntries } from '../../src/config/nav.ts';
 
-test('知识库、博客路由保留分区前缀与中文目录', () => {
+test('任意栏目路由保留分区前缀与中文目录', () => {
   const router = createRouter({ history: createMemoryHistory(), routes: [
-    { path: '/knowledge/:pathMatch(.*)*', component: {} },
-    { path: '/blog/:pathMatch(.*)*', component: {} },
+    { path: CONTENT_ROUTE_PATH, component: {} },
   ] });
-  for (const input of ['/knowledge', '/knowledge/中文/中文/01-笔记', '/blog/随笔/文章']) {
-    const route = router.resolve(input);
-    const root = input.startsWith('/blog') ? '/blog' : '/knowledge';
+  for (const input of ['/knowledge', '/knowledge/中文/中文/01-笔记', '/blog/随笔/文章', '/projects', '/about', '/学习 路线/嵌套/第一篇', '/tags/学习/笔记', '/C# 学习/100%笔记']) {
+    const route = router.resolve(contentHref(input));
+    const root = '/' + route.params.section;
     assert.equal(contentPath(root, route.params.pathMatch), input);
   }
+});
+
+test('导航按现有四栏排序，新栏目追加且只有实际子节点', () => {
+  const folder = (name, children = []) => ({ name, label: name, path: '/' + name, sortKey: null, children });
+  const tree = [folder('学习 路线', [{...folder('01-第一篇.md'), path: '/学习 路线/01-第一篇', label: '第一篇', article: {}}]), folder('about'), folder('blog'), folder('projects'), folder('knowledge'), { ...folder('独立.md'), article: {} }];
+  const entries = createNavEntries(tree);
+  assert.deepEqual(entries.map(n => n.label), ['知识库', '博客', '项目', '关于', '学习 路线']);
+  assert.equal(entries[4].items[0].to, '/' + encodeURIComponent('学习 路线'));
+  assert.deepEqual(entries[4].items.map(n => n.label), ['学习 路线首页', '第一篇']);
+  assert.deepEqual(entries[0].items, [{ label: '知识库首页', to: '/knowledge' }]);
+  assert.equal(createNavEntries(tree.filter(n => n.name !== 'about')).some(n => n.key === 'about'), false);
+  assert.equal(tree[0].name, '学习 路线');
 });
 
 test('相对文档、README、图片及引用式链接使用源文件位置解析', () => {

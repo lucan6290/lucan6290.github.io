@@ -1,10 +1,10 @@
 <template>
   <nav class="breadcrumbs" aria-label="面包屑">
     <ol>
-      <li><router-link :to="root">{{ rootLabel }}</router-link></li>
+      <li><router-link :to="contentHref(root)">{{ rootLabel }}</router-link></li>
       <li v-for="(seg, i) in segments" :key="i">
         <span class="sep" aria-hidden="true">/</span>
-        <router-link v-if="i < segments.length - 1" :to="seg.to">{{ seg.label }}</router-link>
+        <router-link v-if="i < segments.length - 1" :to="contentHref(seg.to)">{{ seg.label }}</router-link>
         <span v-else aria-current="page">{{ seg.label }}</span>
       </li>
     </ol>
@@ -13,17 +13,19 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { sectionLabel } from '@/config/nav';
+import { contentHref } from '@/composables/contentPaths';
 
 const props = defineProps<{ path: string; root: string }>();
 
-const rootLabel = computed(() => props.root === '/blog' ? '博客' : '知识库');
+const rootLabel = computed(() => sectionLabel(props.root.slice(1)));
 
 const segments = computed(() => {
   const rel = props.path.replace(props.root, '').replace(/^\/+|\/+$/g, '');
   if (!rel) return [];
   const parts = rel.split('/').filter(Boolean);
   return parts.map((p, i) => ({
-    label: decodeURIComponent(p),
+    label: p.replace(/^\d+[-_]/, ''),
     to: props.root + '/' + parts.slice(0, i + 1).join('/'),
   }));
 });

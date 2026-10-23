@@ -2,7 +2,7 @@
   <div v-if="articles.length" class="article-list">
     <article v-for="art in articles" :key="art.path" class="article-item">
       <header>
-        <h2><router-link :to="art.path">{{ art.frontmatter.title }}</router-link></h2>
+        <h2><router-link :to="contentHref(art.path)">{{ art.frontmatter.title }}</router-link></h2>
         <time v-if="art.frontmatter.date" :datetime="art.frontmatter.date">{{ formatDate(art.frontmatter.date) }}</time>
       </header>
       <p v-if="art.excerpt">{{ art.excerpt }}</p>
@@ -16,6 +16,7 @@
 
 <script setup lang="ts">
 import type { ArticleMeta } from '@/types/content';
+import { contentHref } from '@/composables/contentPaths';
 
 defineProps<{ articles: ArticleMeta[] }>();
 
