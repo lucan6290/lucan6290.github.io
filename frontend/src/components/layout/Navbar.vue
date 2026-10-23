@@ -15,7 +15,7 @@
           @focusin="open(entry.key)"
           @focusout="close(entry.key)"
         >
-          <button class="navbar__link" type="button" aria-haspopup="true" :aria-expanded="String(active === entry.key)">
+          <button class="navbar__link" type="button" aria-haspopup="true" :aria-expanded="active === entry.key">
             {{ entry.label }}
             <span class="caret" aria-hidden="true" />
           </button>

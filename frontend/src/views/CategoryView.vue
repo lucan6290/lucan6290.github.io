@@ -9,6 +9,12 @@
         <h1>{{ title }}</h1>
         <SortToggle :mode="sortMode" @toggle="toggleSort" />
       </header>
+      <MarkdownRenderer
+        v-if="currentNode?.introduction"
+        :key="currentNode.introduction.relativePath"
+        :content="currentNode.introduction.rawContent"
+        :relative-path="currentNode.introduction.relativePath"
+      />
       <ArticleList :articles="articles" />
     </main>
   </div>
@@ -21,6 +27,7 @@ import TreeSidebar from '@/components/sidebar/TreeSidebar.vue';
 import Breadcrumb from '@/components/list/Breadcrumb.vue';
 import SortToggle from '@/components/list/SortToggle.vue';
 import ArticleList from '@/components/list/ArticleList.vue';
+import MarkdownRenderer from '@/components/article/MarkdownRenderer.vue';
 
 const props = defineProps<{ root: string; path: string }>();
 
@@ -34,10 +41,7 @@ const treeNodes = computed(() => {
   return top ? top.children : [];
 });
 
-const currentNode = computed(() => {
-  if (props.path === props.root) return null;
-  return findNodeByPath(props.path.replace(/^\//, ''));
-});
+const currentNode = computed(() => findNodeByPath(props.path));
 
 const articles = computed(() => {
   if (!ready.value) return [];

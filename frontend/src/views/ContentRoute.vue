@@ -1,6 +1,6 @@
 <template>
   <div v-if="!ready" class="loading">加载中…</div>
-  <ArticleView v-else-if="article" :article="article" />
+  <ArticleView v-else-if="article" :key="article.path" :article="article" />
   <CategoryView v-else :root="root" :path="currentPath" />
 </template>
 
@@ -8,14 +8,15 @@
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useContent } from '@/composables/useContent';
+import { contentPath } from '@/composables/contentPaths';
 import CategoryView from './CategoryView.vue';
 import ArticleView from './ArticleView.vue';
 
 const route = useRoute();
-const { ready, getArticle, findNodeByPath } = useContent();
+const { ready, getArticle } = useContent();
 
-const currentPath = computed(() => '/' + (route.params.pathMatch as string | string[] || []).flat().filter(Boolean).join('/'));
 const root = computed(() => route.name === 'blog' ? '/blog' : '/knowledge');
+const currentPath = computed(() => contentPath(root.value, route.params.pathMatch));
 
 const article = computed(() => {
   const p = currentPath.value;

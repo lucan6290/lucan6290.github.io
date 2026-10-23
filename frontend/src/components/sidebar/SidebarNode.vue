@@ -2,12 +2,10 @@
   <li class="menu__list-item" :class="{ 'is-active': isActive, 'has-children': hasChildren }">
     <div v-if="hasChildren" class="menu__list-item-collapsible" @click="toggle">
       <router-link
-        v-if="node.article"
         class="menu__link menu__link--sublist"
         :to="node.path"
         @click.stop
       >{{ node.label }}</router-link>
-      <span v-else class="menu__link menu__link--sublist">{{ node.label }}</span>
       <button class="menu__caret" type="button" aria-label="折叠">
         <span class="caret-icon" :class="{ collapsed: !expanded }" aria-hidden="true" />
       </button>

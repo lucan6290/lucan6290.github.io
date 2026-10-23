@@ -16,7 +16,7 @@
             <router-link v-for="tag in article.frontmatter.tags" :key="tag" :to="`/tags/${encodeURIComponent(tag)}`">{{ tag }}</router-link>
           </div>
         </header>
-        <MarkdownRenderer :content="rawContent" />
+        <MarkdownRenderer :content="rawContent" :relative-path="article.relativePath" :title="article.frontmatter.title" />
       </article>
       <PrevNext :prev="pn.prev" :next="pn.next" />
     </main>
@@ -25,7 +25,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watchEffect } from 'vue';
+import { computed, watchEffect } from 'vue';
 import type { ArticleMeta } from '@/types/content';
 import { useContent } from '@/composables/useContent';
 import TreeSidebar from '@/components/sidebar/TreeSidebar.vue';
@@ -37,8 +37,10 @@ import FloatToc from '@/components/toc/FloatToc.vue';
 const props = defineProps<{ article: ArticleMeta }>();
 
 const { manifest, getPrevNext } = useContent();
-const rawContent = ref('');
 const pn = computed(() => getPrevNext(props.article.path));
+
+// 原文直接从 manifest 读取（构建期已写入），无需运行时 IO
+const rawContent = computed(() => props.article.rawContent ?? '');
 
 const root = computed(() => props.article.path.startsWith('/blog') ? '/blog' : '/knowledge');
 const treeNodes = computed(() => {
@@ -48,15 +50,7 @@ const treeNodes = computed(() => {
   return top ? top.children : [];
 });
 
-watchEffect(async () => {
-  // 动态导入原始 MD 文本（Vite 的 ?raw）
-  try {
-    const rel = props.article.relativePath;
-    const mod = await import(`../../content/${rel}?raw`);
-    rawContent.value = String(mod.default).replace(/^---[\s\S]*?---\n*/, '');
-  } catch (e) {
-    rawContent.value = `> ⚠️ 无法加载原文：${props.article.relativePath}\n\n${(e as Error).message}`;
-  }
+watchEffect(() => {
   document.title = `${props.article.frontmatter.title} - 箓川码笺`;
 });
 

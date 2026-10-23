@@ -11,10 +11,12 @@ export type ArticleMeta = {
   slug: string;
   path: string;
   relativePath: string;
-  frontmatter: FrontMatter;
+  frontmatter: FrontMatter & { title: string; date: string; updated: string };
   sortKey: string | null;
   mtimeMs: number;
   excerpt: string;
+  /** MD 原文（不含 frontmatter），构建期写入 manifest */
+  rawContent: string;
 };
 
 export type TreeNode = {
@@ -24,6 +26,7 @@ export type TreeNode = {
   sortKey: string | null;
   children: TreeNode[];
   article?: ArticleMeta;
+  introduction?: ArticleMeta;
 };
 
 export type PrevNext = {

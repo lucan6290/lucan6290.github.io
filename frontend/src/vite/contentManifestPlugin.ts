@@ -1,7 +1,7 @@
 import type { Plugin } from 'vite';
 import { watch } from 'chokidar';
 import path from 'node:path';
-import { build } from '../../scripts/build-content.mjs';
+import { build } from '../../scripts/lib/buildContent.mjs';
 
 const VIRTUAL_ID = 'virtual:content-manifest';
 const RESOLVED_ID = '\0' + VIRTUAL_ID;
@@ -11,6 +11,7 @@ const RESOLVED_ID = '\0' + VIRTUAL_ID;
  */
 export function contentManifestPlugin(): Plugin {
   let watcher: ReturnType<typeof watch> | null = null;
+  let reloadTimer: ReturnType<typeof setTimeout> | null = null;
 
   return {
     name: 'content-manifest',
@@ -30,21 +31,30 @@ export function contentManifestPlugin(): Plugin {
       watcher = watch(contentDir, {
         ignoreInitial: true,
         ignored: ['**/node_modules/**', '**/.git/**'],
+        awaitWriteFinish: { stabilityThreshold: 150, pollInterval: 50 },
       });
       const rebuild = () => {
-        const mod = server.moduleGraph.getModuleById(RESOLVED_ID);
-        if (mod) {
-          server.moduleGraph.invalidateModule(mod);
-          server.ws.send({ type: 'full-reload' });
-        }
+        if (reloadTimer) clearTimeout(reloadTimer);
+        reloadTimer = setTimeout(() => {
+          const mod = server.moduleGraph.getModuleById(RESOLVED_ID);
+          if (mod) {
+            server.moduleGraph.invalidateModule(mod);
+            server.ws.send({ type: 'full-reload' });
+          }
+        }, 100);
       };
       watcher.on('add', rebuild);
       watcher.on('change', rebuild);
       watcher.on('unlink', rebuild);
       watcher.on('addDir', rebuild);
       watcher.on('unlinkDir', rebuild);
+      server.httpServer?.once('close', () => {
+        if (reloadTimer) clearTimeout(reloadTimer);
+        void watcher?.close();
+      });
     },
     closeBundle() {
+      if (reloadTimer) clearTimeout(reloadTimer);
       watcher?.close();
     },
   };

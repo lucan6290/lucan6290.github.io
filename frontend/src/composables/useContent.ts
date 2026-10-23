@@ -1,30 +1,10 @@
 import { computed, ref } from 'vue';
 import type { ArticleMeta, ContentManifest, TreeNode } from '@/types/content';
+import manifestModule from 'virtual:content-manifest';
 
-// 构建期由 Vite 插件注入；运行时直接读取静态 JSON 作为兜底
-let manifestModule: ContentManifest | null = null;
-try {
-  // @ts-expect-error virtual module
-  manifestModule = (await import('virtual:content-manifest')).default;
-} catch {
-  manifestModule = null;
-}
-
-async function loadManifest(): Promise<ContentManifest> {
-  if (manifestModule) return manifestModule;
-  const mod = await import('@/generated/content-manifest.json');
-  return mod.default as unknown as ContentManifest;
-}
-
-const manifestRef = ref<ContentManifest | null>(manifestModule);
-const ready = ref(Boolean(manifestModule));
-
-if (!ready.value) {
-  loadManifest().then((m) => {
-    manifestRef.value = m;
-    ready.value = true;
-  });
-}
+// 开发和生产均由 Vite 内容插件提供数据，不依赖浏览器顶层 await。
+const manifestRef = ref<ContentManifest>(manifestModule);
+const ready = ref(true);
 
 export type SortMode = 'prefix' | 'date';
 
@@ -36,16 +16,16 @@ export function useContent() {
   function findNodeByPath(path: string): TreeNode | null {
     const m = manifest.value;
     if (!m) return null;
-    const segments = path.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean);
-    let nodes = m.tree;
-    let found: TreeNode | null = null;
-    for (const seg of segments) {
-      const match = nodes.find((n) => n.name === seg || n.label === seg || n.path === '/' + segments.slice(0, segments.indexOf(seg) + 1).join('/'));
-      if (!match) return null;
-      found = match;
-      nodes = match.children;
-    }
-    return found;
+    const target = '/' + path.replace(/^\/+|\/+$/g, '');
+    const find = (nodes: TreeNode[]): TreeNode | null => {
+      for (const node of nodes) {
+        if (node.path === target) return node;
+        const child = find(node.children);
+        if (child) return child;
+      }
+      return null;
+    };
+    return find(m.tree);
   }
 
   function getArticlesUnder(node: TreeNode | null): ArticleMeta[] {

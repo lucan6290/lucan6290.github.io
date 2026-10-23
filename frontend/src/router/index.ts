@@ -17,7 +17,13 @@ export const router = createRouter({
   routes,
   scrollBehavior(to, _from, saved) {
     if (saved) return saved;
-    if (to.hash) return { el: to.hash, behavior: 'smooth' };
+    if (to.hash) {
+      let id: string;
+      try { id = decodeURIComponent(to.hash.slice(1)); } catch { return { top: 0 }; }
+      const el = document.getElementById(id);
+      // 首次进入文章时正文可能尚未渲染；渲染器随后完成锚点定位。
+      if (el) return { el, top: 80, behavior: 'smooth' };
+    }
     return { top: 0 };
   },
 });
