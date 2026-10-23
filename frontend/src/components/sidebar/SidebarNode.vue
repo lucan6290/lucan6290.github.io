@@ -6,7 +6,7 @@
         :to="contentHref(node.path)"
         @click.stop
       >{{ node.label }}</router-link>
-      <button class="menu__caret" type="button" aria-label="折叠">
+      <button class="menu__caret" type="button" :aria-label="expanded ? '折叠' : '展开'" :aria-expanded="expanded">
         <span class="caret-icon" :class="{ collapsed: !expanded }" aria-hidden="true" />
       </button>
     </div>
@@ -33,7 +33,7 @@ const props = defineProps<{ node: TreeNode; activePath: string; depth: number }>
 
 const hasChildren = computed(() => props.node.children.length > 0);
 const isActive = computed(() => props.activePath === props.node.path || props.activePath.startsWith(props.node.path + '/'));
-const expanded = ref(true);
+const expanded = ref(false);
 
 // 自动展开包含当前激活路径的节点
 watchEffect(() => {
