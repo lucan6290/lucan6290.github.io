@@ -1,21 +1,22 @@
 <template>
-  <div class="category-layout">
-    <aside class="sidebar-container">
+  <div class="category-layout" :class="{ 'knowledge-home': isKnowledgeHome }">
+    <aside v-if="!isKnowledgeHome" class="sidebar-container">
       <TreeSidebar :nodes="treeNodes" :active-path="path" :root="root" />
     </aside>
     <main class="category-main">
-      <Breadcrumb :path="path" :root="root" />
-      <header class="category-header">
+      <Breadcrumb v-if="!isKnowledgeHome" :path="path" :root="root" />
+      <header v-if="!isKnowledgeHome" class="category-header">
         <h1>{{ title }}</h1>
         <SortToggle v-if="articles.length" :mode="sortMode" @toggle="toggleSort" />
       </header>
       <MarkdownRenderer
-        v-if="currentNode?.introduction"
+        v-if="currentNode?.introduction && (!isKnowledgeHome || currentNode.introduction.rawContent.trim())"
         :key="currentNode.introduction.relativePath"
         :content="currentNode.introduction.rawContent"
         :relative-path="currentNode.introduction.relativePath"
       />
-      <nav v-if="subcategories.length" class="subcategory-list" aria-label="子分类">
+      <p v-else-if="isKnowledgeHome" class="empty-home">暂无首页内容。</p>
+      <nav v-if="!isKnowledgeHome && subcategories.length" class="subcategory-list" aria-label="子分类">
         <h2>子分类</h2>
         <ul>
           <li v-for="category in subcategories" :key="category.path">
@@ -23,7 +24,7 @@
           </li>
         </ul>
       </nav>
-      <ArticleList v-if="articles.length || (!subcategories.length && !currentNode?.introduction)" :articles="articles" />
+      <ArticleList v-if="!isKnowledgeHome && (articles.length || (!subcategories.length && !currentNode?.introduction))" :articles="articles" />
     </main>
   </div>
 </template>
@@ -40,6 +41,7 @@ import { sectionLabel } from '@/config/nav';
 import { contentHref } from '@/composables/contentPaths';
 
 const props = defineProps<{ root: string; path: string }>();
+const isKnowledgeHome = computed(() => props.root === '/knowledge' && props.path === '/knowledge');
 
 const { ready, findNodeByPath, getArticlesUnder, sortMode, toggleSort, manifest } = useContent();
 
@@ -80,6 +82,9 @@ watchEffect(() => {
   grid-template-columns: var(--doc-sidebar-width) minmax(0, 1fr);
   min-height: calc(100vh - var(--ifm-navbar-height));
 }
+.category-layout.knowledge-home { display: block; }
+.knowledge-home .category-main { width: 100%; }
+.empty-home { color: var(--site-text-muted); }
 .sidebar-container {
   position: sticky;
   top: var(--ifm-navbar-height);
