@@ -25,7 +25,7 @@ export function createNavEntries(tree: TreeNode[]): NavEntry[] {
       label: sectionLabel(node.name),
       rootPath: node.path,
       items: [
-        { label: `${sectionLabel(node.name)}首页`, to: contentHref(node.path) },
+        { label: node.name === 'knowledge' ? '首页' : `${sectionLabel(node.name)}首页`, to: contentHref(node.path) },
         ...node.children
           .filter((child) => node.name !== 'knowledge' || !child.article)
           .map((child) => ({ label: child.label, to: contentHref(child.path) })),

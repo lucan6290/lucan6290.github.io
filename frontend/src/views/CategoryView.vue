@@ -1,7 +1,10 @@
 <template>
   <div class="category-layout" :class="{ 'knowledge-home': isKnowledgeHome }">
-    <aside v-if="!isKnowledgeHome" class="sidebar-container">
-      <TreeSidebar :nodes="treeNodes" :active-path="path" :root="root" />
+    <aside class="sidebar-container">
+      <nav v-if="isKnowledgeHome" aria-label="知识库分类" class="home-categories">
+        <router-link v-for="category in subcategories" :key="category.path" :to="contentHref(category.path)">{{ category.label }}</router-link>
+      </nav>
+      <TreeSidebar v-else :nodes="treeNodes" :active-path="path" :root="root" />
     </aside>
     <main class="category-main">
       <Breadcrumb v-if="!isKnowledgeHome" :path="path" :root="root" />
@@ -82,9 +85,11 @@ watchEffect(() => {
   grid-template-columns: var(--doc-sidebar-width) minmax(0, 1fr);
   min-height: calc(100vh - var(--ifm-navbar-height));
 }
-.category-layout.knowledge-home { display: block; }
 .knowledge-home .category-main { width: 100%; }
 .empty-home { color: var(--site-text-muted); }
+.home-categories { display: grid; gap: 4px; }
+.home-categories a { padding: 8px 10px; border-radius: 6px; color: var(--site-text-secondary); text-decoration: none; }
+.home-categories a:hover { color: var(--ifm-color-primary); background: var(--site-accent-soft); }
 .sidebar-container {
   position: sticky;
   top: var(--ifm-navbar-height);

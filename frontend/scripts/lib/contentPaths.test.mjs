@@ -34,7 +34,7 @@ test('导航按现有四栏排序，新栏目追加且只有实际子节点', ()
   assert.deepEqual(entries.map(n => n.label), ['知识库', '博客', '项目', '关于', '学习 路线']);
   assert.equal(entries[4].items[0].to, '/' + encodeURIComponent('学习 路线'));
   assert.deepEqual(entries[4].items.map(n => n.label), ['学习 路线首页', '第一篇']);
-  assert.deepEqual(entries[0].items, [{ label: '知识库首页', to: '/knowledge' }]);
+  assert.deepEqual(entries[0].items, [{ label: '首页', to: '/knowledge' }]);
   assert.equal(createNavEntries(tree.filter(n => n.name !== 'about')).some(n => n.key === 'about'), false);
   assert.equal(tree[0].name, '学习 路线');
 });
