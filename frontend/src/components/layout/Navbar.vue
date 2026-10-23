@@ -15,11 +15,12 @@
           @focusin="open(entry.key)"
           @focusout="close(entry.key)"
         >
-          <button class="navbar__link" type="button" aria-haspopup="true" :aria-expanded="active === entry.key" @click="open(entry.key)" @keydown.esc="active = null">
+          <router-link v-if="!entry.items.length" class="navbar__link" :to="entry.rootPath">{{ entry.label }}</router-link>
+          <button v-else class="navbar__link" type="button" aria-haspopup="true" :aria-expanded="active === entry.key" @click="open(entry.key)" @keydown.esc="active = null">
             {{ entry.label }}
             <span class="caret" aria-hidden="true" />
           </button>
-          <ul v-show="active === entry.key" class="dropdown__menu">
+          <ul v-if="entry.items.length" v-show="active === entry.key" class="dropdown__menu">
             <li v-for="it in entry.items" :key="it.to">
               <router-link class="dropdown__link" :to="it.to">{{ it.label }}</router-link>
             </li>

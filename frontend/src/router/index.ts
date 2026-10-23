@@ -6,6 +6,7 @@ const hasSection = (name: string) => manifest.tree.some((node) => !node.article 
 
 const routes: RouteRecordRaw[] = [
   { path: '/', name: 'home', component: () => import('@/views/HomePage.vue') },
+  { path: '/about', name: 'about', component: () => import('@/views/AboutPage.vue') },
   ...(!hasSection('tags') ? [
     { path: '/tags', name: 'tags', component: () => import('@/views/TagsIndex.vue') },
     { path: '/tags/:tag', name: 'tagged', component: () => import('@/views/TaggedList.vue') },

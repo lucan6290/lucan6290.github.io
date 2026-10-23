@@ -18,8 +18,7 @@ export function createNavEntries(tree: TreeNode[]): NavEntry[] {
     const index = KNOWN_SECTIONS.findIndex((section) => section.key === name);
     return index < 0 ? KNOWN_SECTIONS.length : index;
   };
-  return tree.filter((node) => !node.article)
-    .sort((a, b) => rank(a.name) - rank(b.name))
+  const entries: NavEntry[] = tree.filter((node) => !node.article && node.name !== 'about')
     .map((node) => ({
       key: node.name,
       label: sectionLabel(node.name),
@@ -31,4 +30,6 @@ export function createNavEntries(tree: TreeNode[]): NavEntry[] {
           .map((child) => ({ label: child.label, to: contentHref(child.path) })),
       ],
     }));
+  entries.push({ key: 'about', label: '关于', rootPath: '/about', items: [] });
+  return entries.sort((a, b) => rank(a.key) - rank(b.key));
 }

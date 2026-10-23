@@ -73,10 +73,11 @@ pnpm build        # 类型检查与生产构建
 | `content/knowledge/` | 知识库 | README（可选）与文章列表 |
 | `content/blog/` | 博客 | README（可选）与文章列表 |
 | `content/projects/` | 项目 | `projects/README.md`，已迁入原项目页面内容 |
-| `content/about/` | 关于 | `about/README.md`，已迁入原关于页面内容 |
+| 固定页面 `/about` | 关于 | `src/views/AboutPage.vue` |
 | `content/学习路线/` 等新目录 | 文件夹名称 | README（可选）与文章列表 |
 
 - 新建一级目录即可出现顶部入口，无需修改导航或路由代码，空目录也可进入。
+- “关于”是固定页面，点击顶部导航直接进入，不依赖内容目录。
 - 窄窗口点击顶部“栏目”按钮展开导航，选择页面后自动收起。
 - 知识库下拉菜单只显示首页及直属一级文件夹。二级及更深文件夹显示在分类页和左侧目录；分类页只列直属子分类和直属文章，不将后代文档平铺。其他栏目下拉仍显示首页及直属子分类、文章。
 - 知识库层级示例：`knowledge/Java/集合框架/HashMap.md` → 下拉选 Java → 分类页选集合框架 → 打开 HashMap。新建空分类也可按此路径逐级进入。

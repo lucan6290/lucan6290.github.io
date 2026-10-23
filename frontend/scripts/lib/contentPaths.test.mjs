@@ -35,8 +35,14 @@ test('导航按现有四栏排序，新栏目追加且只有实际子节点', ()
   assert.equal(entries[4].items[0].to, '/' + encodeURIComponent('学习 路线'));
   assert.deepEqual(entries[4].items.map(n => n.label), ['学习 路线首页', '第一篇']);
   assert.deepEqual(entries[0].items, [{ label: '首页', to: '/knowledge' }]);
-  assert.equal(createNavEntries(tree.filter(n => n.name !== 'about')).some(n => n.key === 'about'), false);
+  assert.equal(createNavEntries(tree.filter(n => n.name !== 'about')).some(n => n.key === 'about'), true);
   assert.equal(tree[0].name, '学习 路线');
+});
+
+test('关于是固定入口，不依赖内容目录且没有下拉项', () => {
+  const entries = createNavEntries([{ name: 'knowledge', label: 'knowledge', path: '/knowledge', sortKey: null, children: [] }]);
+  const about = entries.find(entry => entry.key === 'about');
+  assert.deepEqual(about, { key: 'about', label: '关于', rootPath: '/about', items: [] });
 });
 
 test('相对文档、README、图片及引用式链接使用源文件位置解析', () => {
