@@ -7,7 +7,7 @@
       <Breadcrumb :path="path" :root="root" />
       <header class="category-header">
         <h1>{{ title }}</h1>
-        <SortToggle :mode="sortMode" @toggle="toggleSort" />
+        <SortToggle v-if="articles.length" :mode="sortMode" @toggle="toggleSort" />
       </header>
       <MarkdownRenderer
         v-if="currentNode?.introduction"
@@ -15,7 +15,15 @@
         :content="currentNode.introduction.rawContent"
         :relative-path="currentNode.introduction.relativePath"
       />
-      <ArticleList v-if="articles.length || !currentNode?.introduction" :articles="articles" />
+      <nav v-if="subcategories.length" class="subcategory-list" aria-label="子分类">
+        <h2>子分类</h2>
+        <ul>
+          <li v-for="category in subcategories" :key="category.path">
+            <router-link :to="contentHref(category.path)">{{ category.label }}</router-link>
+          </li>
+        </ul>
+      </nav>
+      <ArticleList v-if="articles.length || (!subcategories.length && !currentNode?.introduction)" :articles="articles" />
     </main>
   </div>
 </template>
@@ -29,6 +37,7 @@ import SortToggle from '@/components/list/SortToggle.vue';
 import ArticleList from '@/components/list/ArticleList.vue';
 import MarkdownRenderer from '@/components/article/MarkdownRenderer.vue';
 import { sectionLabel } from '@/config/nav';
+import { contentHref } from '@/composables/contentPaths';
 
 const props = defineProps<{ root: string; path: string }>();
 
@@ -43,14 +52,16 @@ const treeNodes = computed(() => {
 });
 
 const currentNode = computed(() => findNodeByPath(props.path));
+const subcategories = computed(() => props.root === '/knowledge'
+  ? currentNode.value?.children.filter((node) => !node.article) || []
+  : []);
 
 const articles = computed(() => {
   if (!ready.value) return [];
-  if (props.path === props.root) {
-    // 根分类：列出直属子分类 + 直属文章
-    return getArticlesUnder({ name: '', label: '', path: props.root, sortKey: null, children: treeNodes.value });
-  }
-  return getArticlesUnder(currentNode.value);
+  const list = getArticlesUnder(currentNode.value);
+  return props.root === '/knowledge'
+    ? list.filter((article) => article.path.slice(0, article.path.lastIndexOf('/')) === props.path)
+    : list;
 });
 
 const title = computed(() => {
@@ -93,6 +104,19 @@ watchEffect(() => {
   border-bottom: 1px solid var(--site-border);
 }
 .category-header h1 { font-size: 32px; line-height: 1.25; }
+.subcategory-list { margin-bottom: 28px; }
+.subcategory-list h2 { font-size: 18px; margin-bottom: 12px; }
+.subcategory-list ul { list-style: none; padding: 0; display: grid; gap: 10px; }
+.subcategory-list a {
+  display: block;
+  padding: 14px 18px;
+  border: 1px solid var(--site-border);
+  border-radius: 8px;
+  color: var(--site-text);
+  background: var(--site-surface);
+  text-decoration: none;
+}
+.subcategory-list a:hover { border-color: var(--ifm-color-primary); color: var(--ifm-color-primary); }
 
 @media (max-width: 996px) {
   .category-layout { display: block; }

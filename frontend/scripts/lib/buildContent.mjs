@@ -62,7 +62,12 @@ function walkTree(dir, relativeRoot) {
       const entries = walkTree(fullPath, relativeRoot);
       const introduction = entries.find((node) => /^readme\.md$/i.test(node.name))?.article;
       const children = entries.filter((node) => !/^readme\.md$/i.test(node.name));
-      if (dir !== relativeRoot && !children.length && !introduction) continue;
+      if (dir !== relativeRoot && !children.length && !introduction) {
+        // 知识库空分类也可导航；只有图片等资源的目录仍不生成分类。
+        const emptyCategory = rel.startsWith('knowledge/')
+          && fs.readdirSync(fullPath).every((name) => name.startsWith('.') || name.startsWith('_'));
+        if (!emptyCategory) continue;
+      }
       const label = stripPrefix(entry.name);
       nodes.push({
         name: entry.name,

@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { build } from './buildContent.mjs';
+import { createNavEntries } from '../../src/config/nav.ts';
 
 test('一级空目录成为栏目，隐藏和资源目录不成为栏目', (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'notes-sections-'));
@@ -16,9 +17,35 @@ test('一级空目录成为栏目，隐藏和资源目录不成为栏目', (t) =
   const options = { contentDir, outDir: path.join(root, 'generated') };
   const result = build(options);
   assert.deepEqual(result.tree.map(n => n.name).sort(), ['about', 'blog', 'knowledge', 'projects', '学习路线'].sort());
-  assert.deepEqual(result.tree.find(n => n.name === 'knowledge').children, []);
+  assert.deepEqual(result.tree.find(n => n.name === 'knowledge').children.map(n => n.name), ['空子目录']);
   fs.rmdirSync(path.join(contentDir, '学习路线'));
   assert.equal(build(options).tree.some(n => n.name === '学习路线'), false);
+});
+
+test('知识库保留两级空分类，下拉只列一级文件夹，文档保留在二级分类', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowledge-levels-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const contentDir = path.join(root, 'content');
+  const category = path.join(contentDir, 'knowledge', 'Java', '集合框架');
+  fs.mkdirSync(category, { recursive: true });
+  fs.mkdirSync(path.join(contentDir, 'knowledge', 'images'));
+  fs.mkdirSync(path.join(contentDir, 'knowledge', '_草稿'));
+  fs.writeFileSync(path.join(contentDir, 'knowledge', '说明.md'), '# 说明');
+  const options = { contentDir, outDir: path.join(root, 'generated') };
+  let result = build(options);
+  const java = result.tree.find(n => n.name === 'knowledge').children.find(n => n.name === 'Java');
+  assert.ok(java, '空的一级分类仍保留');
+  assert.equal(java.children[0].path, '/knowledge/Java/集合框架');
+  assert.deepEqual(createNavEntries(result.tree)[0].items.map(n => n.label), ['知识库首页', 'Java']);
+  fs.writeFileSync(path.join(category, 'HashMap.md'), '# HashMap 笔记\n\n正文');
+  result = build(options);
+  assert.ok(result.articles['/knowledge/Java/集合框架/HashMap']);
+  assert.deepEqual(createNavEntries(result.tree)[0].items.map(n => n.label), ['知识库首页', 'Java']);
+  fs.unlinkSync(path.join(category, 'HashMap.md'));
+  assert.equal(build(options).tree[0].children.find(n => n.name === 'Java').children[0].children.length, 0);
+  fs.rmdirSync(category);
+  fs.rmdirSync(path.dirname(category));
+  assert.deepEqual(createNavEntries(build(options).tree)[0].items.map(n => n.label), ['知识库首页']);
 });
 
 test('复制笔记文件夹后生成标题、分类介绍，过滤资源目录', (t) => {
