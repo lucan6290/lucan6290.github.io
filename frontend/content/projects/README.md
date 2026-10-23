@@ -4,7 +4,7 @@
 
 基于自研前端 + Vite + Vue3 的长期知识库、博客与项目展示站。
 
-[查看工程实践笔记](/knowledge/project-practice)
+[查看工程实践笔记](/knowledge/项目实战)
 
 ## 内容管理端
 
