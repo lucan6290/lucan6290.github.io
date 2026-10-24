@@ -60,6 +60,19 @@ const contentLinks = computed<BytemdPlugin>(() => ({
 
     const used = new Set<string>();
     markdownBody.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6').forEach((heading) => {
+      const textNode = Array.from(heading.childNodes).find((node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim());
+      const number = textNode?.textContent?.match(/^((?:\d+(?:\.\d+)*[.、)）]|[一二三四五六七八九十]+[、.])\s*)/);
+      if (textNode && number) {
+        const numberText = number[1].trimEnd();
+        const spacing = number[1].slice(numberText.length);
+        const badge = document.createElement('span');
+        badge.className = 'article-heading-number';
+        badge.textContent = numberText;
+        textNode.textContent = textNode.textContent!.slice(number[0].length);
+        heading.insertBefore(badge, textNode);
+        if (spacing) heading.insertBefore(document.createTextNode(spacing), textNode);
+      }
+
       const base = (heading.textContent || '').trim().toLowerCase().replace(/[^\p{L}\p{N}\p{M}\s_-]/gu, '').replace(/\s/g, '-') || 'section';
       let id = base;
       let index = 1;
@@ -106,21 +119,34 @@ onMounted(() => {
 /* ByteMD viewer 全局样式覆写，与 site/ 正文风格对齐 */
 .md-viewer .markdown-body {
   font-family: var(--ifm-font-family-base);
-  font-size: 17px;
-  line-height: 1.88;
-  color: var(--site-text);
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--site-reading-text);
 }
-.md-viewer .markdown-body h1 { font-size: 2rem; line-height: 1.35; }
+.md-viewer .markdown-body h1,
+.md-viewer .markdown-body h2,
+.md-viewer .markdown-body h3,
+.md-viewer .markdown-body h4 { color: var(--site-reading-heading); }
+.md-viewer .markdown-body h1 { line-height: 1.35; }
 .md-viewer .markdown-body h2 {
-  margin-top: 34px;
-  padding-bottom: 9px;
+  margin: 28px 0 12px;
+  padding-bottom: 8px;
+  font-size: 1.5rem;
+  line-height: 1.4;
   border-bottom: 1px solid var(--site-border);
 }
 .md-viewer .markdown-body > h2:first-child { margin-top: 22px; }
 .md-viewer .markdown-body h3,
-.md-viewer .markdown-body h4 { margin-top: 30px; }
+.md-viewer .markdown-body h4 { margin: 20px 0 8px; }
+.md-viewer .markdown-body h1 { font-size: 1.85rem; }
+.md-viewer .markdown-body h3 { margin: 20px 0 8px; font-size: 1.25rem; line-height: 1.45; }
+.md-viewer .markdown-body h4 { font-size: 1.1rem; }
+.md-viewer .markdown-body h5 { font-size: 1rem; }
+.md-viewer .markdown-body h6 { font-size: .92rem; }
+.md-viewer .markdown-body .article-heading-number { color: var(--site-text-muted); font-size: .76em; font-weight: 600; }
 .md-viewer .markdown-body p,
-.md-viewer .markdown-body li { color: var(--site-text); }
+.md-viewer .markdown-body li,
+.md-viewer .markdown-body td { color: var(--site-reading-text); }
 .md-viewer .markdown-body li + li { margin-top: 4px; }
 .md-viewer .markdown-body img {
   display: block;
@@ -134,13 +160,15 @@ onMounted(() => {
   background: var(--site-surface);
   border: 1px solid var(--site-border);
   border-radius: 7px;
-  padding: 17px 19px;
+  padding: 12px 16px;
   overflow-x: auto;
+  line-height: 1.25;
 }
 .md-viewer .markdown-body code {
   font-family: var(--ifm-font-family-monospace);
   font-size: 0.92em;
 }
+.md-viewer .markdown-body pre code { line-height: inherit; }
 .md-viewer .markdown-body :not(pre) > code {
   padding: .12em .34em;
   border-radius: 4px;
@@ -150,7 +178,7 @@ onMounted(() => {
 .md-viewer .markdown-body blockquote {
   border-left: 3px solid var(--site-accent);
   padding: 8px 17px;
-  color: var(--site-text-secondary);
+  color: var(--site-reading-text);
   background: var(--site-accent-soft);
   border-radius: 0 5px 5px 0;
 }
@@ -166,9 +194,13 @@ onMounted(() => {
 .md-viewer .markdown-body th { border: 1px solid var(--site-border); padding: 10px 14px; text-align: left; background: var(--site-accent-soft); }
 .md-viewer .markdown-body tr:nth-child(2n) { background: var(--site-accent-soft); }
 @media (max-width: 700px) {
-  .md-viewer .markdown-body { font-size: 16px; line-height: 1.85; }
-  .md-viewer .markdown-body h2 { margin-top: 28px; }
-  .md-viewer .markdown-body > h2:first-child { margin-top: 18px; }
-  .md-viewer .markdown-body pre { padding: 14px; }
+  .md-viewer .markdown-body { font-size: 12px; line-height: 1.7; }
+  .md-viewer .markdown-body h2 { margin: 24px 0 10px; font-size: 1.35rem; }
+  .md-viewer .markdown-body > h2:first-child { margin-top: 20px; }
+  .md-viewer .markdown-body h3 { font-size: 1.15rem; }
+  .md-viewer .markdown-body h4 { font-size: 1.05rem; }
+  .md-viewer .markdown-body h5 { font-size: .98rem; }
+  .md-viewer .markdown-body h6 { font-size: .9rem; }
+  .md-viewer .markdown-body pre { padding: 10px 12px; line-height: 1.25; }
 }
 </style>
