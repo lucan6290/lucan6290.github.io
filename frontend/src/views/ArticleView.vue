@@ -77,31 +77,33 @@ function formatDate(iso: string) {
   overflow-y: auto;
   border-right: 1px solid var(--site-border);
   background: var(--site-surface);
-  padding: 20px 16px 96px 12px;
+  padding: 24px 18px 96px 14px;
 }
 .article-main {
-  padding: 32px 56px 96px;
-  max-width: 860px;
+  padding: 42px clamp(28px, 5vw, 68px) 96px;
+  max-width: 900px;
   margin: 0 auto;
   width: 100%;
 }
-.markdown-body header { margin-bottom: 32px; }
-.markdown-body h1 { font-size: 46px; line-height: 1.16; margin-bottom: 14px; }
-.meta { color: var(--site-text-muted); font-size: 0.92rem; margin-bottom: 12px; }
+.markdown-body header { margin-bottom: 30px; }
+.markdown-body h1 { font-size: clamp(2rem, 3.5vw, 2.55rem); line-height: 1.35; letter-spacing: -.025em; margin-bottom: 15px; }
+.meta { display: flex; flex-wrap: wrap; gap: 4px 10px; color: var(--site-text-muted); font-size: 0.84rem; margin-bottom: 15px; }
 .tags { display: flex; flex-wrap: wrap; gap: 8px; }
 .tags a {
-  border: 1px solid var(--site-border);
-  border-radius: 999px;
-  padding: 2px 9px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 3px 9px;
+  background: var(--site-accent-soft);
   color: var(--ifm-color-primary-dark);
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 0.72rem;
+  font-weight: 600;
 }
+.tags a:hover { border-color: var(--site-accent); }
 
 @media (max-width: 996px) {
   .article-layout { display: block; }
-  .sidebar-container { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--site-border); padding: 24px 20px; }
-  .article-main { padding: 24px 20px 72px; }
-  .markdown-body h1 { font-size: 30px; }
+  .sidebar-container { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--site-border); padding: 16px 20px; }
+  .article-main { padding: 28px 20px 72px; }
+  .markdown-body h1 { font-size: clamp(1.75rem, 7vw, 2rem); }
 }
 </style>

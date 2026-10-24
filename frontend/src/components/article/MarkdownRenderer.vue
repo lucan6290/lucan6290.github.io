@@ -96,46 +96,61 @@ onMounted(() => {
 /* ByteMD viewer 全局样式覆写，与 site/ 正文风格对齐 */
 .md-viewer .bytemd-viewer {
   font-family: var(--ifm-font-family-base);
-  font-size: 18px;
-  line-height: 1.9;
+  font-size: 17px;
+  line-height: 1.88;
   color: var(--site-text);
 }
-.md-viewer .bytemd-viewer h1 { font-size: 46px; line-height: 1.16; }
+.md-viewer .bytemd-viewer h1 { font-size: 2rem; line-height: 1.35; }
 .md-viewer .bytemd-viewer h2 {
-  margin-top: 46px;
-  padding-bottom: 10px;
+  margin-top: 42px;
+  padding-bottom: 9px;
   border-bottom: 1px solid var(--site-border);
 }
+.md-viewer .bytemd-viewer h3,
+.md-viewer .bytemd-viewer h4 { margin-top: 30px; }
 .md-viewer .bytemd-viewer p,
 .md-viewer .bytemd-viewer li { color: var(--site-text); }
+.md-viewer .bytemd-viewer li + li { margin-top: 4px; }
 .md-viewer .bytemd-viewer img {
   display: block;
   margin: 20px auto;
-  max-width: 80%;
+  max-width: 100%;
   max-height: 560px;
   border-radius: 8px;
-  box-shadow: 0 2px 12px var(--site-shadow);
+  box-shadow: 0 2px 16px var(--site-shadow);
 }
 .md-viewer .bytemd-viewer pre {
   background: var(--site-surface);
   border: 1px solid var(--site-border);
-  border-radius: 8px;
-  padding: 16px;
+  border-radius: 7px;
+  padding: 17px 19px;
   overflow-x: auto;
 }
 .md-viewer .bytemd-viewer code {
   font-family: var(--ifm-font-family-monospace);
   font-size: 0.92em;
 }
-.md-viewer .bytemd-viewer blockquote {
-  border-left: 4px solid var(--site-border);
-  padding: 8px 16px;
-  color: var(--site-text-muted);
+.md-viewer .bytemd-viewer :not(pre) > code {
+  padding: .12em .34em;
+  border-radius: 4px;
   background: var(--site-accent-soft);
-  border-radius: 0 8px 8px 0;
+  color: var(--ifm-color-primary-dark);
 }
-.md-viewer .bytemd-viewer table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+.md-viewer .bytemd-viewer blockquote {
+  border-left: 3px solid var(--site-accent);
+  padding: 8px 17px;
+  color: var(--site-text-secondary);
+  background: var(--site-accent-soft);
+  border-radius: 0 5px 5px 0;
+}
+.md-viewer .bytemd-viewer table { display: block; width: 100%; overflow-x: auto; border-collapse: collapse; margin: 22px 0; }
 .md-viewer .bytemd-viewer th,
 .md-viewer .bytemd-viewer td { border: 1px solid var(--site-border); padding: 10px 14px; text-align: left; }
+.md-viewer .bytemd-viewer th { border: 1px solid var(--site-border); padding: 10px 14px; text-align: left; background: var(--site-accent-soft); }
 .md-viewer .bytemd-viewer tr:nth-child(2n) { background: var(--site-accent-soft); }
+@media (max-width: 700px) {
+  .md-viewer .bytemd-viewer { font-size: 16px; line-height: 1.85; }
+  .md-viewer .bytemd-viewer h2 { margin-top: 34px; }
+  .md-viewer .bytemd-viewer pre { padding: 14px; }
+}
 </style>

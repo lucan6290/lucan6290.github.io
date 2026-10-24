@@ -55,6 +55,11 @@ a {
   transition: color 180ms ease;
 }
 
+:focus-visible {
+  outline: 3px solid var(--site-warm);
+  outline-offset: 3px;
+}
+
 a:hover {
   color: var(--ifm-color-primary-dark);
 }
