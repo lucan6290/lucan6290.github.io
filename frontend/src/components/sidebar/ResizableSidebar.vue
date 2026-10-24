@@ -6,6 +6,16 @@
     aria-label="目录侧栏"
   >
     <button
+      class="sidebar-mobile-toggle"
+      type="button"
+      aria-label="栏目目录"
+      aria-controls="sidebar-mobile-content"
+      :aria-expanded="mobileOpen"
+      @click="mobileOpen = !mobileOpen"
+    >
+      栏目目录 <span aria-hidden="true">{{ mobileOpen ? '⌃' : '⌄' }}</span>
+    </button>
+    <button
       v-if="collapsed"
       class="sidebar-expand"
       type="button"
@@ -17,7 +27,11 @@
       <span>展开目录</span>
     </button>
 
-    <template v-else>
+    <div
+      id="sidebar-mobile-content"
+      class="sidebar-panel"
+      :class="{ 'sidebar-panel--collapsed': collapsed, 'sidebar-panel--mobile-open': mobileOpen }"
+    >
       <div class="sidebar-toolbar">
         <button
           class="sidebar-toggle"
@@ -45,12 +59,13 @@
         @pointercancel="finishResize"
         @keydown="resizeByKeyboard"
       />
-    </template>
+    </div>
   </aside>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 
 const STORAGE_KEY = 'xiaocancoding.sidebar-layout';
 const MIN_WIDTH = 240;
@@ -79,7 +94,10 @@ function loadLayout() {
 const initialLayout = loadLayout();
 const width = ref(initialLayout.width);
 const collapsed = ref(initialLayout.collapsed);
+const mobileOpen = ref(false);
 const resizing = ref(false);
+const route = useRoute();
+watch(() => route.fullPath, () => { mobileOpen.value = false; });
 let startX = 0;
 let startWidth = width.value;
 
@@ -150,7 +168,9 @@ function resizeByKeyboard(event: KeyboardEvent) {
   transition: none;
 }
 .sidebar-container--resizing { transition: none; }
+.sidebar-panel--collapsed { display: none; }
 .sidebar-toolbar { display: flex; justify-content: flex-end; margin: -5px -7px 10px; }
+.sidebar-mobile-toggle { display: none; }
 .sidebar-toggle,
 .sidebar-expand {
   display: inline-flex;
@@ -184,17 +204,36 @@ function resizeByKeyboard(event: KeyboardEvent) {
 .sidebar-resizer:focus-visible { outline-offset: -3px; }
 
 @media (max-width: 996px) {
-  .sidebar-container:not(.sidebar-container--collapsed) {
+  .sidebar-container,
+  .sidebar-container--collapsed {
     position: static;
     width: 100%;
     height: auto;
+    overflow: visible;
     border-right: 0;
-    border-bottom: 1px solid var(--site-border);
-    padding: 12px 20px 20px;
+    padding: 0;
     transition: none;
   }
-  .sidebar-container--collapsed { height: 0; }
-  .sidebar-toolbar { margin: 0 0 8px; }
+  .sidebar-mobile-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--site-border);
+    color: var(--site-text-secondary);
+    font-size: .88rem;
+    font-weight: 600;
+  }
+  .sidebar-mobile-toggle:hover { color: var(--site-accent-ink); background: var(--site-accent-soft); }
+  .sidebar-panel { display: none; }
+  .sidebar-panel--mobile-open {
+    display: block;
+    padding: 12px 20px 20px;
+    border-bottom: 1px solid var(--site-border);
+  }
+  .sidebar-toolbar, .sidebar-expand { display: none; }
   .sidebar-resizer { display: none; }
 }
 

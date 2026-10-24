@@ -7,7 +7,7 @@
         <p class="lead">这里记录长期学习中的知识整理、项目实践与真实复盘。希望每一篇笔记，都能成为下一次出发时找得到的路标。</p>
         <div class="actions">
           <router-link class="primaryAction" to="/knowledge">从知识库开始 <span aria-hidden="true">↗</span></router-link>
-          <router-link class="secondaryAction" to="/blog">读读最近的随笔</router-link>
+          <router-link class="secondaryAction" to="/blog/随笔感想/03-重建个人技术站">先读：重建个人技术站</router-link>
         </div>
       </div>
 
@@ -15,14 +15,14 @@
         <div class="recentHeading">
           <div>
             <p class="sectionLabel">持续更新</p>
-            <h2 id="recent-title">最近写下的内容</h2>
+            <h2 id="recent-title">最近的博客文章</h2>
           </div>
           <router-link to="/blog" aria-label="查看全部博客">全部 <span aria-hidden="true">↗</span></router-link>
         </div>
         <ul v-if="recent.length" class="recentList">
           <li v-for="article in recent" :key="article.path">
             <router-link :to="article.path" class="recentLink">
-              <span class="recentCategory">{{ article.frontmatter.tags?.[0] || '近期笔记' }}</span>
+              <span class="recentCategory">{{ article.frontmatter.tags?.[0] || '博客' }}</span>
               <span class="recentTitle">{{ article.frontmatter.title }}</span>
               <time v-if="article.frontmatter.date" :datetime="article.frontmatter.date">{{ formatDate(article.frontmatter.date) }}</time>
             </router-link>
@@ -57,13 +57,16 @@
 import { computed } from 'vue';
 import { useContent } from '@/composables/useContent';
 
-const { getRecent } = useContent();
-const recent = computed(() => getRecent(4));
+const { manifest } = useContent();
+const recent = computed(() => Object.values(manifest.value.articles)
+  .filter((article) => article.path.startsWith('/blog/'))
+  .sort((a, b) => new Date(b.frontmatter.date).getTime() - new Date(a.frontmatter.date).getTime())
+  .slice(0, 4));
 
 const entries = [
   { title: '技术知识库', text: '系统整理技术体系、学习笔记与常用参考，方便回看，也方便沿着目录继续深入。', href: '/knowledge', tone: 'accent' },
-  { title: '博客随笔', text: '记录项目推进、踩坑复盘和阶段思考，把过程中的经验留存下来。', href: '/blog', tone: 'warm' },
-  { title: '工程项目', text: '看看想法怎样落到代码里，以及实践过程中的取舍与收获。', href: '/projects', tone: 'cool' },
+  { title: '博客随笔', text: '记录项目推进、踩坑复盘和阶段思考，把过程中的经验留存下来。', href: '/blog', tone: 'light' },
+  { title: '工程项目', text: '看看想法怎样落到代码里，以及实践过程中的取舍与收获。', href: '/projects', tone: 'lighter' },
 ];
 
 function formatDate(iso: string) {
@@ -87,8 +90,8 @@ function formatDate(iso: string) {
 }
 .tagline, .sectionLabel {
   margin: 0;
-  color: var(--site-accent);
-  font-size: .8rem;
+  color: var(--site-accent-ink);
+  font-size: .82rem;
   font-weight: 650;
   letter-spacing: .04em;
 }
@@ -106,22 +109,22 @@ function formatDate(iso: string) {
 .actions { display: flex; align-items: center; flex-wrap: wrap; gap: 22px; margin-top: 29px; }
 .primaryAction, .secondaryAction { display: inline-flex; align-items: center; gap: 14px; min-height: 44px; font-size: .88rem; font-weight: 650; text-decoration: none; }
 .primaryAction { padding: 0 18px; border-radius: 7px; background: var(--site-accent); color: var(--site-on-accent); }
-.primaryAction:hover { background: var(--ifm-color-primary-dark); color: var(--site-on-accent); }
+.primaryAction:hover { background: var(--site-accent-hover); color: var(--site-on-accent); }
 .secondaryAction { color: var(--site-text-secondary); }
-.secondaryAction:hover { color: var(--site-accent); }
+.secondaryAction:hover { color: var(--site-accent-ink); }
 
 .recent { padding: 8px 0 8px 28px; border-left: 1px solid var(--site-border); }
 .recentHeading, .sectionHeading { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; }
 .recentHeading h2, .sectionHeading h2 { margin: 5px 0 0; font-size: 1.18rem; font-weight: 700; letter-spacing: -.02em; }
-.recentHeading > a { flex: none; color: var(--site-text-muted); font-size: .78rem; }
-.recentHeading > a:hover { color: var(--site-accent); }
+.recentHeading > a { flex: none; color: var(--site-text-secondary); font-size: .82rem; }
+.recentHeading > a:hover { color: var(--site-accent-ink); }
 .recentList { list-style: none; padding: 0; margin: 12px 0 0; }
 .recentList li { border-top: 1px solid var(--site-border); }
 .recentLink { display: grid; grid-template-columns: minmax(72px, .38fr) minmax(0, 1fr) auto; align-items: baseline; gap: 12px; padding: 13px 0; color: var(--site-text); text-decoration: none; }
-.recentCategory { overflow: hidden; color: var(--site-accent); font-size: .72rem; text-overflow: ellipsis; white-space: nowrap; }
-.recentTitle { overflow: hidden; font-size: .86rem; font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
-.recentLink:hover .recentTitle { color: var(--site-accent); }
-.recentLink time { color: var(--site-text-muted); font-size: .7rem; white-space: nowrap; }
+.recentCategory { overflow: hidden; color: var(--site-accent-ink); font-size: .82rem; text-overflow: ellipsis; white-space: nowrap; }
+.recentTitle { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: .9rem; font-weight: 550; line-height: 1.45; }
+.recentLink:hover .recentTitle { color: var(--site-accent-ink); }
+.recentLink time { color: var(--site-text-secondary); font-size: .82rem; white-space: nowrap; }
 .recentEmpty { margin-top: 20px; color: var(--site-text-muted); font-size: .86rem; }
 
 .paths { padding: 30px 0 74px; border-top: 1px solid var(--site-border); }
@@ -129,13 +132,13 @@ function formatDate(iso: string) {
 .entryGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 30px; margin-top: 25px; }
 .entry { display: flex; gap: 17px; min-height: 122px; padding: 20px 0; color: var(--site-text); text-decoration: none; }
 .entryLine { flex: none; width: 3px; height: 38px; margin-top: 4px; border-radius: 3px; background: var(--site-accent); }
-.entryLine.warm { background: var(--site-warm); }
-.entryLine.cool { background: var(--site-cool); }
+.entryLine.light { background: var(--ifm-color-primary-light); }
+.entryLine.lighter { background: var(--ifm-color-primary-lighter); }
 .entryContent { min-width: 0; }
 .entry h3 { display: flex; justify-content: space-between; gap: 12px; margin: 0; font-size: 1rem; font-weight: 700; }
 .entry h3 span { color: var(--site-text-muted); font-size: .9rem; font-weight: 400; }
 .entry p { margin: 8px 0 0; color: var(--site-text-muted); font-size: .8rem; line-height: 1.75; }
-.entry:hover h3, .entry:hover h3 span { color: var(--site-accent); }
+.entry:hover h3, .entry:hover h3 span { color: var(--site-accent-ink); }
 
 @media (max-width: 900px) {
   .hero { grid-template-columns: minmax(0, 1fr); gap: 42px; padding-top: 60px; }

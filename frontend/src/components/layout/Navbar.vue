@@ -8,7 +8,7 @@
       </router-link>
 
       <!-- Left: dropdown entries -->
-      <nav id="section-navigation" class="navbar__items navbar__items--left" :class="{ 'navbar__items--open': mobileOpen }" aria-label="顶部栏目">
+      <nav id="section-navigation" class="navbar__items navbar__items--left" :class="{ 'navbar__items--open': mobileOpen }" aria-label="顶部栏目" @keydown.esc="closeMobileMenu">
         <router-link class="navbar__link navbar__home" to="/" @click="mobileOpen = false">首页</router-link>
         <div
           v-for="entry in navEntries"
@@ -19,8 +19,8 @@
           @focusin="open(entry.key)"
           @focusout="close(entry.key)"
         >
-          <router-link v-if="!entry.items.length" class="navbar__link" :to="entry.rootPath">{{ entry.label }}</router-link>
-          <button v-else class="navbar__link" type="button" aria-haspopup="true" :aria-expanded="active === entry.key" @click="open(entry.key)" @keydown.esc="active = null">
+          <router-link v-if="!entry.items.length" class="navbar__link" :class="{ 'navbar__link--active': inSection(entry.rootPath) }" :to="entry.rootPath">{{ entry.label }}</router-link>
+          <button v-else class="navbar__link" :class="{ 'navbar__link--active': inSection(entry.rootPath) }" type="button" aria-haspopup="true" :aria-expanded="active === entry.key" @click="open(entry.key)" @keydown.esc="active = null">
             {{ entry.label }}
             <span class="caret" aria-hidden="true" />
           </button>
@@ -35,7 +35,7 @@
 
       <!-- Right: GitHub link + theme toggle -->
       <div class="navbar__items navbar__items--right">
-        <button class="navbar__link mobile-nav-toggle" type="button" aria-controls="section-navigation" :aria-expanded="mobileOpen" @click="mobileOpen = !mobileOpen">栏目</button>
+        <button ref="mobileNavToggle" class="navbar__link mobile-nav-toggle" type="button" aria-controls="section-navigation" :aria-expanded="mobileOpen" @click="mobileOpen = !mobileOpen" @keydown.esc="closeMobileMenu">栏目</button>
         <a
           v-for="item in NAV_RIGHT_ITEMS"
           :key="item.href"
@@ -44,7 +44,7 @@
           target="_blank"
           rel="noopener"
         >{{ item.label }}</a>
-        <button class="theme-toggle" type="button" title="切换主题" @click="toggle">
+        <button class="theme-toggle" type="button" :aria-label="theme === 'light' ? '切换到深色模式' : '切换到浅色模式'" @click="toggle">
           <span v-if="theme === 'light'" aria-hidden="true">🌙</span>
           <span v-else aria-hidden="true">☀️</span>
         </button>
@@ -64,10 +64,20 @@ const { theme, toggle } = useTheme();
 const { manifest } = useContent();
 const navEntries = computed(() => createNavEntries(manifest.value.tree));
 const mobileOpen = ref(false);
+const mobileNavToggle = ref<HTMLButtonElement | null>(null);
 const route = useRoute();
 const active = ref<string | null>(null);
 watch(() => route.fullPath, () => { mobileOpen.value = false; active.value = null; });
 let timer: number | null = null;
+
+function inSection(rootPath: string) {
+  return route.path === rootPath || route.path.startsWith(`${rootPath}/`);
+}
+function closeMobileMenu() {
+  if (!mobileOpen.value) return;
+  mobileNavToggle.value?.focus();
+  mobileOpen.value = false;
+}
 
 function open(key: string) {
   if (timer) { clearTimeout(timer); timer = null; }
@@ -144,6 +154,7 @@ function close(key: string) {
   background: var(--site-accent-soft);
 }
 .navbar__home.router-link-exact-active { color: var(--ifm-color-primary); background: var(--site-accent-soft); }
+.navbar__link--active { color: var(--ifm-color-primary); background: var(--site-accent-soft); }
 
 .caret {
   display: inline-block;
@@ -189,7 +200,7 @@ function close(key: string) {
 
 /* Theme toggle */
 .theme-toggle {
-  width: 32px; height: 32px;
+  width: 44px; height: 44px;
   border-radius: 9px;
   display: grid; place-items: center;
   font-size: 1rem;
@@ -202,10 +213,11 @@ function close(key: string) {
 
 @media (max-width: 996px) {
   .navbar__items--left { display: none; }
+  .navbar__items--left .navbar__link { min-height: 44px; }
   .navbar__inner { gap: 12px; padding: 0 12px; }
   .navbar__items--right { margin-left: auto; gap: 4px; }
   .navbar__items--right > a { display: none; }
-  .mobile-nav-toggle { display: inline-flex; }
+  .mobile-nav-toggle { display: inline-flex; align-items: center; min-height: 44px; }
   .navbar__items--left.navbar__items--open {
     display: flex;
     flex-direction: column;
@@ -222,5 +234,6 @@ function close(key: string) {
     box-shadow: 0 16px 28px var(--site-shadow);
   }
   .dropdown__menu { position: static; box-shadow: none; margin: 0 8px 8px; }
+  .dropdown__link { display: flex; align-items: center; min-height: 44px; }
 }
 </style>

@@ -33,3 +33,14 @@ export function createNavEntries(tree: TreeNode[]): NavEntry[] {
   entries.push({ key: 'about', label: '关于', rootPath: '/about', items: [] });
   return entries.sort((a, b) => rank(a.key) - rank(b.key));
 }
+
+/** Navbar 右侧独立链接 */
+export const NAV_RIGHT_ITEMS = [
+  { label: 'GitHub', href: 'https://github.com/lucan6290' },
+] as const;
+
+/** Logo 配置 */
+export const NAV_LOGO = {
+  src: '/img/favicon.png',
+  alt: '箓川码笺',
+} as const;

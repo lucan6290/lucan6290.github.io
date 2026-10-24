@@ -119,9 +119,10 @@ onMounted(() => {
 /* ByteMD viewer 全局样式覆写，与 site/ 正文风格对齐 */
 .md-viewer .markdown-body {
   font-family: var(--ifm-font-family-base);
-  font-size: 13px;
-  line-height: 1.65;
+  font-size: 17px;
+  line-height: 1.82;
   color: var(--site-reading-text);
+  overflow-wrap: break-word;
 }
 .md-viewer .markdown-body h1,
 .md-viewer .markdown-body h2,
@@ -162,13 +163,26 @@ onMounted(() => {
   border-radius: 7px;
   padding: 12px 16px;
   overflow-x: auto;
-  line-height: 1.25;
+  line-height: 1.55;
 }
 .md-viewer .markdown-body code {
   font-family: var(--ifm-font-family-monospace);
   font-size: 0.92em;
 }
-.md-viewer .markdown-body pre code { line-height: inherit; }
+.md-viewer .markdown-body pre code { font-size: .85em; line-height: inherit; }
+.md-viewer .markdown-body pre code.hljs { overflow: visible; padding: 0; background: transparent; }
+html[data-theme='dark'] .md-viewer .markdown-body pre code.hljs { color: var(--site-reading-text); }
+html[data-theme='dark'] .md-viewer .hljs span { color: inherit; }
+html[data-theme='dark'] .md-viewer .markdown-body :is(.hljs-doctag, .hljs-keyword, .hljs-template-tag, .hljs-template-variable, .hljs-type) { color: #ff9b95; }
+html[data-theme='dark'] .md-viewer .markdown-body :is(.hljs-title, .hljs-function) { color: #d7b5ff; }
+html[data-theme='dark'] .md-viewer .markdown-body :is(.hljs-attr, .hljs-attribute, .hljs-literal, .hljs-meta, .hljs-number, .hljs-operator, .hljs-variable, .hljs-selector-attr, .hljs-selector-class, .hljs-selector-id, .hljs-section) { color: #93caff; }
+html[data-theme='dark'] .md-viewer .markdown-body :is(.hljs-string, .hljs-regexp) { color: #b8dcff; }
+html[data-theme='dark'] .md-viewer .markdown-body :is(.hljs-built_in, .hljs-symbol) { color: #ffbb7b; }
+html[data-theme='dark'] .md-viewer .markdown-body :is(.hljs-comment, .hljs-code, .hljs-formula) { color: #a7b1b9; }
+html[data-theme='dark'] .md-viewer .markdown-body :is(.hljs-name, .hljs-quote, .hljs-selector-tag, .hljs-selector-pseudo) { color: #9ce4a5; }
+html[data-theme='dark'] .md-viewer .markdown-body .hljs-bullet { color: #e8cd82; }
+html[data-theme='dark'] .md-viewer .markdown-body .hljs-addition { color: #aff5b4; background: #033a16; }
+html[data-theme='dark'] .md-viewer .markdown-body .hljs-deletion { color: #ffdcd7; background: #67060c; }
 .md-viewer .markdown-body :not(pre) > code {
   padding: .12em .34em;
   border-radius: 4px;
@@ -194,13 +208,13 @@ onMounted(() => {
 .md-viewer .markdown-body th { border: 1px solid var(--site-border); padding: 10px 14px; text-align: left; background: var(--site-accent-soft); }
 .md-viewer .markdown-body tr:nth-child(2n) { background: var(--site-accent-soft); }
 @media (max-width: 700px) {
-  .md-viewer .markdown-body { font-size: 12px; line-height: 1.7; }
+  .md-viewer .markdown-body { font-size: 16px; line-height: 1.8; }
   .md-viewer .markdown-body h2 { margin: 24px 0 10px; font-size: 1.35rem; }
   .md-viewer .markdown-body > h2:first-child { margin-top: 20px; }
   .md-viewer .markdown-body h3 { font-size: 1.15rem; }
   .md-viewer .markdown-body h4 { font-size: 1.05rem; }
   .md-viewer .markdown-body h5 { font-size: .98rem; }
   .md-viewer .markdown-body h6 { font-size: .9rem; }
-  .md-viewer .markdown-body pre { padding: 10px 12px; line-height: 1.25; }
+  .md-viewer .markdown-body pre { padding: 10px 12px; }
 }
 </style>

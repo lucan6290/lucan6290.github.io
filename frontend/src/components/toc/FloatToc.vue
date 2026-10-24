@@ -1,44 +1,71 @@
 <template>
-  <div class="toc-hover-zone" @mouseenter="show" @mouseleave="scheduleHide" />
-  <aside
+  <div v-if="headings.length" class="toc-action-bar">
+    <button
+      ref="trigger"
+      class="toc-trigger"
+      type="button"
+      aria-label="本文目录"
+      aria-controls="article-toc-panel"
+      :aria-expanded="visible"
+      @click="toggle"
+    >本文目录</button>
+  </div>
+  <nav
+    v-if="headings.length"
+    v-show="visible"
+    id="article-toc-panel"
+    ref="panel"
     class="custom-toc-float"
-    :class="{ 'custom-toc-float--visible': visible }"
-    @mouseenter="cancelHide"
-    @mouseleave="scheduleHide"
+    aria-label="本文目录"
   >
     <div class="toc-header">
       <span class="toc-header__title">目录</span>
-      <button class="toc-header__btn toc-header__btn--hide" type="button" title="隐藏大纲" @click="hide">✕</button>
+      <button class="toc-header__btn" type="button" aria-label="关闭本文目录" @click="hide(true)">✕</button>
     </div>
-    <ul v-if="headings.length" class="table-of-contents">
+    <ul class="table-of-contents">
       <li v-for="h in headings" :key="h.id" class="toc-tree-item" :class="`toc-tree-item--level-${h.level}`">
         <a
           class="table-of-contents__link"
           :class="{ 'table-of-contents__link--active': activeId === h.id }"
+          :aria-current="activeId === h.id ? 'location' : undefined"
           :href="`#${h.id}`"
           @click.prevent="scrollTo(h.id)"
         >{{ h.text }}</a>
       </li>
     </ul>
-    <p v-else class="toc-empty">本页无标题</p>
-  </aside>
+  </nav>
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 
 type Heading = { id: string; text: string; level: number };
 
 const visible = ref(false);
 const activeId = ref('');
 const headings = ref<Heading[]>([]);
-let hideTimer: number | null = null;
+const trigger = ref<HTMLButtonElement | null>(null);
+const panel = ref<HTMLElement | null>(null);
+const route = useRoute();
+let collectTimer: number | null = null;
 let observer: IntersectionObserver | null = null;
 
-function show() { cancelHide(); visible.value = true; document.body.classList.add('toc-panel-visible'); }
-function hide() { cancelHide(); visible.value = false; document.body.classList.remove('toc-panel-visible'); }
-function scheduleHide() { hideTimer = window.setTimeout(hide, 280); }
-function cancelHide() { if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; } }
+async function show() {
+  visible.value = true;
+  await nextTick();
+  panel.value?.querySelector<HTMLAnchorElement>('a')?.focus();
+}
+function hide(restoreFocus = false) {
+  visible.value = false;
+  if (restoreFocus) trigger.value?.focus();
+}
+function toggle() { if (visible.value) hide(true); else void show(); }
+function onKeydown(event: KeyboardEvent) { if (event.key === 'Escape' && visible.value) hide(true); }
+function onPointerdown(event: PointerEvent) {
+  const target = event.target as Node;
+  if (visible.value && !panel.value?.contains(target) && !trigger.value?.contains(target)) hide();
+}
 
 function collectHeadings() {
   const nodes = document.querySelectorAll('.md-viewer h2, .md-viewer h3');
@@ -55,12 +82,19 @@ function scrollTo(id: string) {
   const el = document.getElementById(id);
   if (el) {
     const y = el.getBoundingClientRect().top + window.scrollY - 80;
-    window.scrollTo({ top: y, behavior: 'smooth' });
+    window.scrollTo({ top: y, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     activeId.value = id;
+    if (!el.hasAttribute('tabindex')) {
+      el.tabIndex = -1;
+      el.addEventListener('blur', () => el.removeAttribute('tabindex'), { once: true });
+    }
+    el.focus({ preventScroll: true });
+    hide();
   }
 }
 
 function setupObserver() {
+  observer?.disconnect();
   observer = new IntersectionObserver(
     (entries) => {
       for (const e of entries) {
@@ -75,38 +109,65 @@ function setupObserver() {
   });
 }
 
+function scheduleCollect() {
+  if (collectTimer !== null) window.clearTimeout(collectTimer);
+  observer?.disconnect();
+  headings.value = [];
+  activeId.value = '';
+  hide();
+  // 等 Markdown 渲染器更新章节节点。
+  collectTimer = window.setTimeout(() => { collectHeadings(); setupObserver(); collectTimer = null; }, 300);
+}
+
 onMounted(() => {
-  // 延迟收集，等 MD 渲染完成
-  setTimeout(() => { collectHeadings(); setupObserver(); }, 300);
+  scheduleCollect();
+  window.addEventListener('keydown', onKeydown);
+  window.addEventListener('pointerdown', onPointerdown);
 });
+watch(() => route.fullPath, scheduleCollect);
 onUnmounted(() => {
   observer?.disconnect();
-  cancelHide();
-  document.body.classList.remove('toc-panel-visible');
+  if (collectTimer !== null) window.clearTimeout(collectTimer);
+  window.removeEventListener('keydown', onKeydown);
+  window.removeEventListener('pointerdown', onPointerdown);
 });
 </script>
 
 <style scoped>
-.toc-hover-zone {
-  position: fixed; top: 0; right: 0; bottom: 0; width: 40px; z-index: 198;
+.toc-action-bar {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 200;
 }
+.toc-trigger {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: var(--site-accent);
+  color: var(--site-on-accent);
+  font-size: .88rem;
+  font-weight: 650;
+  box-shadow: 0 4px 14px var(--site-shadow);
+}
+.toc-trigger:hover { background: var(--site-accent-hover); }
 .custom-toc-float {
-  position: fixed; top: 0; right: 0; bottom: 0; width: var(--doc-toc-width);
-  padding: 12px 16px 24px;
+  position: fixed;
+  right: 16px;
+  bottom: 76px;
+  width: min(320px, calc(100vw - 32px));
+  max-height: 70vh;
+  padding: 16px;
   background: var(--site-background);
-  border-left: 1px solid var(--site-border);
+  border: 1px solid var(--site-border);
+  border-radius: 8px;
+  box-shadow: 0 12px 32px var(--site-shadow);
   z-index: 201;
   overflow-y: auto;
-  transform: translateX(100%); opacity: 0; visibility: hidden; pointer-events: none;
-  transition: transform 0.25s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease, visibility 0s linear 0.25s;
 }
-.custom-toc-float--visible {
-  transform: translateX(0); opacity: 1; visibility: visible; pointer-events: auto;
-  transition: transform 0.25s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease, visibility 0s linear 0s;
-}
-.toc-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; position: sticky; top: 0; background: var(--site-background); z-index: 2; padding: 4px 0 8px; }
-.toc-header__title { font-size: 20px; font-weight: 700; color: var(--site-text); }
-.toc-header__btn { width: 32px; height: 32px; border-radius: 10px; background: var(--site-accent-soft); color: var(--site-text-muted); display: grid; place-items: center; transition: background 180ms, color 180ms; }
+.toc-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; position: sticky; top: 0; background: var(--site-background); z-index: 2; padding-bottom: 8px; }
+.toc-header__title { font-size: 1.1rem; font-weight: 700; color: var(--site-text); }
+.toc-header__btn { width: 44px; height: 44px; border-radius: 8px; background: var(--site-accent-soft); color: var(--site-text-muted); display: grid; place-items: center; transition: background 180ms, color 180ms; }
 .toc-header__btn:hover { background: var(--site-border); color: var(--ifm-color-primary); }
 
 .table-of-contents { list-style: none; padding: 0; margin: 0; position: relative; }
@@ -118,9 +179,22 @@ onUnmounted(() => {
 .toc-tree-item--level-1 .table-of-contents__link { font-size: 14px; color: var(--site-text-muted); padding-left: 32px; }
 .table-of-contents__link:hover { color: var(--ifm-color-primary); }
 .table-of-contents__link--active { color: var(--ifm-color-primary) !important; font-weight: 600; }
-.toc-empty { color: var(--site-text-muted); font-size: 14px; padding: 12px 0; }
-
+@media (prefers-reduced-motion: reduce) {
+  .toc-header__btn, .table-of-contents__link { transition: none; }
+}
 @media (max-width: 996px) {
-  .toc-hover-zone, .custom-toc-float { display: none; }
+  .toc-action-bar {
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-height: 64px;
+    padding: 0 20px;
+    border-top: 1px solid var(--site-border);
+    background: var(--site-background);
+  }
+  .toc-trigger { box-shadow: none; }
 }
 </style>
