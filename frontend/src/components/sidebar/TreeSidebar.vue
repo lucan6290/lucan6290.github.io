@@ -20,6 +20,6 @@ defineProps<{ nodes: TreeNode[]; activePath: string; root: string }>();
 </script>
 
 <style scoped>
-.tree-sidebar { font-size: 14px; }
+.tree-sidebar { font-size: 13px; }
 .menu { list-style: none; padding: 0; margin: 0; }
 </style>

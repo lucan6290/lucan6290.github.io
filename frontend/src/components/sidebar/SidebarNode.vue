@@ -1,8 +1,9 @@
 <template>
-  <li class="menu__list-item" :class="{ 'is-active': isActive, 'has-children': hasChildren }">
+  <li class="menu__list-item" :class="[`menu__list-item--depth-${depth}`, { 'is-active': isActive, 'has-children': hasChildren }]">
     <div v-if="hasChildren" class="menu__list-item-collapsible" @click="toggle">
       <router-link
         class="menu__link menu__link--sublist"
+        :class="{ 'menu__link--root': depth === 0 }"
         :to="contentHref(node.path)"
         @click.stop
       >{{ node.label }}</router-link>
@@ -10,7 +11,7 @@
         <span class="caret-icon" :class="{ collapsed: !expanded }" aria-hidden="true" />
       </button>
     </div>
-    <router-link v-else class="menu__link" :to="contentHref(node.path)">{{ node.label }}</router-link>
+    <router-link v-else class="menu__link" :class="{ 'menu__link--root': depth === 0 }" :to="contentHref(node.path)">{{ node.label }}</router-link>
 
     <ul v-if="hasChildren && expanded" class="menu__list">
       <SidebarNode
@@ -46,8 +47,10 @@ function toggle() {
 </script>
 
 <style scoped>
-.menu__list-item { margin-top: 1px; }
-.menu__list { list-style: none; position: relative; margin: 2px 0 0; padding-left: 16px; }
+.menu__list-item { margin-top: 6px; }
+.menu__list-item--depth-0 { margin-top: 22px; }
+.menu > .menu__list-item--depth-0:first-child { margin-top: 0; }
+.menu__list { list-style: none; position: relative; margin: 10px 0 0; padding-left: 16px; }
 .menu__list::before {
   content: '';
   position: absolute;
@@ -60,9 +63,9 @@ function toggle() {
   display: flex;
   align-items: flex-start;
   padding: 5px 10px;
-  color: var(--site-text-muted);
-  font-size: 14px;
-  line-height: 1.55;
+  color: var(--site-reading-text);
+  font-size: .73rem;
+  line-height: 1.6;
   border-radius: 6px;
   word-break: break-word;
   text-decoration: none;
@@ -70,21 +73,16 @@ function toggle() {
 }
 .menu__link:hover { color: var(--ifm-color-primary); background: var(--site-accent-soft); }
 
-.menu__link--sublist { color: var(--site-text-secondary); font-weight: 600; }
+.menu__link--sublist { color: var(--site-reading-heading); font-size: .81rem; font-weight: 600; }
+.menu__link--root { color: var(--site-reading-heading); font-size: .89rem; font-weight: 700; line-height: 1.45; }
+.menu__list-item--depth-1 { margin-top: 10px; }
 
 .menu__list-item.is-active > .menu__link:not(.menu__link--sublist),
 .menu__list-item.is-active > .menu__list-item-collapsible > .menu__link:not(.menu__link--sublist) {
   position: relative;
   color: var(--ifm-color-primary);
-  font-weight: 600;
-  background: var(--site-accent-soft);
-}
-.menu__list-item.is-active > .menu__link:not(.menu__link--sublist)::before {
-  content: '';
-  position: absolute;
-  top: 4px; bottom: 4px; left: -13px;
-  width: 3px; border-radius: 0 3px 3px 0;
-  background: var(--ifm-color-primary);
+  font-weight: 700;
+  background: transparent;
 }
 
 .menu__list-item-collapsible {

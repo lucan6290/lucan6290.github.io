@@ -1,8 +1,8 @@
 <template>
   <div class="article-layout">
-    <aside class="sidebar-container">
+    <ResizableSidebar>
       <TreeSidebar :nodes="treeNodes" :active-path="article.path" :root="root" />
-    </aside>
+    </ResizableSidebar>
     <main class="article-main">
       <ReadingProgress />
       <article class="markdown-body">
@@ -38,6 +38,7 @@ import type { ArticleMeta } from '@/types/content';
 import { useContent } from '@/composables/useContent';
 import { sidebarNodes } from '@/composables/contentPaths';
 import TreeSidebar from '@/components/sidebar/TreeSidebar.vue';
+import ResizableSidebar from '@/components/sidebar/ResizableSidebar.vue';
 import MarkdownRenderer from '@/components/article/MarkdownRenderer.vue';
 import ReadingProgress from '@/components/article/ReadingProgress.vue';
 import PrevNext from '@/components/article/PrevNext.vue';
@@ -75,26 +76,19 @@ function formatDate(iso: string) {
 <style scoped>
 .article-layout {
   display: grid;
-  grid-template-columns: var(--doc-sidebar-width) minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   min-height: calc(100vh - var(--ifm-navbar-height));
+  transition: padding-right 250ms ease;
 }
-.sidebar-container {
-  position: sticky;
-  top: var(--ifm-navbar-height);
-  height: calc(100vh - var(--ifm-navbar-height));
-  overflow-y: auto;
-  border-right: 1px solid var(--site-border);
-  background: var(--site-surface);
-  padding: 24px 18px 96px 14px;
-}
+:global(body.toc-panel-visible) .article-layout { padding-right: var(--doc-toc-width); }
 .article-main {
-  padding: 38px clamp(28px, 4.5vw, 72px) 96px;
-  max-width: 1120px;
+  padding: 40px clamp(28px, 4vw, 64px) 96px;
+  max-width: 1280px;
   margin: 0 auto;
   width: 100%;
 }
 .article-header { margin-bottom: 24px; padding-bottom: 18px; border-bottom: 1px solid var(--site-border); }
-.article-header h1 { max-width: 100%; margin-bottom: 18px; font-size: clamp(2rem, 3vw, 2.4rem); line-height: 1.32; letter-spacing: -.025em; }
+.article-header h1 { max-width: 100%; margin-bottom: 18px; color: var(--site-reading-heading); font-size: clamp(1.95rem, 3.2vw, 2.5rem); line-height: 1.32; letter-spacing: -.025em; }
 .byline { display: flex; align-items: center; gap: 11px; margin-bottom: 12px; }
 .author-mark { display: grid; place-items: center; flex: none; width: 38px; height: 38px; border-radius: 50%; background: var(--site-accent-soft); color: var(--site-accent); font-family: var(--site-font-literary); font-size: 1.1rem; font-weight: 700; }
 .author-details { display: flex; flex-direction: column; gap: 1px; }
@@ -115,10 +109,9 @@ function formatDate(iso: string) {
 .tags a:hover { border-color: var(--site-accent); }
 
 @media (max-width: 996px) {
-  .article-layout { display: block; }
-  .sidebar-container { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--site-border); padding: 16px 20px; }
+  .article-layout { display: block; padding-right: 0; transition: none; }
   .article-main { padding: 28px 20px 72px; }
-  .article-header h1 { font-size: clamp(1.75rem, 7vw, 2.1rem); }
+  .article-header h1 { font-size: clamp(1.65rem, 7vw, 1.95rem); }
   .word-count { font-size: .72rem; }
 }
 </style>

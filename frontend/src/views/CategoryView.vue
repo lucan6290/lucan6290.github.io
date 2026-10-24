@@ -1,11 +1,11 @@
 <template>
   <div class="category-layout" :class="{ 'knowledge-home': isKnowledgeHome }">
-    <aside class="sidebar-container">
+    <ResizableSidebar>
       <nav v-if="isKnowledgeHome" aria-label="知识库分类" class="home-categories">
         <router-link v-for="category in subcategories" :key="category.path" :to="contentHref(category.path)">{{ category.label }}</router-link>
       </nav>
       <TreeSidebar v-else :nodes="treeNodes" :active-path="path" :root="root" />
-    </aside>
+    </ResizableSidebar>
     <main class="category-main">
       <Breadcrumb v-if="!isKnowledgeHome" :path="path" :root="root" />
       <header v-if="!isKnowledgeHome" class="category-header">
@@ -36,6 +36,7 @@
 import { computed, watchEffect } from 'vue';
 import { useContent } from '@/composables/useContent';
 import TreeSidebar from '@/components/sidebar/TreeSidebar.vue';
+import ResizableSidebar from '@/components/sidebar/ResizableSidebar.vue';
 import Breadcrumb from '@/components/list/Breadcrumb.vue';
 import SortToggle from '@/components/list/SortToggle.vue';
 import ArticleList from '@/components/list/ArticleList.vue';
@@ -82,7 +83,7 @@ watchEffect(() => {
 <style scoped>
 .category-layout {
   display: grid;
-  grid-template-columns: var(--doc-sidebar-width) minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   min-height: calc(100vh - var(--ifm-navbar-height));
 }
 .knowledge-home .category-main { width: 100%; }
@@ -90,15 +91,6 @@ watchEffect(() => {
 .home-categories { display: grid; gap: 4px; }
 .home-categories a { padding: 8px 10px; border-radius: 6px; color: var(--site-text-secondary); text-decoration: none; }
 .home-categories a:hover { color: var(--ifm-color-primary); background: var(--site-accent-soft); }
-.sidebar-container {
-  position: sticky;
-  top: var(--ifm-navbar-height);
-  height: calc(100vh - var(--ifm-navbar-height));
-  overflow-y: auto;
-  border-right: 1px solid var(--site-border);
-  background: var(--site-surface);
-  padding: 24px 18px 96px 14px;
-}
 .category-main {
   padding: 42px clamp(28px, 5vw, 68px) 96px;
   max-width: 940px;
@@ -128,13 +120,6 @@ watchEffect(() => {
 
 @media (max-width: 996px) {
   .category-layout { display: block; }
-  .sidebar-container {
-    position: static;
-    height: auto;
-    border-right: 0;
-    border-bottom: 1px solid var(--site-border);
-    padding: 16px 20px;
-  }
   .category-main { padding: 28px 20px 72px; }
 }
 </style>

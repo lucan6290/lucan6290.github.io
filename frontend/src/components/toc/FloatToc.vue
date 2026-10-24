@@ -91,7 +91,7 @@ onUnmounted(() => {
   position: fixed; top: 0; right: 0; bottom: 0; width: 40px; z-index: 198;
 }
 .custom-toc-float {
-  position: fixed; top: 0; right: 0; bottom: 0; width: 280px;
+  position: fixed; top: 0; right: 0; bottom: 0; width: var(--doc-toc-width);
   padding: 12px 16px 24px;
   background: var(--site-background);
   border-left: 1px solid var(--site-border);
