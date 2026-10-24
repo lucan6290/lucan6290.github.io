@@ -175,6 +175,7 @@ function close(key: string) {
   padding: 8px 12px;
   border-radius: 6px;
   color: var(--site-text-secondary);
+  font-size: 0.82rem;
   font-weight: 500;
   line-height: 1.35;
   text-decoration: none;
