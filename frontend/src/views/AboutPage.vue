@@ -47,7 +47,7 @@ const focusAreas = [
 const contacts = [
   { label: 'GitHub', value: '@lucan6290', href: 'https://github.com/lucan6290' },
   { label: 'Gitee', value: '@lucan6290', href: 'https://gitee.com/lucan6290' },
-  { label: 'CSDN', value: '箓川码笺', href: 'https://blog.csdn.net/2301_80165396' },
+  { label: 'CSDN', value: '小灿同学啊', href: 'https://blog.csdn.net/2301_80165396' },
   { label: 'Email', value: 'lucan6290@gmail.com', href: 'mailto:lucan6290@gmail.com' },
 ];
 </script>
