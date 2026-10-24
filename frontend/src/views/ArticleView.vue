@@ -6,8 +6,16 @@
     <main class="article-main">
       <ReadingProgress />
       <article class="markdown-body">
-        <header>
+        <header class="article-header">
           <h1>{{ article.frontmatter.title }}</h1>
+          <div class="byline">
+            <span class="author-mark" aria-hidden="true">箓</span>
+            <div class="author-details">
+              <strong>小灿同学啊</strong>
+              <span>作者</span>
+            </div>
+            <span class="word-count">全文 {{ article.wordCount }} 字</span>
+          </div>
           <div class="meta">
             <time v-if="article.frontmatter.date" :datetime="article.frontmatter.date">发布于 {{ formatDate(article.frontmatter.date) }}</time>
             <time v-if="article.frontmatter.updated && article.frontmatter.updated !== article.frontmatter.date" :datetime="article.frontmatter.updated">· 更新于 {{ formatDate(article.frontmatter.updated) }}</time>
@@ -80,14 +88,20 @@ function formatDate(iso: string) {
   padding: 24px 18px 96px 14px;
 }
 .article-main {
-  padding: 42px clamp(28px, 5vw, 68px) 96px;
-  max-width: 900px;
+  padding: 38px clamp(28px, 4.5vw, 72px) 96px;
+  max-width: 1120px;
   margin: 0 auto;
   width: 100%;
 }
-.markdown-body header { margin-bottom: 30px; }
-.markdown-body h1 { font-size: clamp(2rem, 3.5vw, 2.55rem); line-height: 1.35; letter-spacing: -.025em; margin-bottom: 15px; }
-.meta { display: flex; flex-wrap: wrap; gap: 4px 10px; color: var(--site-text-muted); font-size: 0.84rem; margin-bottom: 15px; }
+.article-header { margin-bottom: 24px; padding-bottom: 18px; border-bottom: 1px solid var(--site-border); }
+.article-header h1 { max-width: 100%; margin-bottom: 18px; font-size: clamp(2rem, 3vw, 2.4rem); line-height: 1.32; letter-spacing: -.025em; }
+.byline { display: flex; align-items: center; gap: 11px; margin-bottom: 12px; }
+.author-mark { display: grid; place-items: center; flex: none; width: 38px; height: 38px; border-radius: 50%; background: var(--site-accent-soft); color: var(--site-accent); font-family: var(--site-font-literary); font-size: 1.1rem; font-weight: 700; }
+.author-details { display: flex; flex-direction: column; gap: 1px; }
+.author-details strong { color: var(--site-text); font-size: .88rem; font-weight: 700; line-height: 1.4; }
+.author-details > span { color: var(--site-text-muted); font-size: .72rem; line-height: 1.3; }
+.word-count { margin-left: auto; color: var(--site-text-muted); font-size: .78rem; white-space: nowrap; }
+.meta { display: flex; flex-wrap: wrap; gap: 4px 10px; color: var(--site-text-muted); font-size: 0.82rem; margin-bottom: 12px; }
 .tags { display: flex; flex-wrap: wrap; gap: 8px; }
 .tags a {
   border: 1px solid transparent;
@@ -104,6 +118,7 @@ function formatDate(iso: string) {
   .article-layout { display: block; }
   .sidebar-container { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--site-border); padding: 16px 20px; }
   .article-main { padding: 28px 20px 72px; }
-  .markdown-body h1 { font-size: clamp(1.75rem, 7vw, 2rem); }
+  .article-header h1 { font-size: clamp(1.75rem, 7vw, 2.1rem); }
+  .word-count { font-size: .72rem; }
 }
 </style>

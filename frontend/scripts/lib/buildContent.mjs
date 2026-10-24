@@ -46,6 +46,20 @@ function excerptFromContent(content) {
   return text.length > EXCERPT_MAX ? text.slice(0, EXCERPT_MAX) + '…' : text;
 }
 
+function countWords(content) {
+  const text = content
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/^ {0,3}(?:#{1,6}\s+|[-*+]\s+|\d+[.)]\s+|>\s?)/gm, ' ')
+    .replace(/[*_~]/g, ' ');
+  const chineseCharacters = text.match(/\p{Script=Han}/gu)?.length ?? 0;
+  const latinWords = text.match(/[A-Za-z0-9]+(?:[.'’-][A-Za-z0-9]+)*/g)?.length ?? 0;
+  return chineseCharacters + latinWords;
+}
+
 function walkTree(dir, relativeRoot) {
   if (!fs.existsSync(dir)) return [];
   const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -100,6 +114,7 @@ function walkTree(dir, relativeRoot) {
         mtimeMs: stat.mtimeMs,
         excerpt: fm.description || excerptFromContent(rawBody),
         rawContent: rawBody,
+        wordCount: countWords(rawBody),
       };
       nodes.push({
         name: entry.name,

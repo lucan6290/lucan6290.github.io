@@ -1,6 +1,6 @@
 <template>
   <div class="md-viewer" @click="navigate">
-    <Viewer v-if="pluginsReady" :value="content" :plugins="plugins" />
+    <Viewer v-if="pluginsReady" :value="renderableContent" :plugins="plugins" />
     <div v-else class="loading">渲染器加载中…</div>
   </div>
 </template>
@@ -11,6 +11,7 @@ import { useRouter } from 'vue-router';
 import type { BytemdPlugin } from 'bytemd';
 import { contentPath, resolveContentUrl } from '@/composables/contentPaths';
 import { useContent } from '@/composables/useContent';
+import { transformDocusaurusAdmonitions } from '@/utils/markdownAdmonitions.js';
 import { Viewer } from '@bytemd/vue-next';
 import gfm from '@bytemd/plugin-gfm';
 import highlight from '@bytemd/plugin-highlight';
@@ -30,6 +31,7 @@ const resourceModules = import.meta.glob<string>('/content/**/*.{png,PNG,jpg,JPG
   query: '?url', import: 'default', eager: true,
 });
 const resources = Object.fromEntries(Object.entries(resourceModules).map(([key, url]) => [key.slice('/content/'.length), url]));
+const renderableContent = computed(() => transformDocusaurusAdmonitions(props.content));
 
 type MarkdownNode = { type: string; url?: string; value?: string; depth?: number; children?: MarkdownNode[] };
 const contentLinks = computed<BytemdPlugin>(() => ({
@@ -48,6 +50,14 @@ const contentLinks = computed<BytemdPlugin>(() => ({
     visit(tree);
   }),
   viewerEffect({ markdownBody }) {
+    markdownBody.querySelectorAll<HTMLElement>('blockquote').forEach((blockquote) => {
+      const title = blockquote.querySelector<HTMLElement>(':scope > p:first-child > strong');
+      const marker = title?.textContent?.match(/^\[!(note|tip|info|warning|danger)\]\s*/i);
+      if (!title || !marker) return;
+      blockquote.classList.add('md-admonition', `md-admonition--${marker[1].toLowerCase()}`);
+      title.textContent = (title.textContent || '').slice(marker[0].length);
+    });
+
     const used = new Set<string>();
     markdownBody.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6').forEach((heading) => {
       const base = (heading.textContent || '').trim().toLowerCase().replace(/[^\p{L}\p{N}\p{M}\s_-]/gu, '').replace(/\s/g, '-') || 'section';
@@ -94,24 +104,25 @@ onMounted(() => {
 
 <style>
 /* ByteMD viewer 全局样式覆写，与 site/ 正文风格对齐 */
-.md-viewer .bytemd-viewer {
+.md-viewer .markdown-body {
   font-family: var(--ifm-font-family-base);
   font-size: 17px;
   line-height: 1.88;
   color: var(--site-text);
 }
-.md-viewer .bytemd-viewer h1 { font-size: 2rem; line-height: 1.35; }
-.md-viewer .bytemd-viewer h2 {
-  margin-top: 42px;
+.md-viewer .markdown-body h1 { font-size: 2rem; line-height: 1.35; }
+.md-viewer .markdown-body h2 {
+  margin-top: 34px;
   padding-bottom: 9px;
   border-bottom: 1px solid var(--site-border);
 }
-.md-viewer .bytemd-viewer h3,
-.md-viewer .bytemd-viewer h4 { margin-top: 30px; }
-.md-viewer .bytemd-viewer p,
-.md-viewer .bytemd-viewer li { color: var(--site-text); }
-.md-viewer .bytemd-viewer li + li { margin-top: 4px; }
-.md-viewer .bytemd-viewer img {
+.md-viewer .markdown-body > h2:first-child { margin-top: 22px; }
+.md-viewer .markdown-body h3,
+.md-viewer .markdown-body h4 { margin-top: 30px; }
+.md-viewer .markdown-body p,
+.md-viewer .markdown-body li { color: var(--site-text); }
+.md-viewer .markdown-body li + li { margin-top: 4px; }
+.md-viewer .markdown-body img {
   display: block;
   margin: 20px auto;
   max-width: 100%;
@@ -119,38 +130,45 @@ onMounted(() => {
   border-radius: 8px;
   box-shadow: 0 2px 16px var(--site-shadow);
 }
-.md-viewer .bytemd-viewer pre {
+.md-viewer .markdown-body pre {
   background: var(--site-surface);
   border: 1px solid var(--site-border);
   border-radius: 7px;
   padding: 17px 19px;
   overflow-x: auto;
 }
-.md-viewer .bytemd-viewer code {
+.md-viewer .markdown-body code {
   font-family: var(--ifm-font-family-monospace);
   font-size: 0.92em;
 }
-.md-viewer .bytemd-viewer :not(pre) > code {
+.md-viewer .markdown-body :not(pre) > code {
   padding: .12em .34em;
   border-radius: 4px;
   background: var(--site-accent-soft);
   color: var(--ifm-color-primary-dark);
 }
-.md-viewer .bytemd-viewer blockquote {
+.md-viewer .markdown-body blockquote {
   border-left: 3px solid var(--site-accent);
   padding: 8px 17px;
   color: var(--site-text-secondary);
   background: var(--site-accent-soft);
   border-radius: 0 5px 5px 0;
 }
-.md-viewer .bytemd-viewer table { display: block; width: 100%; overflow-x: auto; border-collapse: collapse; margin: 22px 0; }
-.md-viewer .bytemd-viewer th,
-.md-viewer .bytemd-viewer td { border: 1px solid var(--site-border); padding: 10px 14px; text-align: left; }
-.md-viewer .bytemd-viewer th { border: 1px solid var(--site-border); padding: 10px 14px; text-align: left; background: var(--site-accent-soft); }
-.md-viewer .bytemd-viewer tr:nth-child(2n) { background: var(--site-accent-soft); }
+.md-viewer .markdown-body blockquote.md-admonition { margin: 22px 0; padding: 12px 17px; }
+.md-viewer .markdown-body blockquote.md-admonition > p:first-child { margin-bottom: 7px; }
+.md-viewer .markdown-body blockquote.md-admonition > p:last-child { margin-bottom: 0; }
+.md-viewer .markdown-body blockquote.md-admonition--tip { border-left-color: var(--site-cool); background: var(--site-cool-soft); }
+.md-viewer .markdown-body blockquote.md-admonition--warning { border-left-color: var(--site-warm); background: var(--site-warm-soft); }
+.md-viewer .markdown-body blockquote.md-admonition--danger { border-left-color: var(--site-danger); background: var(--site-danger-soft); }
+.md-viewer .markdown-body table { display: block; width: 100%; overflow-x: auto; border-collapse: collapse; margin: 22px 0; }
+.md-viewer .markdown-body th,
+.md-viewer .markdown-body td { border: 1px solid var(--site-border); padding: 10px 14px; text-align: left; }
+.md-viewer .markdown-body th { border: 1px solid var(--site-border); padding: 10px 14px; text-align: left; background: var(--site-accent-soft); }
+.md-viewer .markdown-body tr:nth-child(2n) { background: var(--site-accent-soft); }
 @media (max-width: 700px) {
-  .md-viewer .bytemd-viewer { font-size: 16px; line-height: 1.85; }
-  .md-viewer .bytemd-viewer h2 { margin-top: 34px; }
-  .md-viewer .bytemd-viewer pre { padding: 14px; }
+  .md-viewer .markdown-body { font-size: 16px; line-height: 1.85; }
+  .md-viewer .markdown-body h2 { margin-top: 28px; }
+  .md-viewer .markdown-body > h2:first-child { margin-top: 18px; }
+  .md-viewer .markdown-body pre { padding: 14px; }
 }
 </style>

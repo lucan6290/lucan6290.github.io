@@ -15,6 +15,7 @@ export type ArticleMeta = {
   sortKey: string | null;
   mtimeMs: number;
   excerpt: string;
+  wordCount: number;
   /** MD 原文（不含 frontmatter），构建期写入 manifest */
   rawContent: string;
 };
@@ -43,9 +44,16 @@ export type ContentManifest = {
   recent: string[];
 };
 
+export type NavItem = {
+  label: string;
+  to: string;
+  /** true = 外部链接，用 <a target="_blank"> 而非 <router-link> */
+  external?: boolean;
+};
+
 export type NavEntry = {
   key: string;
   label: string;
   rootPath: string;
-  items: { label: string; to: string }[];
+  items: NavItem[];
 };

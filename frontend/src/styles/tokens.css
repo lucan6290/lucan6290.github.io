@@ -26,6 +26,8 @@
   --site-warm-soft: rgba(183, 129, 56, 0.12);
   --site-cool: #487e93;
   --site-cool-soft: rgba(72, 126, 147, 0.12);
+  --site-danger: #b54747;
+  --site-danger-soft: rgba(181, 71, 71, 0.12);
 
   /* ========== Typography ========== */
   --ifm-font-family-base: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
@@ -71,6 +73,8 @@ html[data-theme='dark'] {
   --site-warm-soft: rgba(216, 170, 104, 0.15);
   --site-cool: #7eb1c2;
   --site-cool-soft: rgba(126, 177, 194, 0.15);
+  --site-danger: #ef8b8b;
+  --site-danger-soft: rgba(239, 139, 139, 0.15);
 
   --site-scrollbar-thumb: rgba(113, 113, 122, 0.5);
   --site-scrollbar-thumb-hover: rgba(161, 161, 170, 0.7);

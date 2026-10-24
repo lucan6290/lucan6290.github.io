@@ -83,3 +83,14 @@ test('复制笔记文件夹后生成标题、分类介绍，过滤资源目录',
   assert.deepEqual(category.children.map(n => n.name), ['介绍', '01-安装.md', '02-语法.md', '03-无标题.md', '04-代码示例.md', '05-Csharp.md']);
   assert.equal(Object.keys(result.articles).length, 6);
 });
+
+test('文章字数统计排除 Markdown 标记、图片和代码块', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'notes-word-count-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const file = path.join(root, 'content', 'blog', '统计.md');
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, `---\ntitle: 统计练习\n---\n# 中文标题\n\n正文包含 CSDN 和 TypeScript，**重点**、\`命令\`，并有[链接文字](https://example.com)。\n\n![图片](./image.png)\n\n\`\`\`ts\nconst hiddenText = '不计入统计';\n\`\`\`\n`);
+
+  const result = build({ contentDir: path.join(root, 'content'), outDir: path.join(root, 'generated') });
+  assert.equal(result.articles['/blog/统计'].wordCount, 21);
+});

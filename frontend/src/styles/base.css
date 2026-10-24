@@ -87,7 +87,7 @@ button {
 }
 
 /* ByteMD viewer 基础重置，避免编辑器样式泄漏 */
-.bytemd-viewer {
+.md-viewer .markdown-body {
   font-family: var(--ifm-font-family-base);
   color: var(--site-text);
   line-height: var(--ifm-line-height-base);
