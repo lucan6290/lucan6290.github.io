@@ -2,12 +2,12 @@
   <div class="page">
     <section class="hero" aria-labelledby="home-title">
       <div class="heroText">
-        <p class="tagline"><span aria-hidden="true" /> 技术研习 · 工程实践 · 日常记录</p>
-        <h1 id="home-title">把技术走过的路，<br />写成可复用的地图。</h1>
-        <p class="lead">这里记录长期学习中的知识整理、项目实践与真实复盘。希望每一篇笔记，都能成为下一次出发时找得到的路标。</p>
+        <p class="tagline">箓藏千思，川流不息</p>
+        <h1 id="home-title">箓川码笺</h1>
+        <p class="lead">在广阔无垠的技术山川中，记录每一次探索、每一个踩坑、每一份感悟，将它们书写成珍贵的技术笺册，沉淀为属于自己的成长宝藏。</p>
         <div class="actions">
-          <router-link class="primaryAction" to="/knowledge">从知识库开始 <span aria-hidden="true">↗</span></router-link>
-          <router-link class="secondaryAction" to="/blog/随笔感想/03-重建个人技术站">先读：重建个人技术站</router-link>
+          <router-link class="primaryAction" to="/knowledge">进入知识库</router-link>
+          <router-link class="secondaryAction" to="/blog">查看博客</router-link>
         </div>
       </div>
 
@@ -79,7 +79,22 @@ function formatDate(iso: string) {
 </script>
 
 <style scoped>
-.page { background: var(--site-background); color: var(--site-text); }
+.page {
+  --home-top: #e7edf5;
+  --home-mid: #fafbfd;
+  --home-bottom: #ffffff;
+  --home-ink: #111827;
+  --home-copy: #374151;
+  --home-blue: #2563eb;
+  --home-primary: #1f6feb;
+  --home-primary-hover: #175dcc;
+  --home-primary-ink: #ffffff;
+  --home-secondary: #ebedf0;
+  --home-secondary-hover: #dfe3e9;
+  --home-secondary-ink: #1c1e21;
+  background: linear-gradient(180deg, var(--home-top), var(--home-mid) 28%, var(--home-bottom) 72%);
+  color: var(--site-text);
+}
 .hero, .paths { width: min(1160px, calc(100% - 64px)); margin-inline: auto; }
 .hero {
   display: grid;
@@ -88,30 +103,45 @@ function formatDate(iso: string) {
   gap: clamp(42px, 7vw, 100px);
   padding: 78px 0 70px;
 }
-.tagline, .sectionLabel {
+.sectionLabel {
   margin: 0;
   color: var(--site-accent-ink);
   font-size: .82rem;
   font-weight: 650;
   letter-spacing: .04em;
 }
-.tagline { display: flex; align-items: center; gap: 10px; margin-bottom: 21px; }
-.tagline > span { width: 7px; height: 7px; border-radius: 50%; background: var(--site-accent); box-shadow: 0 0 0 5px var(--site-accent-soft); }
+.tagline { margin: 0 0 20px; color: var(--home-blue); font-size: clamp(1rem, 1.55vw, 1.5rem); font-weight: 700; line-height: 1.35; }
 .heroText h1 {
   margin: 0;
-  font-family: var(--site-font-literary);
-  font-size: clamp(2.25rem, 4.4vw, 3.7rem);
-  font-weight: 600;
-  letter-spacing: -.035em;
-  line-height: 1.42;
+  color: var(--home-ink);
+  font-family: var(--ifm-font-family-base);
+  font-size: clamp(4.5rem, 7.1vw, 7.5rem);
+  font-weight: 900;
+  letter-spacing: -.045em;
+  line-height: 1.12;
 }
-.lead { max-width: 570px; margin: 20px 0 0; color: var(--site-text-secondary); font-size: 1rem; line-height: 1.9; }
-.actions { display: flex; align-items: center; flex-wrap: wrap; gap: 22px; margin-top: 29px; }
-.primaryAction, .secondaryAction { display: inline-flex; align-items: center; gap: 14px; min-height: 44px; font-size: .88rem; font-weight: 650; text-decoration: none; }
-.primaryAction { padding: 0 18px; border-radius: 7px; background: var(--site-accent); color: var(--site-on-accent); }
-.primaryAction:hover { background: var(--site-accent-hover); color: var(--site-on-accent); }
-.secondaryAction { color: var(--site-text-secondary); }
-.secondaryAction:hover { color: var(--site-accent-ink); }
+.lead { max-width: 610px; margin: 27px 0 0; color: var(--home-copy); font-size: clamp(1.15rem, 1.55vw, 1.5rem); line-height: 1.72; }
+.actions { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; margin-top: 34px; }
+.primaryAction, .secondaryAction { display: inline-flex; align-items: center; justify-content: center; min-height: 56px; padding: 0 22px; border-radius: 12px; font-size: 1.18rem; font-weight: 700; text-decoration: none; }
+.primaryAction { background: var(--home-primary); color: var(--home-primary-ink); }
+.primaryAction:hover { background: var(--home-primary-hover); color: var(--home-primary-ink); }
+.secondaryAction { background: var(--home-secondary); color: var(--home-secondary-ink); }
+.secondaryAction:hover { background: var(--home-secondary-hover); color: var(--home-secondary-ink); }
+
+:global(html[data-theme='dark'] .page) {
+  --home-top: #1b2940;
+  --home-mid: #151f31;
+  --home-bottom: #121a29;
+  --home-ink: #e8effb;
+  --home-copy: #cdd9ef;
+  --home-blue: #93b8ff;
+  --home-primary: #93b8ff;
+  --home-primary-hover: #b1ceff;
+  --home-primary-ink: #0c1b33;
+  --home-secondary: #26354f;
+  --home-secondary-hover: #30415d;
+  --home-secondary-ink: #e8effb;
+}
 
 .recent { padding: 8px 0 8px 28px; border-left: 1px solid var(--site-border); }
 .recentHeading, .sectionHeading { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; }
@@ -147,9 +177,11 @@ function formatDate(iso: string) {
 @media (max-width: 700px) {
   .hero, .paths { width: calc(100% - 40px); }
   .hero { gap: 34px; padding: 43px 0 48px; }
-  .heroText h1 { font-size: clamp(2rem, 8vw, 3rem); line-height: 1.4; }
-  .lead { margin-top: 16px; font-size: .92rem; }
-  .actions { gap: 16px; margin-top: 23px; }
+  .tagline { margin-bottom: 15px; font-size: 1.05rem; }
+  .heroText h1 { font-size: clamp(3.5rem, 15vw, 5rem); }
+  .lead { margin-top: 18px; font-size: 1.05rem; }
+  .actions { flex-direction: column; align-items: stretch; gap: 11px; margin-top: 26px; }
+  .primaryAction, .secondaryAction { min-height: 50px; font-size: 1.05rem; }
   .recent { padding-left: 17px; }
   .recentLink { grid-template-columns: minmax(62px, .34fr) minmax(0, 1fr); gap: 7px 10px; }
   .recentLink time { grid-column: 2; }
