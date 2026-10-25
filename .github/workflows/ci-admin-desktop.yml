@@ -1,0 +1,43 @@
+name: CI - admin-desktop
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'old/admin-desktop/**'
+  push:
+    branches: [main]
+    paths:
+      - 'old/admin-desktop/**'
+
+concurrency:
+  group: ci-admin-desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  desktop:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: old/admin-desktop
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: old/admin-desktop/package-lock.json
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend (type check + bundle)
+        run: npm run build
+
+      - name: Check Rust backend
+        run: cargo check --manifest-path src-tauri/Cargo.toml
