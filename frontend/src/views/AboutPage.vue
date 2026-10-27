@@ -71,7 +71,8 @@ const contacts = [
 </script>
 
 <style scoped>
-.about-page { min-height: calc(100vh - var(--ifm-navbar-height)); background: var(--site-background); color: var(--site-text); padding: 80px 28px 104px; }
+.about-page { min-height: calc(100vh - var(--ifm-navbar-height)); background: var(--site-background); color: var(--site-text); padding: 80px 28px 104px; --about-action-bg: #1f6feb; --about-action-bg-hover: #175dcc; --about-action-ink: #ffffff; }
+:global(html[data-theme='dark'] .about-page) { --about-action-bg: var(--site-accent); --about-action-bg-hover: var(--site-accent-hover); --about-action-ink: var(--site-on-accent); }
 .about-wrap { width: min(1100px, 100%); margin: 0 auto; }
 .intro { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(250px, .72fr); gap: 68px; align-items: center; padding-bottom: 76px; border-bottom: 1px solid var(--site-border); }
 .intro-kicker, .section-kicker { color: var(--site-accent-ink); font-size: .88rem; font-weight: 700; letter-spacing: .04em; }
@@ -81,8 +82,8 @@ const contacts = [
 .intro-text { max-width: 620px; margin-top: 22px; color: var(--site-text-secondary); font-size: 1rem; line-height: 1.9; }
 .intro-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
 .action { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0 19px; border: 1px solid transparent; border-radius: 7px; font-weight: 700; font-size: .9rem; text-decoration: none; }
-.action-primary { color: var(--site-on-accent); background: var(--site-accent); }
-.action-primary:hover { background: var(--site-accent-hover); color: var(--site-on-accent); }
+.action-primary { color: var(--about-action-ink); background: var(--about-action-bg); }
+.action-primary:hover { background: var(--about-action-bg-hover); color: var(--about-action-ink); }
 .action-secondary { border-color: var(--site-border); color: var(--site-text); background: var(--site-surface); }
 .action-secondary:hover { color: var(--site-accent-ink); border-color: var(--site-accent); }
 .identity { padding: 28px; border: 1px solid var(--site-border); border-radius: 12px; background: var(--site-surface); box-shadow: 0 16px 40px var(--site-shadow); }
