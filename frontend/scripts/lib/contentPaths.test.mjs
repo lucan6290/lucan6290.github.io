@@ -4,7 +4,7 @@ import { createMemoryHistory, createRouter } from 'vue-router';
 import { CONTENT_ROUTE_PATH, contentHref, contentPath, resolveContentUrl, sidebarNodes } from '../../src/composables/contentPaths.ts';
 import { createNavEntries } from '../../src/config/nav.ts';
 
-test('知识库分类与文章侧栏只展示所属一级目录，其他栏目维持原样', () => {
+test('知识库侧栏只展示所属一级目录，博客维持原样', () => {
   const tree = [
     { name: 'project-practice', path: '/knowledge/project-practice', children: [] },
     { name: 'tech-study', path: '/knowledge/tech-study', children: [] },
@@ -14,6 +14,19 @@ test('知识库分类与文章侧栏只展示所属一级目录，其他栏目�
   assert.deepEqual(sidebarNodes(tree, '/knowledge', '/knowledge/project-practice/文章'), [tree[0]]);
   assert.deepEqual(sidebarNodes(tree, '/blog', '/blog/随笔/文章'), tree);
   assert.deepEqual(sidebarNodes(tree, '/knowledge', '/knowledge/tech-study-more/文章'), []);
+});
+
+test('项目栏目按一级目录限制侧栏和下拉菜单', () => {
+  const categories = [
+    { name: '01-我的项目', label: '我的项目', path: '/projects/01-我的项目', children: [] },
+    { name: '02-开源工具', label: '开源工具', path: '/projects/02-开源工具', children: [] },
+  ];
+  assert.deepEqual(sidebarNodes(categories, '/projects', '/projects'), []);
+  assert.deepEqual(sidebarNodes(categories, '/projects', '/projects/02-开源工具/Orca'), [categories[1]]);
+  const entries = createNavEntries([{ name: 'projects', label: 'projects', path: '/projects', children: [
+    ...categories, { name: '说明.md', label: '说明', path: '/projects/说明', children: [], article: {} },
+  ] }]);
+  assert.deepEqual(entries[0].items.map(item => item.label), ['项目首页', '我的项目', '开源工具']);
 });
 
 test('任意栏目路由保留分区前缀与中文目录', () => {

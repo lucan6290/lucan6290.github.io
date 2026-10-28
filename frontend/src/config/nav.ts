@@ -1,5 +1,5 @@
 import type { NavEntry, TreeNode } from '@/types/content';
-import { contentHref } from '../composables/contentPaths.ts';
+import { contentHref, isHierarchicalSection } from '../composables/contentPaths.ts';
 
 // 仅保留四个既有栏目的名称与顺序；栏目是否存在由 content 一级目录决定。
 const KNOWN_SECTIONS = [
@@ -26,7 +26,7 @@ export function createNavEntries(tree: TreeNode[]): NavEntry[] {
       items: [
         { label: node.name === 'knowledge' ? '首页' : `${sectionLabel(node.name)}首页`, to: contentHref(node.path) },
         ...node.children
-          .filter((child) => node.name !== 'knowledge' || !child.article)
+          .filter((child) => !isHierarchicalSection(node.path) || !child.article)
           .map((child) => ({ label: child.label, to: contentHref(child.path) })),
       ],
     }));

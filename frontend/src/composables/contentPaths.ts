@@ -9,8 +9,12 @@ export function contentPath(root: string, segments: string | string[] = []) {
   return [root, ...parts.filter(Boolean)].join('/');
 }
 
+export function isHierarchicalSection(root: string) {
+  return root === '/knowledge' || root === '/projects';
+}
+
 export function sidebarNodes<T extends { path: string }>(nodes: T[], root: string, path: string): T[] {
-  if (root !== '/knowledge') return nodes;
+  if (!isHierarchicalSection(root)) return nodes;
   const section = path.slice(root.length).split('/').filter(Boolean)[0];
   if (!section) return [];
   const selected = nodes.find((node) => node.path === `${root}/${section}`);

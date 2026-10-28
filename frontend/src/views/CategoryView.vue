@@ -1,25 +1,25 @@
 <template>
-  <div class="category-layout" :class="{ 'knowledge-home': isKnowledgeHome }">
+  <div class="category-layout" :class="{ 'hierarchical-home': isHierarchicalHome }">
     <ResizableSidebar>
-      <nav v-if="isKnowledgeHome" aria-label="知识库分类" class="home-categories">
+      <nav v-if="isHierarchicalHome" :aria-label="sectionLabel(root.slice(1)) + '分类'" class="home-categories">
         <router-link v-for="category in subcategories" :key="category.path" :to="contentHref(category.path)">{{ category.label }}</router-link>
       </nav>
       <TreeSidebar v-else :nodes="treeNodes" :active-path="path" :root="root" />
     </ResizableSidebar>
     <main class="category-main">
-      <Breadcrumb v-if="!isKnowledgeHome" :path="path" :root="root" />
-      <header v-if="!isKnowledgeHome" class="category-header">
+      <Breadcrumb v-if="!isHierarchicalHome" :path="path" :root="root" />
+      <header v-if="!isHierarchicalHome" class="category-header">
         <h1>{{ title }}</h1>
         <SortToggle v-if="articles.length" :mode="sortMode" @toggle="toggleSort" />
       </header>
       <MarkdownRenderer
-        v-if="currentNode?.introduction && (!isKnowledgeHome || currentNode.introduction.rawContent.trim())"
+        v-if="currentNode?.introduction && (!isHierarchicalHome || currentNode.introduction.rawContent.trim())"
         :key="currentNode.introduction.relativePath"
         :content="currentNode.introduction.rawContent"
         :relative-path="currentNode.introduction.relativePath"
       />
-      <p v-else-if="isKnowledgeHome" class="empty-home">暂无首页内容。</p>
-      <nav v-if="!isKnowledgeHome && subcategories.length" class="subcategory-list" aria-label="子分类">
+      <p v-else-if="isHierarchicalHome" class="empty-home">暂无首页内容。</p>
+      <nav v-if="!isHierarchicalHome && subcategories.length" class="subcategory-list" aria-label="子分类">
         <h2>子分类</h2>
         <ul>
           <li v-for="category in subcategories" :key="category.path">
@@ -27,7 +27,7 @@
           </li>
         </ul>
       </nav>
-      <ArticleList v-if="!isKnowledgeHome && (articles.length || (!subcategories.length && !currentNode?.introduction))" :articles="articles" />
+      <ArticleList v-if="!isHierarchicalHome && (articles.length || (!subcategories.length && !currentNode?.introduction))" :articles="articles" />
     </main>
   </div>
 </template>
@@ -42,10 +42,10 @@ import SortToggle from '@/components/list/SortToggle.vue';
 import ArticleList from '@/components/list/ArticleList.vue';
 import MarkdownRenderer from '@/components/article/MarkdownRenderer.vue';
 import { sectionLabel } from '@/config/nav';
-import { contentHref, sidebarNodes } from '@/composables/contentPaths';
+import { contentHref, isHierarchicalSection, sidebarNodes } from '@/composables/contentPaths';
 
 const props = defineProps<{ root: string; path: string }>();
-const isKnowledgeHome = computed(() => props.root === '/knowledge' && props.path === '/knowledge');
+const isHierarchicalHome = computed(() => isHierarchicalSection(props.root) && props.path === props.root);
 
 const { ready, findNodeByPath, getArticlesUnder, sortMode, toggleSort, manifest } = useContent();
 
@@ -58,14 +58,14 @@ const treeNodes = computed(() => {
 });
 
 const currentNode = computed(() => findNodeByPath(props.path));
-const subcategories = computed(() => props.root === '/knowledge'
+const subcategories = computed(() => isHierarchicalSection(props.root)
   ? currentNode.value?.children.filter((node) => !node.article) || []
   : []);
 
 const articles = computed(() => {
   if (!ready.value) return [];
   const list = getArticlesUnder(currentNode.value);
-  return props.root === '/knowledge'
+  return isHierarchicalSection(props.root)
     ? list.filter((article) => article.path.slice(0, article.path.lastIndexOf('/')) === props.path)
     : list;
 });
@@ -86,7 +86,7 @@ watchEffect(() => {
   grid-template-columns: auto minmax(0, 1fr);
   min-height: calc(100vh - var(--ifm-navbar-height));
 }
-.knowledge-home .category-main { width: 100%; }
+.hierarchical-home .category-main { width: 100%; }
 .empty-home { color: var(--site-text-muted); }
 .home-categories { display: grid; gap: 4px; }
 .home-categories a { padding: 8px 10px; border-radius: 6px; color: var(--site-text-secondary); text-decoration: none; }

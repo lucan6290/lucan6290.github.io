@@ -81,7 +81,7 @@ const focusAreas = [
 ];
 const projects = [
   { label: '个人技术站', title: '箓川码笺', text: '基于 Vite 与 Vue 3 自研前端，承载长期知识库、博客与项目展示。', role: '我负责前端实现、内容结构和持续迭代。', href: 'https://github.com/lucan6290/lucan6290.github.io', linkLabel: '查看站点仓库', external: true },
-  { label: '内容管理', title: '本地 Markdown 管理端', text: '面向 Markdown 写作维护站点内容，记录编辑、管理与发布流程。', role: '我负责管理端开发与内容工作流梳理。', href: '/projects#内容管理端', linkLabel: '查看项目介绍', external: false },
+  { label: '内容管理', title: '本地 Markdown 管理端', text: '面向 Markdown 写作维护站点内容，记录编辑、管理与发布流程。', role: '我负责管理端开发与内容工作流梳理。', href: '/projects', linkLabel: '查看项目列表', external: false },
 ];
 const contacts = [
   { label: 'GitHub', value: '@lucan6290', href: 'https://github.com/lucan6290' },

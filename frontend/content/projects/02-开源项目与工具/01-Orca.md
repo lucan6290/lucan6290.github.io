@@ -1,0 +1,9 @@
+---
+description: 管理多个 AI 编码代理，支持 Git worktree 并行协作。
+---
+
+# Orca
+
+[Orca](https://github.com/stablyai/orca) 是用于管理多个 AI 编码代理的工作环境。它可以让代理在各自的 Git worktree 中并行工作，并集中查看终端与任务；还提供移动端配套应用，方便跟进任务。
+
+- [下载 Orca](https://onorca.dev/download) · [GitHub 仓库](https://github.com/stablyai/orca)

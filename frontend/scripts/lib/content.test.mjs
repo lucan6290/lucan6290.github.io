@@ -48,6 +48,24 @@ test('知识库保留两级空分类，下拉只列一级文件夹，文档保�
   assert.deepEqual(createNavEntries(build(options).tree)[0].items.map(n => n.label), ['首页']);
 });
 
+test('项目目录保留空分类并自动收录子目录中的 Markdown', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'projects-levels-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const contentDir = path.join(root, 'content');
+  const category = path.join(contentDir, 'projects', '01-我的项目');
+  const nested = path.join(category, '桌面工具');
+  fs.mkdirSync(nested, { recursive: true });
+  const options = { contentDir, outDir: path.join(root, 'generated') };
+  let result = build(options);
+  const project = result.tree.find(node => node.name === 'projects');
+  assert.ok(project.children.find(node => node.name === '01-我的项目'), '空项目分类仍保留');
+  assert.equal(project.children[0].children[0].path, '/projects/01-我的项目/桌面工具');
+  fs.writeFileSync(path.join(nested, 'TerminalVoice.md'), '# TerminalVoice\n\n语音工具');
+  result = build(options);
+  assert.equal(result.articles['/projects/01-我的项目/桌面工具/TerminalVoice'].frontmatter.title, 'TerminalVoice');
+  assert.deepEqual(createNavEntries(result.tree)[0].items.map(item => item.label), ['项目首页', '我的项目']);
+});
+
 test('复制笔记文件夹后生成标题、分类介绍，过滤资源目录', (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'notes-content-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
