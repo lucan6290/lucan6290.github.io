@@ -77,8 +77,8 @@ function walkTree(dir, relativeRoot) {
       const introduction = entries.find((node) => /^readme\.md$/i.test(node.name))?.article;
       const children = entries.filter((node) => !/^readme\.md$/i.test(node.name));
       if (dir !== relativeRoot && !children.length && !introduction) {
-        // 知识库与项目栏目的空分类也可导航；只有图片等资源的目录仍不生成分类。
-        const emptyCategory = /^(knowledge|projects)\//.test(rel)
+        // 三个内容栏目的空分类也可导航；只有图片等资源的目录仍不生成分类。
+        const emptyCategory = /^(knowledge|blog|projects)\//.test(rel)
           && fs.readdirSync(fullPath).every((name) => name.startsWith('.') || name.startsWith('_'));
         if (!emptyCategory) continue;
       }

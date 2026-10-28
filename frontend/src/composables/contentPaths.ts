@@ -10,7 +10,7 @@ export function contentPath(root: string, segments: string | string[] = []) {
 }
 
 export function isHierarchicalSection(root: string) {
-  return root === '/knowledge' || root === '/projects';
+  return root === '/knowledge' || root === '/blog' || root === '/projects';
 }
 
 export function sidebarNodes<T extends { path: string }>(nodes: T[], root: string, path: string): T[] {

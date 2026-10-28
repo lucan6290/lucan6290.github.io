@@ -4,7 +4,7 @@ import { createMemoryHistory, createRouter } from 'vue-router';
 import { CONTENT_ROUTE_PATH, contentHref, contentPath, resolveContentUrl, sidebarNodes } from '../../src/composables/contentPaths.ts';
 import { createNavEntries } from '../../src/config/nav.ts';
 
-test('知识库侧栏只展示所属一级目录，博客维持原样', () => {
+test('知识库侧栏只展示所属一级目录，其他自定义栏目维持原样', () => {
   const tree = [
     { name: 'project-practice', path: '/knowledge/project-practice', children: [] },
     { name: 'tech-study', path: '/knowledge/tech-study', children: [] },
@@ -12,8 +12,21 @@ test('知识库侧栏只展示所属一级目录，博客维持原样', () => {
   assert.deepEqual(sidebarNodes(tree, '/knowledge', '/knowledge/tech-study'), [tree[1]]);
   assert.deepEqual(sidebarNodes(tree, '/knowledge', '/knowledge/tech-study/子分类/文章'), [tree[1]]);
   assert.deepEqual(sidebarNodes(tree, '/knowledge', '/knowledge/project-practice/文章'), [tree[0]]);
-  assert.deepEqual(sidebarNodes(tree, '/blog', '/blog/随笔/文章'), tree);
+  assert.deepEqual(sidebarNodes(tree, '/学习路线', '/学习路线/随笔/文章'), tree);
   assert.deepEqual(sidebarNodes(tree, '/knowledge', '/knowledge/tech-study-more/文章'), []);
+});
+
+test('博客与知识库、项目采用相同的目录导航规则', () => {
+  for (const section of ['knowledge', 'blog', 'projects']) {
+    const root = '/' + section;
+    const categories = ['分类一', '分类二'].map(name => ({ name, label: name, path: root + '/' + name, children: [] }));
+    assert.deepEqual(sidebarNodes(categories, root, root), []);
+    assert.deepEqual(sidebarNodes(categories, root, root + '/分类二/文章'), [categories[1]]);
+    const entries = createNavEntries([{ name: section, label: section, path: root, children: [
+      ...categories, { name: '文章.md', label: '文章', path: root + '/文章', children: [], article: {} },
+    ] }]);
+    assert.deepEqual(entries[0].items.slice(1).map(item => item.label), ['分类一', '分类二']);
+  }
 });
 
 test('项目栏目按一级目录限制侧栏和下拉菜单', () => {

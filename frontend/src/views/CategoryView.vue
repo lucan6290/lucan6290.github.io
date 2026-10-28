@@ -7,19 +7,18 @@
       <TreeSidebar v-else :nodes="treeNodes" :active-path="path" :root="root" />
     </ResizableSidebar>
     <main class="category-main">
-      <Breadcrumb v-if="!isHierarchicalHome" :path="path" :root="root" />
-      <header v-if="!isHierarchicalHome" class="category-header">
+      <Breadcrumb v-if="showDirectoryContents" :path="path" :root="root" />
+      <header v-if="showDirectoryContents" class="category-header">
         <h1>{{ title }}</h1>
         <SortToggle v-if="articles.length" :mode="sortMode" @toggle="toggleSort" />
       </header>
       <MarkdownRenderer
-        v-if="currentNode?.introduction && (!isHierarchicalHome || currentNode.introduction.rawContent.trim())"
+        v-if="currentNode?.introduction && hasIntroduction"
         :key="currentNode.introduction.relativePath"
         :content="currentNode.introduction.rawContent"
         :relative-path="currentNode.introduction.relativePath"
       />
-      <p v-else-if="isHierarchicalHome" class="empty-home">暂无首页内容。</p>
-      <nav v-if="!isHierarchicalHome && subcategories.length" class="subcategory-list" aria-label="子分类">
+      <nav v-if="showDirectoryContents && subcategories.length" class="subcategory-list" aria-label="子分类">
         <h2>子分类</h2>
         <ul>
           <li v-for="category in subcategories" :key="category.path">
@@ -27,7 +26,7 @@
           </li>
         </ul>
       </nav>
-      <ArticleList v-if="!isHierarchicalHome && (articles.length || (!subcategories.length && !currentNode?.introduction))" :articles="articles" />
+      <ArticleList v-if="showDirectoryContents && (articles.length || (!subcategories.length && !hasIntroduction))" :articles="articles" />
     </main>
   </div>
 </template>
@@ -58,6 +57,8 @@ const treeNodes = computed(() => {
 });
 
 const currentNode = computed(() => findNodeByPath(props.path));
+const hasIntroduction = computed(() => Boolean(currentNode.value?.introduction?.rawContent.trim()));
+const showDirectoryContents = computed(() => !isHierarchicalHome.value || !hasIntroduction.value);
 const subcategories = computed(() => isHierarchicalSection(props.root)
   ? currentNode.value?.children.filter((node) => !node.article) || []
   : []);
@@ -87,7 +88,6 @@ watchEffect(() => {
   min-height: calc(100vh - var(--ifm-navbar-height));
 }
 .hierarchical-home .category-main { width: 100%; }
-.empty-home { color: var(--site-text-muted); }
 .home-categories { display: grid; gap: 4px; }
 .home-categories a { padding: 8px 10px; border-radius: 6px; color: var(--site-text-secondary); text-decoration: none; }
 .home-categories a:hover { color: var(--ifm-color-primary); background: var(--site-accent-soft); }
