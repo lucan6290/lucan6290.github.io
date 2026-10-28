@@ -6,10 +6,6 @@
           <p class="intro-kicker"><span aria-hidden="true"></span>关于箓川码笺</p>
           <h1 id="about-title">把学习路上的每一次探索，<br class="desktop-break">写成能再次出发的笺册。</h1>
           <p class="intro-text">我是箓川码笺的作者“小灿同学啊”，持续记录 AI 工具实践、开发工具与计算机基础学习，也分享个人技术站建设中的问题复盘和工程经验。</p>
-          <div class="intro-actions">
-            <router-link class="action action-primary" to="/knowledge">进入知识库</router-link>
-            <router-link class="action action-secondary" to="/blog">阅读博客</router-link>
-          </div>
         </div>
         <aside class="identity" aria-label="站点简介">
           <div class="identity-heading"><span class="seal" aria-hidden="true">箓</span><div><strong>箓川码笺</strong><p>记录、复盘、持续生长</p></div></div>
@@ -92,8 +88,7 @@ const contacts = [
 </script>
 
 <style scoped>
-.about-page { min-height: calc(100vh - var(--ifm-navbar-height)); background: var(--site-background); color: var(--site-text); padding: 80px 28px 104px; --about-action-bg: #1f6feb; --about-action-bg-hover: #175dcc; --about-action-ink: #ffffff; }
-:global(html[data-theme='dark'] .about-page) { --about-action-bg: var(--site-accent); --about-action-bg-hover: var(--site-accent-hover); --about-action-ink: var(--site-on-accent); }
+.about-page { min-height: calc(100vh - var(--ifm-navbar-height)); background: var(--site-background); color: var(--site-text); padding: 80px 28px 104px; }
 .about-wrap { width: min(1100px, 100%); margin: 0 auto; }
 .intro { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(250px, .72fr); gap: 68px; align-items: center; padding-bottom: 76px; border-bottom: 1px solid var(--site-border); }
 .intro-kicker, .section-kicker { color: var(--site-accent-ink); font-size: .88rem; font-weight: 700; letter-spacing: .04em; }
@@ -101,12 +96,6 @@ const contacts = [
 .intro-kicker span { width: 24px; height: 2px; background: var(--site-accent); }
 .intro h1 { margin: 0; font-family: var(--site-font-literary); font-size: clamp(2.05rem, 3.25vw, 3.1rem); font-weight: 700; line-height: 1.36; letter-spacing: -.025em; }
 .intro-text { max-width: 620px; margin-top: 22px; color: var(--site-text-secondary); font-size: 1rem; line-height: 1.9; }
-.intro-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
-.action { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0 19px; border: 1px solid transparent; border-radius: 7px; font-weight: 700; font-size: .9rem; text-decoration: none; }
-.action-primary { color: var(--about-action-ink); background: var(--about-action-bg); }
-.action-primary:hover { background: var(--about-action-bg-hover); color: var(--about-action-ink); }
-.action-secondary { border-color: var(--site-border); color: var(--site-text); background: var(--site-surface); }
-.action-secondary:hover { color: var(--site-accent-ink); border-color: var(--site-accent); }
 .identity { padding: 28px; border: 1px solid var(--site-border); border-radius: 12px; background: var(--site-surface); box-shadow: 0 16px 40px var(--site-shadow); }
 .identity-heading { display: flex; align-items: center; gap: 14px; }
 .seal { display: grid; place-items: center; width: 52px; height: 52px; flex: none; border-radius: 10px; color: var(--site-accent-ink); background: var(--site-accent-soft); font: 700 1.55rem var(--site-font-literary); }
@@ -150,7 +139,7 @@ const contacts = [
 .site-notes-list dt { font-weight: 650; }
 .site-notes-list dd { margin: 0; color: var(--site-text-secondary); font-size: .93rem; line-height: 1.85; }
 .site-notes-list a { color: var(--site-accent-ink); }
-.action:focus-visible, .project-link:focus-visible, .contact-list a:focus-visible, .site-notes-list a:focus-visible { outline: 2px solid var(--site-accent); outline-offset: 3px; }
+.project-link:focus-visible, .contact-list a:focus-visible, .site-notes-list a:focus-visible { outline: 2px solid var(--site-accent); outline-offset: 3px; }
 @media (max-width: 850px) { .intro { grid-template-columns: 1fr; gap: 36px; padding-bottom: 56px; } .identity { max-width: 520px; } .focus, .projects { padding: 56px 0; } .personal { gap: 40px; padding: 56px 0; } .contact { gap: 40px; padding: 56px 0; } .site-notes { padding-top: 56px; } }
 @media (max-width: 600px) { .about-page { padding: 48px 20px 72px; } .desktop-break { display: none; } .intro h1 { font-size: clamp(1.9rem, 8vw, 2.5rem); } .section-heading { display: block; } .focus-grid, .project-grid, .personal, .contact { grid-template-columns: 1fr; } .focus-item, .project-item { padding: 18px 0; } .personal, .contact { gap: 28px; } .contact-list a { grid-template-columns: 65px minmax(0, 1fr) auto; gap: 10px; } .site-notes-list > div { grid-template-columns: 1fr; gap: 4px; } }
 </style>
