@@ -76,7 +76,7 @@ sticky: false
 ### 检查版本
 ```
 
-六字段全部保留；`title`、`description` 非空，没有标签时填 `tags: []`，`sticky` 默认 `false`。修改正文或元信息时维护 `updated`，不因文件复制、移动或部署改写日期；站点扫描器不会自动回写或强制校验。字段含义以 [内容指南](../docs/SITE_CONTENT_GUIDE.md#统一-yaml-头部frontmatter) 为准。
+六字段全部保留；`title`、`description` 非空，没有标签时填 `tags: []`，`sticky` 默认 `false`。修改正文或元信息时维护 `updated`，不因文件复制、移动或部署改写日期。站点扫描器不回写 YAML；桌面端新建普通文章会生成模板并校验，已有完整六字段文章实际修改时维护 `updated`。字段含义以 [内容指南](../docs/SITE_CONTENT_GUIDE.md#统一-yaml-头部frontmatter) 为准。
 
 普通文章页统一显示阅读时长、文章字数、创建时间和最新更新时间。字数自动统计，阅读时长按每分钟 300 字向上取整、至少 1 分钟，两项都不写入 YAML。创建和更新时间按北京时间显示到分钟，相同也同时显示；缺失或无效日期显示“未记录”，不使用文件时间补齐。
 

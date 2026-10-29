@@ -9,6 +9,7 @@
 | 工程 | 技术栈 | 状态 |
 | --- | --- | --- |
 | `frontend/` | Vite 6 + Vue 3.5 + TypeScript + ByteMD | **新自研前端（开发中）** |
+| `admin-desktop/` | Tauri 2 + Vue 3 + 独立 FastAPI 内容服务 | 当前桌面管理端，管理 `frontend/content/` |
 | `site/` | Docusaurus 3 + React 19 + TypeScript | 旧站（逐步被 frontend 替代） |
 | `admin/frontend/` | Vue 3 + Vite + Naive UI + Pinia + ByteMD | 管理端前端 |
 | `admin/backend/` | FastAPI + Pydantic v2 + PyYAML + Python 3.10 | 管理端后端 |
@@ -45,6 +46,8 @@
 | 运行服务 | 下方「本地开发规范」 |
 | **新前端开发** | `frontend/README.md` → `frontend/src/` |
 | **新前端内容写作** | 先读 `docs/SITE_CONTENT_GUIDE.md`（统一 YAML 六字段与时间语义）→ `frontend/content/`（零配置，目录即导航） |
+| **桌面管理端开发** | `admin-desktop/AGENTS.md` → `admin-desktop/docs/DOCUMENTATION_INDEX.md` |
+| **桌面内容接口变更** | `admin-desktop/docs/内容接口契约.md`（独立契约，不使用旧站接口） |
 | 后端开发 | 后端模块 `AGENTS.md` → `admin/lc-docs/BACKEND_CONVENTION.md` |
 | 管理前端开发 | 前端模块 `AGENTS.md` → `admin/lc-docs/FRONTEND_CONVENTION.md` |
 | 旧站点开发 | 站点模块 `AGENTS.md` → `site/lc-docs/FRONTEND_CONVENTION.md` |
@@ -80,6 +83,7 @@
 
 - **新前端文档**：`frontend/README.md`
 - **新前端内容写作规范**：`docs/SITE_CONTENT_GUIDE.md`（新文章必读，包含统一 YAML 模板）
+- **桌面端文档**：`admin-desktop/docs/DOCUMENTATION_INDEX.md`（含前端、独立后端、测试与原生模块导航）
 - 管理端工程治理文档：`admin/lc-docs/DOCUMENTATION_INDEX.md`
 - 旧站点工程治理文档：`site/lc-docs/DOCUMENTATION_INDEX.md`
 - 管理端设计/接口文档：`admin/docs/`

@@ -1,0 +1,6 @@
+# Independent desktop content backend; httpx is used by TestClient.
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic==2.12.2
+PyYAML==6.0.3
+httpx==0.28.1
