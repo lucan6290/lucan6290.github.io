@@ -1,50 +1,25 @@
-# Blue Theme Implementation Plan
+# 蓝色主题维护计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> 当前修订：2026-10-29。已有主题以当前样式文件为准；新配色调整需用户明确授权。
 
-**Goal:** Align the public site's light and dark themes with the existing blue Logo.
+设计依据：[蓝色主题规范](../../PRD/博客蓝色主题调整方案.md)。
 
-**Architecture:** Keep the current Vue pages and styles. Change shared CSS tokens so interactive components inherit the blue palette, then update only the three decorative entry lines on the homepage.
+## 实现入口
 
-**Tech Stack:** Vue 3.5, Vite 6, CSS custom properties, pnpm.
+- `frontend/src/styles/tokens.css`：浅深主题的公共颜色。
+- `frontend/src/styles/base.css`：基础文字、焦点与状态。
+- 页面或组件样式：仅在其局部语义确需调整时修改。
 
-**Spec:** `docs/博客蓝色主题调整方案.md`
+## 复核清单
 
-## Global Constraints
+- 主按钮背景与文字、白底链接、选中项和辅助文字在两种主题下清晰。
+- 不将品牌浅蓝直接套用于所有小字号文字。
+- 正文、警告、错误与代码高亮保留各自语义。
+- 桌面和窄屏的首页、分类、文章、本文目录及搜索均可读。
+- 改动后导航、主题切换及内容展示继续正常。
 
-- Preserve existing layout, typography, content and the user-owned Logo.
-- Preserve other uncommitted changes. Do not commit or add dependencies.
-- Keep fixed development port 3400. Do not edit generated content.
+## 验证与权限
 
-## Review Focus
+记录实际检查页面和运行结果，不沿用固定测试数量证明当前通过。纯文档修订只检查文档；样式及行为变更按 [前端约定](../../FRONTEND_CONVENTION.md) 验收。
 
-- White text on the light primary button and dark text on the dark primary button must remain legible.
-- Hover and active navigation states must keep visible contrast in both themes.
-- Warning, danger, code syntax and keyboard focus retain their semantic distinctions.
-- No former teal primary interaction or teal decorative homepage line remains.
-- Knowledge and article components consuming shared tokens remain readable.
-
----
-
-### Task 1: Shared color tokens
-
-**Files:** `frontend/src/styles/tokens.css`.
-
-- [x] Replace primary, accent, surface, text and border values for both themes using the approved palette.
-- [x] Verify representative color pairs meet contrast targets; preserve warning/danger semantics.
-
-### Task 2: Homepage decorative accents
-
-**Files:** `frontend/src/views/HomePage.vue`.
-
-- [x] Change the three section entry lines to related blue shades without changing their content or layout.
-- [x] Check that light and dark homepage controls and labels still have a clear hierarchy.
-
-### Task 3: Visual and code verification
-
-**Files:** No additional product file unless a fixed-color remnant is found.
-
-- [x] Inspect light home/article at 390, 768 and 1440px; spot-check dark home/list/article/knowledge across desktop, tablet and mobile, including controls and dark code.
-- [x] Run `pnpm test`, `pnpm build`, and `git diff --check`; review only this change's diff before reporting.
-
-No commit step is included because the repository's `AGENTS.md` requires a separate explicit commit instruction.
+禁止手工修改生成产物，不为历史数据添加兼容分支；提交和推送需要分别获得用户明确指令。

@@ -1,71 +1,24 @@
-# Blog Reading Polish Implementation Plan
+# 阅读体验维护计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> 当前修订：2026-10-29。作为现有能力的复核清单；新修改仍须取得本次任务的明确授权。
 
-**Goal:** Improve the public Vue blog's reading and navigation experience while keeping its current green and handwritten visual identity.
+设计依据：[视觉与阅读体验规范](../../PRD/博客视觉与阅读体验完善方案.md)。工程约束：[全局规范](../../GLOBAL_STANDARDS.md)。
 
-**Architecture:** Reuse the existing Vue components and CSS tokens. Adjust the reading styles in MarkdownRenderer and ArticleView; give the shared sidebar a compact mobile disclosure; make FloatToc reachable through a visible button; refine HomePage, ArticleList and Navbar without changing the content pipeline.
+## 当前实现入口
 
-**Tech Stack:** Vue 3.5, Vite 6, TypeScript, scoped CSS, ByteMD, pnpm.
+- 正文与文章头部：`frontend/src/components/article/MarkdownRenderer.vue`、`frontend/src/views/ArticleView.vue`。
+- 响应式栏目目录：`frontend/src/components/sidebar/ResizableSidebar.vue`。
+- 右下角目录：`frontend/src/components/toc/FloatToc.vue`。
+- 导航与列表：`frontend/src/components/layout/Navbar.vue`、`frontend/src/components/list/ArticleList.vue`。
 
-**Spec:** `docs/博客视觉与阅读体验完善方案.md`
+## 复核步骤
 
-## Global Constraints
+1. 对照同一篇长文的桌面与窄屏，检查字号、换行、代码、表格和图片。
+2. 检查手机目录默认状态、展开收起和路由切换；桌面调宽偏好不污染手机状态。
+3. 检查二三级标题的目录收集、章节跳转、Esc 关闭、焦点恢复与减少动态效果。
+4. 检查知识库、博客、项目共用组件的导航与阅读行为。
+5. 根据实际修改运行相关测试、构建和浏览器验证，记录本次结果。
 
-- Preserve existing theme, routes, content, and existing uncommitted edits.
-- No new dependency, API, content migration or automatic Git commit.
-- Keep the fixed dev port at 3400 and do not run old and new frontends together.
-- Do not edit `frontend/src/generated/` by hand.
-- Verify desktop, tablet and mobile; light and dark; keyboard and pointer use.
+## 状态说明
 
-## Review Focus
-
-- Desktop collapse preference must not force the mobile directory open on first visit.
-- Route changes must not leave a prior article's table of contents visible.
-- Long Chinese titles, long code and wide tables must stay readable without whole-page overflow.
-- Closing an open table of contents with Escape must restore focus to its trigger.
-- Knowledge pages sharing the sidebar and article renderer must keep their existing navigation behavior.
-
----
-
-### Task 1: Reading layout and type
-
-**Files:** `frontend/src/components/article/MarkdownRenderer.vue`, `frontend/src/views/ArticleView.vue`.
-
-- [x] Capture and inspect a long article at desktop and phone widths; confirm the existing font sizes and layout.
-- [x] Set body text to about 17px desktop and 16px mobile, line-height about 1.8–1.85 and reading measure about 820px; tune code, table, quote and image spacing without changing Markdown data.
-- [x] Recheck long Chinese headings and long code/table overflow in the browser.
-
-### Task 2: Compact mobile directory
-
-**Files:** `frontend/src/components/sidebar/ResizableSidebar.vue`.
-
-- [x] Verify current phone view puts the expanded directory before article title.
-- [x] Add an independent mobile disclosure state, initially closed and reset on route change, with a 44px target and accurate `aria-expanded`/`aria-controls`; preserve desktop collapse and resize state.
-- [x] Check mobile initial view, expand/collapse, route change and desktop resize preference.
-
-### Task 3: Explicit article table of contents
-
-**Files:** `frontend/src/components/toc/FloatToc.vue`, and `frontend/src/views/ArticleView.vue` only if needed for placement.
-
-- [x] Verify current hover-only desktop access and hidden mobile access.
-- [x] Add a visible “本文目录” trigger and nonmodal panel, limit dimensions, add Escape/outside-click closing, restore focus, and refresh headings on route changes. Hide trigger when headings are absent.
-- [x] Check pointer, keyboard, mobile chapter navigation, route switching and reduced motion.
-
-### Task 4: List and navigation polish
-
-**Files:** `frontend/src/views/HomePage.vue`, `frontend/src/components/list/ArticleList.vue`, `frontend/src/components/layout/Navbar.vue`, `frontend/src/views/ArticleView.vue` if tag styles need alignment.
-
-- [x] Verify long recent title truncation and current navigation state.
-- [x] Allow recent titles to use two lines; increase date legibility; align article list and tags; indicate active top-level section and enlarge touch targets.
-- [x] Check Home, blog, knowledge, article and theme/menu interactions at mobile and desktop widths.
-
-### Task 5: Integration and review
-
-**Files:** this plan status only if progress notation is useful; no new product file by default.
-
-- [x] Run `pnpm test` and `pnpm build` from `frontend/` and inspect full output.
-- [x] Use the design skill's inspector and browser screenshots at 390, 768 and 1440 widths, interpreting its aesthetic warnings against the user's existing theme preference.
-- [x] Compare current pages with the baseline, review the final diff for unrelated edits, and report residual limitations.
-
-No commit step is included because the repository's `AGENTS.md` forbids an AI commit without a separate explicit commit instruction.
+上述能力已有实现；本次文档核对不代表重新执行了所有交互验证，也不提供通用的提交、推送或发布授权。主题遵循当前蓝色规范。
