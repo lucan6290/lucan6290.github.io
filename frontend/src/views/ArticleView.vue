@@ -17,19 +17,23 @@
           </div>
           <div class="meta">
             <span class="meta-item" tabindex="0" aria-describedby="reading-time-tip">
-              阅读约 {{ article.readingMinutes }} 分钟
+              <svg class="meta-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 2h14M5 22h14M6 2v4a6 6 0 0 0 3 5.2L12 13l3-1.8A6 6 0 0 0 18 6V2M6 22v-4a6 6 0 0 1 3-5.2L12 11l3 1.8a6 6 0 0 1 3 5.2v4" /></svg>
+              <span class="meta-label">预计阅读时长</span>{{ article.readingMinutes }} 分钟
               <span id="reading-time-tip" class="meta-tooltip" role="tooltip">预计阅读时长 ⏳</span>
             </span>
             <span class="meta-item" tabindex="0" aria-describedby="word-count-tip">
-              全文 {{ article.wordCount }} 字
+              <svg class="meta-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6M8 13h8M8 17h6" /></svg>
+              <span class="meta-label">全文</span>{{ article.wordCount }} 字
               <span id="word-count-tip" class="meta-tooltip" role="tooltip">文章字数 📝</span>
             </span>
             <span class="meta-item" tabindex="0" aria-describedby="created-time-tip">
-              创建于 <time v-if="article.frontmatter.date" :datetime="article.frontmatter.date">{{ formatDate(article.frontmatter.date) }}</time><template v-else>未记录</template>
+              <svg class="meta-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 11h18" /></svg>
+              <span class="meta-label">创建于</span><time v-if="article.frontmatter.date" :datetime="article.frontmatter.date">{{ formatDate(article.frontmatter.date) }}</time><template v-else>未记录</template>
               <span id="created-time-tip" class="meta-tooltip" role="tooltip">写作日期 📅</span>
             </span>
             <span class="meta-item" tabindex="0" aria-describedby="updated-time-tip">
-              更新于 <time v-if="article.frontmatter.updated" :datetime="article.frontmatter.updated">{{ formatDate(article.frontmatter.updated) }}</time><template v-else>未记录</template>
+              <svg class="meta-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11a9 9 0 1 1 2.6 7M3 4v7h7M12 7v5l3 2" /></svg>
+              <span class="meta-label">更新于</span><time v-if="article.frontmatter.updated" :datetime="article.frontmatter.updated">{{ formatDate(article.frontmatter.updated) }}</time><template v-else>未记录</template>
               <span id="updated-time-tip" class="meta-tooltip" role="tooltip">最新更新时间 🕒</span>
             </span>
           </div>
@@ -108,6 +112,8 @@ function formatDate(iso: string) {
 .author-details > span { color: var(--site-text-secondary); font-size: .82rem; line-height: 1.3; }
 .meta { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--site-text-secondary); font-size: 0.82rem; margin-bottom: 12px; line-height: 1.6; font-variant-numeric: tabular-nums; }
 .meta-item { position: relative; white-space: nowrap; cursor: help; }
+.meta-icon { width: 1em; height: 1em; margin-right: 5px; vertical-align: -.15em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.meta-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .meta-item:focus-visible { outline: 2px solid var(--ifm-color-primary); outline-offset: 3px; border-radius: 3px; }
 .meta-tooltip {
   position: absolute;
@@ -117,8 +123,10 @@ function formatDate(iso: string) {
   transform: translateX(-50%);
   padding: 8px 12px;
   border-radius: 3px;
-  background: #1f1f1f;
-  color: #fff;
+  background: var(--site-accent-soft);
+  color: var(--site-text);
+  border: 1px solid var(--site-border);
+  box-shadow: 0 4px 12px var(--site-shadow);
   font-size: .88rem;
   font-weight: 600;
   line-height: 1.5;
@@ -132,9 +140,12 @@ function formatDate(iso: string) {
   position: absolute;
   top: 100%;
   left: 50%;
-  transform: translateX(-50%);
-  border: 7px solid transparent;
-  border-top-color: #1f1f1f;
+  width: 10px;
+  height: 10px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  background: var(--site-accent-soft);
+  border-right: 1px solid var(--site-border);
+  border-bottom: 1px solid var(--site-border);
 }
 .meta-item:hover > .meta-tooltip,
 .meta-item:focus-visible > .meta-tooltip { visibility: visible; opacity: 1; }
