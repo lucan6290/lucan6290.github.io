@@ -1,5 +1,10 @@
 ---
-description: 统一管理 AI Agent Skills，并同步到全局和项目目录。
+title: "AgentKit"
+date: "2026-10-29T17:25:10+08:00"
+updated: "2026-10-29T17:25:10+08:00"
+description: "统一管理 AI Agent Skills，并同步到全局和项目目录。"
+tags: []
+sticky: false
 ---
 
 # AgentKit

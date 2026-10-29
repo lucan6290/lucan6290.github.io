@@ -1,12 +1,10 @@
 ---
-title: YOLO 运行时 Jetson 内存不足问题解决
-authors: lucan
-date: '2025-01-05T10:00:00+08:00'
-last_update:
-  date: '2025-01-05T10:00:00+08:00'
-  author: lucan
-description: 完整解决 Jetson 设备运行 YOLOv11 时的 PyTorch CUDA 内存分配错误，涵盖环境变量配置、Swap 优化与模型调优。
-sidebar_position: 15
+title: "YOLO 运行时 Jetson 内存不足问题解决"
+date: "2025-01-05T10:00:00+08:00"
+updated: "2026-10-29T17:25:10+08:00"
+description: "完整解决 Jetson 设备运行 YOLOv11 时的 PyTorch CUDA 内存分配错误，涵盖环境变量配置、Swap 优化与模型调优。"
+tags: []
+sticky: false
 ---
 
 ## 前言

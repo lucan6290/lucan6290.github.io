@@ -1,12 +1,10 @@
 ---
-title: AI 项目开发规范 —— Claude Code 工程化最佳实践
-authors: lucan
-date: '2026-05-22T17:30:00+08:00'
-last_update:
-  date: '2026-05-22T17:30:00+08:00'
-  author: lucan
-description: 使用 Claude Code 进行工程化开发的完整规范，包含协作模式、代码质量、项目结构、测试与部署等方面的最佳实践。
-sidebar_position: 3
+title: "AI 项目开发规范 —— Claude Code 工程化最佳实践"
+date: "2026-05-22T17:30:00+08:00"
+updated: "2026-10-29T17:25:10+08:00"
+description: "使用 Claude Code 进行工程化开发的完整规范，包含协作模式、代码质量、项目结构、测试与部署等方面的最佳实践。"
+tags: []
+sticky: false
 ---
 
 ## 前言

@@ -1,12 +1,10 @@
 ---
-title: Ollama 常用命令参考
-authors: lucan
-date: '2025-12-13T10:00:00+08:00'
-last_update:
-  date: '2025-12-13T10:00:00+08:00'
-  author: lucan
-description: Ollama 在 Jetson Orin Nano 上的完整操作命令大全，涵盖核心使用、模型管理、服务管理、网络配置与故障排查。
-sidebar_position: 12
+title: "Ollama 常用命令参考"
+date: "2025-12-13T10:00:00+08:00"
+updated: "2026-10-29T17:25:10+08:00"
+description: "Ollama 在 Jetson Orin Nano 上的完整操作命令大全，涵盖核心使用、模型管理、服务管理、网络配置与故障排查。"
+tags: []
+sticky: false
 ---
 
 ## 前言

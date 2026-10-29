@@ -1,12 +1,10 @@
 ---
-title: Miniforge 安装 —— Miniforge vs Miniconda 选择指南
-authors: lucan
-date: '2025-10-20T10:00:00+08:00'
-last_update:
-  date: '2025-10-20T10:00:00+08:00'
-  author: lucan
-description: 在 Jetson Orin NANO 上安装 Miniforge 的完整指南，对比 Miniforge 与 Miniconda 的区别，解释为何推荐 Miniforge。
-sidebar_position: 4
+title: "Miniforge 安装 —— Miniforge vs Miniconda 选择指南"
+date: "2025-10-20T10:00:00+08:00"
+updated: "2026-10-29T17:25:10+08:00"
+description: "在 Jetson Orin NANO 上安装 Miniforge 的完整指南，对比 Miniforge 与 Miniconda 的区别，解释为何推荐 Miniforge。"
+tags: []
+sticky: false
 ---
 
 ## 前言

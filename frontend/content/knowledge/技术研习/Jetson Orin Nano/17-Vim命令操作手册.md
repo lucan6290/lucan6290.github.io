@@ -1,12 +1,10 @@
 ---
-title: Vim 编辑器命令操作手册
-authors: lucan
-date: '2025-01-15T10:00:00+08:00'
-last_update:
-  date: '2025-01-15T10:00:00+08:00'
-  author: lucan
-description: Vim 编辑器完整命令速查手册，涵盖模式切换、光标移动、文本编辑、搜索替换、窗口管理等常用操作。
-sidebar_position: 17
+title: "Vim 编辑器命令操作手册"
+date: "2025-01-15T10:00:00+08:00"
+updated: "2026-10-29T17:25:10+08:00"
+description: "Vim 编辑器完整命令速查手册，涵盖模式切换、光标移动、文本编辑、搜索替换、窗口管理等常用操作。"
+tags: []
+sticky: false
 ---
 
 ## 前言

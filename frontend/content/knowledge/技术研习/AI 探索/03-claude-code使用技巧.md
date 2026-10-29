@@ -1,12 +1,10 @@
 ---
-title: Claude Code 使用技巧与最佳实践 —— 成为 Vibe Coding 高手
-authors: lucan
-date: '2026-05-22T18:00:00+08:00'
-last_update:
-  date: '2026-05-22T18:00:00+08:00'
-  author: lucan
-description: Claude Code 高级使用技巧，包括提示词工程、高效协作模式、问题排查、性能优化等，让 AI 成为你的得力搭档。
-sidebar_position: 4
+title: "Claude Code 使用技巧与最佳实践 —— 成为 Vibe Coding 高手"
+date: "2026-05-22T18:00:00+08:00"
+updated: "2026-10-29T17:25:10+08:00"
+description: "Claude Code 高级使用技巧，包括提示词工程、高效协作模式、问题排查、性能优化等，让 AI 成为你的得力搭档。"
+tags: []
+sticky: false
 ---
 
 ## 前言

@@ -1,12 +1,10 @@
 ---
-title: Agent 入门笔记 —— 从概念到实战
-authors: lucan
-date: '2026-05-20T10:00:00+08:00'
-last_update:
-  date: '2026-05-20T10:00:00+08:00'
-  author: lucan
-description: 系统学习 AI Agent 的笔记，涵盖概念、架构、核心组件和实践经验。
-sidebar_position: 1
+title: "Agent 入门笔记 —— 从概念到实战"
+date: "2026-05-20T10:00:00+08:00"
+updated: "2026-10-29T17:25:10+08:00"
+description: "系统学习 AI Agent 的笔记，涵盖概念、架构、核心组件和实践经验。"
+tags: []
+sticky: false
 ---
 
 ## 什么是 Agent？

@@ -1,12 +1,10 @@
 ---
-title: Conda 常用命令参考
-authors: lucan
-date: '2025-10-25T10:00:00+08:00'
-last_update:
-  date: '2025-10-25T10:00:00+08:00'
-  author: lucan
-description: Jetson Orin NANO 上常用的 Conda 环境管理与包管理命令速查手册。
-sidebar_position: 5
+title: "Conda 常用命令参考"
+date: "2025-10-25T10:00:00+08:00"
+updated: "2026-10-29T17:25:10+08:00"
+description: "Jetson Orin NANO 上常用的 Conda 环境管理与包管理命令速查手册。"
+tags: []
+sticky: false
 ---
 
 ## 前言

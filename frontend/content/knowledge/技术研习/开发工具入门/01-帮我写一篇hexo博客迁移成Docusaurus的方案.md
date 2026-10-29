@@ -1,12 +1,10 @@
 ---
-title: 帮我写一篇hexo博客迁移成Docusaurus的方案
-authors: lucan
-date: '2026-06-29T11:23:05+08:00'
-last_update:
-  date: '2026-06-29T11:23:05+08:00'
-  author: lucan
-description: 本文围绕“帮我写一篇hexo博客迁移成Docusaurus的方案”整理成一篇可继续编辑的博客草稿，先给出背景、目标、步骤、注意事项和总结框架，方便后续补充真实案例、代码片段与验证结果。
-sidebar_position: 2
+title: "帮我写一篇hexo博客迁移成Docusaurus的方案"
+date: "2026-06-29T11:23:05+08:00"
+updated: "2026-10-29T17:25:10+08:00"
+description: "本文围绕“帮我写一篇hexo博客迁移成Docusaurus的方案”整理成一篇可继续编辑的博客草稿，先给出背景、目标、步骤、注意事项和总结框架，方便后续补充真实案例、代码片段与验证结果。"
+tags: []
+sticky: false
 ---
 
 ## 背景与目标

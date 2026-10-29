@@ -1,12 +1,10 @@
 ---
-title: Ollama 模型选择指南（Jetson 适配）
-authors: lucan
-date: '2025-12-20T10:00:00+08:00'
-last_update:
-  date: '2025-12-20T10:00:00+08:00'
-  author: lucan
-description: 针对 Jetson Orin NANO 8GB 内存的 Ollama 模型选择指南，涵盖通用文本、代码专用、多模态等模型的详细对比与推荐。
-sidebar_position: 13
+title: "Ollama 模型选择指南（Jetson 适配）"
+date: "2025-12-20T10:00:00+08:00"
+updated: "2026-10-29T17:25:10+08:00"
+description: "针对 Jetson Orin NANO 8GB 内存的 Ollama 模型选择指南，涵盖通用文本、代码专用、多模态等模型的详细对比与推荐。"
+tags: []
+sticky: false
 ---
 
 ## 前言

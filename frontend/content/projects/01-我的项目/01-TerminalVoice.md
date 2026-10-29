@@ -1,5 +1,10 @@
 ---
-description: Windows 桌面语音工具，支持语音输入、朗读与翻译。
+title: "TerminalVoice"
+date: "2026-10-29T17:25:10+08:00"
+updated: "2026-10-29T17:25:10+08:00"
+description: "Windows 桌面语音工具，支持语音输入、朗读与翻译。"
+tags: []
+sticky: false
 ---
 
 # TerminalVoice

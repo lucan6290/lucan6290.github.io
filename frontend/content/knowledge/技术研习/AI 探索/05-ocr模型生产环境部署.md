@@ -1,12 +1,10 @@
 ---
-title: OCR 模型生产环境部署指南 —— 从零到高并发
-authors: lucan
-date: '2026-05-22T19:00:00+08:00'
-last_update:
-  date: '2026-05-22T19:00:00+08:00'
-  author: lucan
-description: PaddleOCR GPU 服务容器化部署全流程文档，涵盖环境配置、依赖冲突解决、服务封装、永久后台运行等完整流程。
-sidebar_position: 5
+title: "OCR 模型生产环境部署指南 —— 从零到高并发"
+date: "2026-05-22T19:00:00+08:00"
+updated: "2026-10-29T17:25:10+08:00"
+description: "PaddleOCR GPU 服务容器化部署全流程文档，涵盖环境配置、依赖冲突解决、服务封装、永久后台运行等完整流程。"
+tags: []
+sticky: false
 ---
 
 ## 一、基础环境信息

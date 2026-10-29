@@ -1,12 +1,10 @@
 ---
-title: Docker 常用命令参考
-authors: lucan
-date: '2025-11-25T10:00:00+08:00'
-last_update:
-  date: '2025-11-25T10:00:00+08:00'
-  author: lucan
-description: Jetson Orin NANO 上 Docker 常用命令完整参考，涵盖参数详解、网络配置、端口映射、数据持久化与重启策略。
-sidebar_position: 9
+title: "Docker 常用命令参考"
+date: "2025-11-25T10:00:00+08:00"
+updated: "2026-10-29T17:25:10+08:00"
+description: "Jetson Orin NANO 上 Docker 常用命令完整参考，涵盖参数详解、网络配置、端口映射、数据持久化与重启策略。"
+tags: []
+sticky: false
 ---
 
 ## 前言

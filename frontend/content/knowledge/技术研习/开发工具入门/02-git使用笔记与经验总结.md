@@ -1,12 +1,10 @@
 ---
-title: Git 使用笔记与经验总结
-authors: lucan
-date: '2024-10-20T10:00:00+08:00'
-last_update:
-  date: '2024-10-20T10:00:00+08:00'
-  author: lucan
-description: Git 常用操作笔记与踩坑经验总结，涵盖代码提交、分支管理、冲突解决、回退操作等实用场景。
-sidebar_position: 1
+title: "Git 使用笔记与经验总结"
+date: "2024-10-20T10:00:00+08:00"
+updated: "2026-10-29T17:25:10+08:00"
+description: "Git 常用操作笔记与踩坑经验总结，涵盖代码提交、分支管理、冲突解决、回退操作等实用场景。"
+tags: []
+sticky: false
 ---
 
 ## 一、本地代码上传远程仓库

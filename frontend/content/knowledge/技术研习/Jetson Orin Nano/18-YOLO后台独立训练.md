@@ -1,12 +1,10 @@
 ---
-title: YOLO 后台独立训练 —— nohup 与 screen
-authors: lucan
-date: '2025-12-28T10:00:00+08:00'
-last_update:
-  date: '2025-12-28T10:00:00+08:00'
-  author: lucan
-description: 在 Jetson Orin NANO 上通过 SSH 远程运行 YOLO 训练任务，使用 nohup 实现断开连接后训练继续运行。
-sidebar_position: 14
+title: "YOLO 后台独立训练 —— nohup 与 screen"
+date: "2025-12-28T10:00:00+08:00"
+updated: "2026-10-29T17:25:10+08:00"
+description: "在 Jetson Orin NANO 上通过 SSH 远程运行 YOLO 训练任务，使用 nohup 实现断开连接后训练继续运行。"
+tags: []
+sticky: false
 ---
 
 ## 前言

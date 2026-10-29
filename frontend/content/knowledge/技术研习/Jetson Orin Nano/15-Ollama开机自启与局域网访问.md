@@ -1,12 +1,10 @@
 ---
-title: Ollama 开机自启与局域网访问配置
-authors: lucan
-date: '2025-12-08T10:00:00+08:00'
-last_update:
-  date: '2025-12-08T10:00:00+08:00'
-  author: lucan
-description: 配置 Jetson Orin NANO 上的 Ollama 服务实现开机自动启动、自动预加载模型，并支持局域网持久访问。
-sidebar_position: 11
+title: "Ollama 开机自启与局域网访问配置"
+date: "2025-12-08T10:00:00+08:00"
+updated: "2026-10-29T17:25:10+08:00"
+description: "配置 Jetson Orin NANO 上的 Ollama 服务实现开机自动启动、自动预加载模型，并支持局域网持久访问。"
+tags: []
+sticky: false
 ---
 
 ## 前言

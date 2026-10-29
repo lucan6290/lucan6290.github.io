@@ -1,5 +1,10 @@
 ---
-description: 跨平台 SSH 和 SFTP 客户端，支持服务器与远程文件管理。
+title: "Hexhub"
+date: "2026-10-29T17:25:10+08:00"
+updated: "2026-10-29T17:25:10+08:00"
+description: "跨平台 SSH 和 SFTP 客户端，支持服务器与远程文件管理。"
+tags: []
+sticky: false
 ---
 
 # Hexhub

@@ -1,5 +1,10 @@
 ---
-description: 基于 loks666/get_jobs 的求职辅助工具二次开发。
+title: "get_jobs（二次开发）"
+date: "2026-10-29T17:25:10+08:00"
+updated: "2026-10-29T17:25:10+08:00"
+description: "基于 loks666/get_jobs 的求职辅助工具二次开发。"
+tags: []
+sticky: false
 ---
 
 # get_jobs（二次开发）

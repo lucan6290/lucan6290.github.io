@@ -1,5 +1,10 @@
 ---
-description: 管理多个 AI 编码代理，支持 Git worktree 并行协作。
+title: "Orca"
+date: "2026-10-29T17:25:10+08:00"
+updated: "2026-10-29T17:25:10+08:00"
+description: "管理多个 AI 编码代理，支持 Git worktree 并行协作。"
+tags: []
+sticky: false
 ---
 
 # Orca

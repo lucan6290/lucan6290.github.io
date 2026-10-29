@@ -1,12 +1,10 @@
 ---
-title: Claude Code 入门指南 —— 安装、配置与基础使用
-authors: lucan
-date: '2026-05-22T17:00:00+08:00'
-last_update:
-  date: '2026-05-22T17:00:00+08:00'
-  author: lucan
-description: Claude Code 完整入门教程，涵盖安装配置、核心功能、基础使用，开启 AI 驱动的编程新体验。
-sidebar_position: 2
+title: "Claude Code 入门指南 —— 安装、配置与基础使用"
+date: "2026-05-22T17:00:00+08:00"
+updated: "2026-10-29T17:25:10+08:00"
+description: "Claude Code 完整入门教程，涵盖安装配置、核心功能、基础使用，开启 AI 驱动的编程新体验。"
+tags: []
+sticky: false
 ---
 
 ## 前言

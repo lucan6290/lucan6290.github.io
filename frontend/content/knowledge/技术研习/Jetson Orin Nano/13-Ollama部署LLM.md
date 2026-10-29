@@ -1,12 +1,10 @@
 ---
-title: Ollama 部署 LLM —— 开放局域网访问
-authors: lucan
-date: '2025-12-03T10:00:00+08:00'
-last_update:
-  date: '2025-12-03T10:00:00+08:00'
-  author: lucan
-description: 在 Jetson Orin NANO 上安装 Ollama 并部署大语言模型，配置局域网访问，使用 LangChain 调用，以及部署 Open WebUI。
-sidebar_position: 10
+title: "Ollama 部署 LLM —— 开放局域网访问"
+date: "2025-12-03T10:00:00+08:00"
+updated: "2026-10-29T17:25:10+08:00"
+description: "在 Jetson Orin NANO 上安装 Ollama 并部署大语言模型，配置局域网访问，使用 LangChain 调用，以及部署 Open WebUI。"
+tags: []
+sticky: false
 ---
 
 ## 前言
