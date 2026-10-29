@@ -112,3 +112,92 @@ test('文章字数统计排除 Markdown 标记、图片和代码块', (t) => {
   const result = build({ contentDir: path.join(root, 'content'), outDir: path.join(root, 'generated') });
   assert.equal(result.articles['/blog/统计'].wordCount, 21);
 });
+
+test('阅读时长按每分钟 300 字向上取整，空文和短文至少 1 分钟', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'notes-reading-time-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const contentDir = path.join(root, 'content');
+  fs.mkdirSync(path.join(contentDir, 'blog'), { recursive: true });
+  for (const count of [0, 1, 300, 301, 2164]) {
+    fs.writeFileSync(path.join(contentDir, 'blog', `${count}.md`), '字'.repeat(count));
+  }
+  const { articles } = build({ contentDir, outDir: path.join(root, 'generated') });
+  for (const [count, minutes] of [[0, 1], [1, 1], [300, 1], [301, 2], [2164, 8]]) {
+    assert.equal(articles[`/blog/${count}`].wordCount, count);
+    assert.equal(articles[`/blog/${count}`].readingMinutes, minutes);
+  }
+});
+
+test('字数和阅读时长不计入波浪号、长反引号围栏和 HTML 注释', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'notes-reading-code-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const contentDir = path.join(root, 'content');
+  fs.mkdirSync(path.join(contentDir, 'knowledge'), { recursive: true });
+  const hidden = '不计入统计'.repeat(100);
+  fs.writeFileSync(path.join(contentDir, 'knowledge', '围栏.md'), [
+    '正文 Vue 3', '~~~js', hidden, '~~~', '````md', '```', hidden, '```', '````', `<!-- ${hidden} -->`,
+  ].join('\n'));
+  const article = build({ contentDir, outDir: path.join(root, 'generated') }).articles['/knowledge/围栏'];
+  assert.equal(article.wordCount, 4);
+  assert.equal(article.readingMinutes, 1);
+});
+
+for (const [name, body, wordCount, readingMinutes] of [
+  ['代码中的注释起始符不会吞掉后续正文', ['```html', '<!--', '```', '字'.repeat(301)].join('\n'), 301, 2],
+  ['引用内的围栏代码不计入字数', ['> ```js', '> ' + '字'.repeat(301), '> ```', '', '正文'].join('\n'), 2, 1],
+  ['注释内的围栏不会隐藏注释后的正文', ['<!--', '```', '隐藏内容', '-->', '', '字'.repeat(301)].join('\n'), 301, 2],
+]) test(name, (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'notes-markdown-stats-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const contentDir = path.join(root, 'content');
+  fs.mkdirSync(path.join(contentDir, 'blog'), { recursive: true });
+  fs.writeFileSync(path.join(contentDir, 'blog', '统计.md'), body);
+  const article = build({ contentDir, outDir: path.join(root, 'generated') }).articles['/blog/统计'];
+  assert.equal(article.wordCount, wordCount);
+  assert.equal(article.readingMinutes, readingMinutes);
+});
+
+test('日期仅来自 YAML，缺失或无效日期不回退为文件时间', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'notes-article-dates-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const contentDir = path.join(root, 'content');
+  fs.mkdirSync(path.join(contentDir, 'projects'), { recursive: true });
+  const cases = [
+    ['未填写', '', '', ''],
+    ['无效', 'date: "不是日期"\nupdated: "未知"', '', ''],
+    ['仅创建', 'date: "2026-10-01T09:00:00+08:00"', '2026-10-01T09:00:00+08:00', ''],
+    ['仅更新', 'updated: "2026-10-02T11:30:00+08:00"', '', '2026-10-02T11:30:00+08:00'],
+    ['相同', 'date: "2026-10-01T09:00:00+08:00"\nupdated: "2026-10-01T09:00:00+08:00"', '2026-10-01T09:00:00+08:00', '2026-10-01T09:00:00+08:00'],
+    ['同日更新', 'date: "2026-10-01T09:00:00+08:00"\nupdated: "2026-10-01T11:30:00+08:00"', '2026-10-01T09:00:00+08:00', '2026-10-01T11:30:00+08:00'],
+    ['YAML日期', 'date: 2026-10-01T09:00:00+08:00\nupdated: 2026-10-02T11:30:00+08:00', '2026-10-01T01:00:00.000Z', '2026-10-02T03:30:00.000Z'],
+  ];
+  for (const [name, yaml] of cases) {
+    const file = path.join(contentDir, 'projects', `${name}.md`);
+    fs.writeFileSync(file, `---\n${yaml}\n---\n# ${name}\n正文`);
+    fs.utimesSync(file, new Date('2030-01-01T00:00:00Z'), new Date('2030-01-01T00:00:00Z'));
+  }
+  const result = build({ contentDir, outDir: path.join(root, 'generated') });
+  for (const [name, , date, updated] of cases) {
+    assert.equal(result.articles[`/projects/${name}`].frontmatter.date, date, name);
+    assert.equal(result.articles[`/projects/${name}`].frontmatter.updated, updated, name);
+  }
+  assert.deepEqual(Object.keys(result.archive), ['2026']);
+  assert.equal(Object.values(result.archive['2026']).flat().length, 4);
+});
+
+test('最近文章按真实更新时间排序，无日期文章排在末尾', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'notes-recent-dates-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const contentDir = path.join(root, 'content');
+  fs.mkdirSync(path.join(contentDir, 'blog'), { recursive: true });
+  for (const [name, yaml] of [
+    ['a-未填写', ''],
+    ['b-较早', 'date: "2026-10-01T10:00:00+08:00"'],
+    ['c-较晚', 'date: "2026-10-02T10:00:00+08:00"'],
+    ['d-更新', 'date: "2026-09-01T10:00:00+08:00"\nupdated: "2026-10-03T10:00:00+08:00"'],
+  ]) {
+    fs.writeFileSync(path.join(contentDir, 'blog', `${name}.md`), `---\n${yaml}\n---\n正文`);
+  }
+  const { recent } = build({ contentDir, outDir: path.join(root, 'generated') });
+  assert.deepEqual(recent, ['/blog/d-更新', '/blog/c-较晚', '/blog/b-较早', '/blog/a-未填写']);
+});

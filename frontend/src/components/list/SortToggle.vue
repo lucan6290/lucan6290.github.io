@@ -1,6 +1,6 @@
 <template>
   <button class="sort-toggle" type="button" @click="$emit('toggle')">
-    排序：{{ mode === 'prefix' ? '目录顺序' : '发布日期' }}
+    排序：{{ mode === 'prefix' ? '目录顺序' : '创建时间' }}
   </button>
 </template>
 

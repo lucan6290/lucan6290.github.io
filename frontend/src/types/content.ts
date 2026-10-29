@@ -16,6 +16,7 @@ export type ArticleMeta = {
   mtimeMs: number;
   excerpt: string;
   wordCount: number;
+  readingMinutes: number;
   /** MD 原文（不含 frontmatter），构建期写入 manifest */
   rawContent: string;
 };

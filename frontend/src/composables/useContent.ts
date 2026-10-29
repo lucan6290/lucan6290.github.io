@@ -49,8 +49,8 @@ export function useContent() {
         if (b.sortKey) return 1;
         return a.frontmatter.title.localeCompare(b.frontmatter.title);
       }
-      const da = new Date(a.frontmatter.date).getTime();
-      const db = new Date(b.frontmatter.date).getTime();
+      const da = Date.parse(a.frontmatter.date) || 0;
+      const db = Date.parse(b.frontmatter.date) || 0;
       return db - da;
     });
     return [...sticky, ...rest];

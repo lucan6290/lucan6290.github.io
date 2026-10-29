@@ -14,11 +14,24 @@
               <strong>小灿同学啊</strong>
               <span>作者</span>
             </div>
-            <span class="word-count">全文 {{ article.wordCount }} 字</span>
           </div>
           <div class="meta">
-            <time v-if="article.frontmatter.date" :datetime="article.frontmatter.date">发布于 {{ formatDate(article.frontmatter.date) }}</time>
-            <time v-if="article.frontmatter.updated && article.frontmatter.updated !== article.frontmatter.date" :datetime="article.frontmatter.updated">· 更新于 {{ formatDate(article.frontmatter.updated) }}</time>
+            <span class="meta-item" tabindex="0" aria-describedby="reading-time-tip">
+              阅读约 {{ article.readingMinutes }} 分钟
+              <span id="reading-time-tip" class="meta-tooltip" role="tooltip">预计阅读时长 ⏳</span>
+            </span>
+            <span class="meta-item" tabindex="0" aria-describedby="word-count-tip">
+              全文 {{ article.wordCount }} 字
+              <span id="word-count-tip" class="meta-tooltip" role="tooltip">文章字数 📝</span>
+            </span>
+            <span class="meta-item" tabindex="0" aria-describedby="created-time-tip">
+              创建于 <time v-if="article.frontmatter.date" :datetime="article.frontmatter.date">{{ formatDate(article.frontmatter.date) }}</time><template v-else>未记录</template>
+              <span id="created-time-tip" class="meta-tooltip" role="tooltip">写作日期 📅</span>
+            </span>
+            <span class="meta-item" tabindex="0" aria-describedby="updated-time-tip">
+              更新于 <time v-if="article.frontmatter.updated" :datetime="article.frontmatter.updated">{{ formatDate(article.frontmatter.updated) }}</time><template v-else>未记录</template>
+              <span id="updated-time-tip" class="meta-tooltip" role="tooltip">最新更新时间 🕒</span>
+            </span>
           </div>
           <div v-if="article.frontmatter.tags?.length" class="tags">
             <router-link v-for="tag in article.frontmatter.tags" :key="tag" :to="`/tags/${encodeURIComponent(tag)}`">{{ tag }}</router-link>
@@ -67,7 +80,7 @@ watchEffect(() => {
 function formatDate(iso: string) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Shanghai' })
+  return new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Shanghai' })
     .format(d)
     .replace(/\//g, '.');
 }
@@ -93,8 +106,38 @@ function formatDate(iso: string) {
 .author-details { display: flex; flex-direction: column; gap: 1px; }
 .author-details strong { color: var(--site-text); font-size: .88rem; font-weight: 700; line-height: 1.4; }
 .author-details > span { color: var(--site-text-secondary); font-size: .82rem; line-height: 1.3; }
-.word-count { margin-left: auto; color: var(--site-text-secondary); font-size: .82rem; white-space: nowrap; }
-.meta { display: flex; flex-wrap: wrap; gap: 4px 10px; color: var(--site-text-secondary); font-size: 0.82rem; margin-bottom: 12px; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--site-text-secondary); font-size: 0.82rem; margin-bottom: 12px; line-height: 1.6; font-variant-numeric: tabular-nums; }
+.meta-item { position: relative; white-space: nowrap; cursor: help; }
+.meta-item:focus-visible { outline: 2px solid var(--ifm-color-primary); outline-offset: 3px; border-radius: 3px; }
+.meta-tooltip {
+  position: absolute;
+  z-index: 10;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 12px;
+  border-radius: 3px;
+  background: #1f1f1f;
+  color: #fff;
+  font-size: .88rem;
+  font-weight: 600;
+  line-height: 1.5;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms;
+}
+.meta-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 7px solid transparent;
+  border-top-color: #1f1f1f;
+}
+.meta-item:hover > .meta-tooltip,
+.meta-item:focus-visible > .meta-tooltip { visibility: visible; opacity: 1; }
 .tags { display: flex; flex-wrap: wrap; gap: 8px; }
 .tags a {
   border: 1px solid transparent;
@@ -111,6 +154,7 @@ function formatDate(iso: string) {
   .article-layout { display: block; }
   .article-main { padding: 28px 20px 72px; }
   .article-header h1 { font-size: clamp(1.65rem, 7vw, 1.95rem); }
-  .word-count { font-size: .82rem; }
+  .meta-tooltip { left: 0; transform: none; }
+  .meta-tooltip::after { left: 24px; }
 }
 </style>

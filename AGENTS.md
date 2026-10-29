@@ -44,7 +44,7 @@
 | --- | --- |
 | 运行服务 | 下方「本地开发规范」 |
 | **新前端开发** | `frontend/README.md` → `frontend/src/` |
-| **新前端内容写作** | `frontend/content/`（零配置，目录即导航） |
+| **新前端内容写作** | 先读 `docs/SITE_CONTENT_GUIDE.md`（统一 YAML 六字段与时间语义）→ `frontend/content/`（零配置，目录即导航） |
 | 后端开发 | 后端模块 `AGENTS.md` → `admin/lc-docs/BACKEND_CONVENTION.md` |
 | 管理前端开发 | 前端模块 `AGENTS.md` → `admin/lc-docs/FRONTEND_CONVENTION.md` |
 | 旧站点开发 | 站点模块 `AGENTS.md` → `site/lc-docs/FRONTEND_CONVENTION.md` |
@@ -58,6 +58,8 @@
 ## Required Documentation（开发前必须产出的文档）
 
 涉及多阶段/跨层改动时，按需产出：需求 → 方案（前后端）→ 契约 → 评审。单文件小改动可跳过。
+
+新建 `frontend/content/` 下的普通 Markdown 文章时，必须按 `docs/SITE_CONTENT_GUIDE.md` 使用固定顺序的 `title`、`date`、`updated`、`description`、`tags`、`sticky` 六字段 YAML。`date` 为首次开始写作时间，创建后不变；修改正文或元信息时更新 `updated`。新建时两个时间相同，使用真实的 `YYYY-MM-DDTHH:mm:ss+08:00` 时间字符串。目录介绍 README、工程说明和设计文档不要求套用文章模板。
 
 ## Contract Requirement（契约要求）
 
@@ -77,6 +79,7 @@
 ## Documentation Index
 
 - **新前端文档**：`frontend/README.md`
+- **新前端内容写作规范**：`docs/SITE_CONTENT_GUIDE.md`（新文章必读，包含统一 YAML 模板）
 - 管理端工程治理文档：`admin/lc-docs/DOCUMENTATION_INDEX.md`
 - 旧站点工程治理文档：`site/lc-docs/DOCUMENTATION_INDEX.md`
 - 管理端设计/接口文档：`admin/docs/`

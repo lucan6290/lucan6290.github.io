@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import matter from 'gray-matter';
+import { getProcessor } from 'bytemd';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -17,6 +18,7 @@ const MD_EXT = /\.(md|mdx)$/i;
 const NUMERIC_PREFIX = /^(\d+)[-_]/;
 const EXCERPT_MAX = 180;
 const RESOURCE_DIR = /^(?:images|assets|.*-imgs)$/i;
+const markdownProcessor = getProcessor({});
 
 function firstHeading(content) {
   const withoutCode = content.replace(/^ {0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?^ {0,3}\1[^\n]*$/gm, '');
@@ -47,17 +49,22 @@ function excerptFromContent(content) {
 }
 
 function countWords(content) {
-  const text = content
-    .replace(/```[\s\S]*?```/g, ' ')
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/^ {0,3}(?:#{1,6}\s+|[-*+]\s+|\d+[.)]\s+|>\s?)/gm, ' ')
-    .replace(/[*_~]/g, ' ');
+  const nodes = [markdownProcessor.parse(content)];
+  const parts = [];
+  while (nodes.length) {
+    const node = nodes.pop();
+    if (node.type === 'text' || node.type === 'inlineCode') parts.push(node.value);
+    else if (node.children) nodes.push(...node.children);
+  }
+  const text = parts.join(' ');
   const chineseCharacters = text.match(/\p{Script=Han}/gu)?.length ?? 0;
   const latinWords = text.match(/[A-Za-z0-9]+(?:[.'’-][A-Za-z0-9]+)*/g)?.length ?? 0;
   return chineseCharacters + latinWords;
+}
+
+function articleDate(value) {
+  const date = value instanceof Date ? value.toISOString() : typeof value === 'string' ? value.trim() : '';
+  return Number.isFinite(Date.parse(date)) ? date : '';
 }
 
 function walkTree(dir, relativeRoot) {
@@ -98,14 +105,15 @@ function walkTree(dir, relativeRoot) {
       const stat = fs.statSync(fullPath);
       const slug = path.basename(entry.name, path.extname(entry.name));
       const rawBody = parsed.content;
+      const wordCount = countWords(rawBody);
       const article = {
         slug,
         path: urlPath,
         relativePath: rel,
         frontmatter: {
           title: fm.title || firstHeading(rawBody) || stripPrefix(slug),
-          date: fm.date ? String(fm.date) : stat.birthtime.toISOString(),
-          updated: fm.updated ? String(fm.updated) : stat.mtime.toISOString(),
+          date: articleDate(fm.date),
+          updated: articleDate(fm.updated),
           tags: Array.isArray(fm.tags) ? fm.tags.map(String) : [],
           description: fm.description || '',
           sticky: Boolean(fm.sticky),
@@ -114,7 +122,8 @@ function walkTree(dir, relativeRoot) {
         mtimeMs: stat.mtimeMs,
         excerpt: fm.description || excerptFromContent(rawBody),
         rawContent: rawBody,
-        wordCount: countWords(rawBody),
+        wordCount,
+        readingMinutes: Math.max(1, Math.ceil(wordCount / 300)),
       };
       nodes.push({
         name: entry.name,
@@ -160,6 +169,7 @@ function buildPrevNext(articles) {
       if (a.sortKey && b.sortKey) return a.sortKey.localeCompare(b.sortKey);
       if (a.sortKey) return -1;
       if (b.sortKey) return 1;
+      if (!a.frontmatter.date || !b.frontmatter.date) return Number(Boolean(b.frontmatter.date)) - Number(Boolean(a.frontmatter.date));
       return new Date(a.frontmatter.date).getTime() - new Date(b.frontmatter.date).getTime();
     });
     for (let i = 0; i < list.length; i++) {
@@ -210,8 +220,8 @@ function buildArchive(articles) {
 function buildRecent(articles, limit = 10) {
   return Object.values(articles)
     .sort((a, b) => {
-      const ua = new Date(a.frontmatter.updated || a.frontmatter.date).getTime();
-      const ub = new Date(b.frontmatter.updated || b.frontmatter.date).getTime();
+      const ua = Date.parse(a.frontmatter.updated || a.frontmatter.date) || 0;
+      const ub = Date.parse(b.frontmatter.updated || b.frontmatter.date) || 0;
       return ub - ua;
     })
     .slice(0, limit)

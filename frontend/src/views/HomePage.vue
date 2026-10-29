@@ -60,7 +60,7 @@ import { useContent } from '@/composables/useContent';
 const { manifest } = useContent();
 const recent = computed(() => Object.values(manifest.value.articles)
   .filter((article) => article.path.startsWith('/blog/'))
-  .sort((a, b) => new Date(b.frontmatter.date).getTime() - new Date(a.frontmatter.date).getTime())
+  .sort((a, b) => (Date.parse(b.frontmatter.date) || 0) - (Date.parse(a.frontmatter.date) || 0))
   .slice(0, 4));
 
 const entries = [
