@@ -249,6 +249,82 @@ class GitWorkspaceTests(unittest.TestCase):
                 self.assert_error("git_upstream_required", lambda: self.workspace.preview(action))
         self.assertEqual(self.git("rev-parse", "local-backup"), backup)
 
+    def test_remote_operations_reject_symbolic_tracking_ref_to_local_branch(self):
+        head = self.initial()
+        _, peer = self.remote()
+        self.git("branch", "local-backup")
+        self.peer_commit(peer)
+        self.git("symbolic-ref", "refs/remotes/origin/main", "refs/heads/local-backup")
+        for action in ("update", "push"):
+            with self.subTest(action=action):
+                self.assert_error("git_upstream_required", lambda: self.workspace.preview(action))
+        self.assertEqual(self.git("rev-parse", "local-backup"), head)
+
+    def test_push_cannot_be_redirected_after_confirming_effective_url(self):
+        previous = self.initial()
+        original, _ = self.remote()
+        substitute = self.directory / "substitute.git"
+        self.git("clone", "--bare", "-q", str(original), str(substitute))
+        self.write("edit.txt", "push destination")
+        self.git("commit", "-qam", "feat: 更新推送测试")
+        head = self.git("rev-parse", "HEAD")
+        preview = self.workspace.preview("push")
+        check_direction = self.workspace._check_direction
+
+        def change_remote_after_validation(*args, **kwargs):
+            check_direction(*args, **kwargs)
+            self.git("remote", "set-url", "origin", str(substitute))
+            self.git("config", f"url.{substitute.as_posix()}.insteadOf", str(original))
+            self.git("config", f"url.{substitute.as_posix()}.pushInsteadOf", str(original))
+
+        with patch.object(self.workspace, "_check_direction", side_effect=change_remote_after_validation):
+            self.workspace.execute(preview["token"])
+        self.assertEqual(self.git("rev-parse", "HEAD", root=original), head)
+        self.assertEqual(self.git("rev-parse", "HEAD", root=substitute), previous)
+        self.assertEqual(self.git("rev-parse", "refs/remotes/origin/main"), previous)
+
+    def test_push_lease_rejects_remote_change_between_validation_and_transport(self):
+        self.initial()
+        bare, _ = self.remote()
+        self.write("edit.txt", "intermediate")
+        self.git("commit", "-qam", "feat: 中间版本")
+        intermediate = self.git("rev-parse", "HEAD")
+        self.write("edit.txt", "reviewed")
+        self.git("commit", "-qam", "feat: 待推送版本")
+        preview = self.workspace.preview("push")
+        check_direction = self.workspace._check_direction
+
+        def advance_remote_after_validation(*args, **kwargs):
+            check_direction(*args, **kwargs)
+            self.git("fetch", "-q", "--no-tags", str(self.root),
+                     f"{intermediate}:refs/heads/main", root=bare)
+
+        with patch.object(self.workspace, "_check_direction", side_effect=advance_remote_after_validation):
+            self.assert_error("git_command_failed", lambda: self.workspace.execute(preview["token"]))
+        self.assertEqual(self.git("rev-parse", "HEAD", root=bare), intermediate)
+
+    def test_external_switch_cannot_change_checkout_during_fast_forward(self):
+        head = self.initial()
+        _, peer = self.remote()
+        target = self.peer_commit(peer)
+        self.git("branch", "local-backup")
+        preview = self.workspace.preview("update")
+        git = self.workspace._git
+        observed = []
+
+        def switch_at_checkout(*args, **kwargs):
+            if "merge" in args or ("read-tree" in args and "-u" in args):
+                self.git("switch", "-q", "local-backup", check=False)
+                observed.append(self.git("branch", "--show-current"))
+            return git(*args, **kwargs)
+
+        with patch.object(self.workspace, "_git", side_effect=switch_at_checkout):
+            self.workspace.execute(preview["token"])
+        self.assertEqual(observed, ["main"])
+        self.assertEqual(self.git("rev-parse", "local-backup"), head)
+        self.assertEqual(self.git("rev-parse", "HEAD"), target)
+        self.assertEqual((self.root / "remote.txt").read_text(), "peer")
+
     def test_publish_is_a_separate_confirmed_single_use_action(self):
         head = self.initial()
         self.remote()
