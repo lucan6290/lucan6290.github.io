@@ -47,3 +47,13 @@ test('拒绝输出到构建目录之外的页面路径', (t) => {
     tree: [{ name: 'bad', path: '/../outside', children: [] }], tags: {},
   } }), /构建目录/);
 });
+
+test('标签仍可作为内容元数据，不能作为可移植文件名的标签使用 Vue 回退', (t) => {
+  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pages-tag-segments-'));
+  t.after(() => fs.rmSync(outDir, { recursive: true, force: true }));
+  fs.writeFileSync(path.join(outDir, 'index.html'), '<html></html>');
+  const tags = Object.fromEntries(['../..', 'CI/CD', 'what?', 'CON', 'index.html', 'x'.repeat(256), 'C++ 入门'].map(tag => [tag, ['/blog/test']]));
+  writeStaticPages({ outDir, manifest: { tree: [], tags } });
+  assert.deepEqual(fs.readdirSync(path.join(outDir, 'tags')).sort(), ['C++ 入门', 'index.html'].sort());
+  assert.ok(fs.existsSync(path.join(outDir, '404.html')));
+});

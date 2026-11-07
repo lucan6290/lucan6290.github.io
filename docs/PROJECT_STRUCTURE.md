@@ -1,6 +1,6 @@
 # 工程目录与实现入口
 
-> 更新日期：2026-10-29。本文只描述当前前端及工程文档；按职责定位，不复制源码。
+> 更新日期：2026-11-07。本文描述当前前端、可选互动服务及工程文档。
 
 ## 当前维护目录
 
@@ -26,7 +26,9 @@ xiaocancoding/
 │   ├── public/                      # 站点公共静态资源
 │   ├── scripts/build-content.mjs     # 内容生成命令
 │   ├── scripts/lib/                 # 生成逻辑、类型与测试
+│   ├── service/                     # 可选互动和在线写作 API
 │   ├── src/
+│   │   ├── api/
 │   │   ├── components/
 │   │   ├── composables/
 │   │   ├── config/
@@ -48,6 +50,8 @@ xiaocancoding/
 | 路由分发 | `frontend/src/router/index.ts`、`frontend/src/views/ContentRoute.vue` |
 | 分类首页与列表 | `frontend/src/views/CategoryView.vue` |
 | 独立文章 | `frontend/src/views/ArticleView.vue` |
+| 文章互动 | `frontend/src/components/article/PublicArticleTools.vue`、`frontend/src/api/publicService.ts` |
+| 在线写作与评论审核 | `frontend/src/views/PublicAdminView.vue`、`frontend/service/` |
 | 首页与关于 | `frontend/src/views/HomePage.vue`、`frontend/src/views/AboutPage.vue` |
 | 内容清单访问 | `frontend/src/composables/useContent.ts` |
 | URL 编码、相对路径和侧栏范围 | `frontend/src/composables/contentPaths.ts` |

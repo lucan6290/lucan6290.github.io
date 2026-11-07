@@ -9,7 +9,8 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import type { BytemdPlugin } from 'bytemd';
-import { contentPath, resolveContentUrl, stripBasePath } from '@/composables/contentPaths';
+import { contentPath, stripBasePath } from '@/composables/contentPaths';
+import { headingAnchor, resolvePublicMarkdownLink } from '@/utils/publicPaths';
 import { useContent } from '@/composables/useContent';
 import { transformDocusaurusAdmonitions } from '@/utils/markdownAdmonitions.js';
 import { Viewer } from '@bytemd/vue-next';
@@ -28,7 +29,7 @@ const router = useRouter();
 const { findNodeByPath, getArticle } = useContent();
 
 const resourceModules = import.meta.glob<string>('/content/**/*.{png,PNG,jpg,JPG,jpeg,JPEG,gif,GIF,svg,SVG,webp,WEBP,avif,AVIF,bmp,BMP,ico,ICO,pdf,PDF}', {
-  query: '?url', import: 'default', eager: true,
+  query: '?url&no-inline', import: 'default', eager: true,
 });
 const resources = Object.fromEntries(Object.entries(resourceModules).map(([key, url]) => [key.slice('/content/'.length), url]));
 const renderableContent = computed(() => transformDocusaurusAdmonitions(props.content));
@@ -43,7 +44,7 @@ const contentLinks = computed<BytemdPlugin>(() => ({
     }
     const visit = (node: MarkdownNode) => {
       if (node.url && ['image', 'link', 'definition'].includes(node.type)) {
-        node.url = resolveContentUrl(node.url, props.relativePath, resources, import.meta.env.BASE_URL);
+        node.url = resolvePublicMarkdownLink(node.url, props.relativePath, resources, import.meta.env.BASE_URL);
       }
       node.children?.forEach(visit);
     };
@@ -73,12 +74,7 @@ const contentLinks = computed<BytemdPlugin>(() => ({
         if (spacing) heading.insertBefore(document.createTextNode(spacing), textNode);
       }
 
-      const base = (heading.textContent || '').trim().toLowerCase().replace(/[^\p{L}\p{N}\p{M}\s_-]/gu, '').replace(/\s/g, '-') || 'section';
-      let id = base;
-      let index = 1;
-      while (used.has(id)) id = `${base}-${index++}`;
-      used.add(id);
-      heading.id = id;
+      heading.id = headingAnchor(heading.textContent || '', used);
     });
     const frame = requestAnimationFrame(() => {
       if (!location.hash) return;
@@ -99,7 +95,7 @@ function navigate(event: MouseEvent) {
   if (!anchor || anchor.target || anchor.hasAttribute('download')) return;
   const url = new URL(anchor.href);
   if (url.origin !== location.origin) return;
-  const pathname = stripBasePath(url.pathname, import.meta.env.BASE_URL);
+  const pathname = stripBasePath(url.pathname, router.options.history.base);
   if (pathname === null) return;
   const target = router.resolve(pathname + url.search + url.hash);
   if (target.name !== 'content') return;

@@ -17,7 +17,7 @@ export class ContentApiError extends Error {
   }
 }
 
-async function request<T>(path: string, method = 'GET', data?: unknown): Promise<T> {
+export async function request<T>(path: string, method = 'GET', data?: unknown, timeout = 15000): Promise<T> {
   const response = await fetch(`${connection.base_url}${path}`, {
     method,
     headers: {
@@ -25,7 +25,7 @@ async function request<T>(path: string, method = 'GET', data?: unknown): Promise
       ...(connection.token && path !== '/health' ? { Authorization: `Bearer ${connection.token}` } : {})
     },
     ...(data === undefined ? {} : { body: JSON.stringify(data) }),
-    signal: AbortSignal.timeout(15000)
+    signal: AbortSignal.timeout(timeout)
   })
   const result = await response.json()
   if (!response.ok) throw new ContentApiError(response.status, result.code || 'HTTP_ERROR', result.message || `请求失败 (${response.status})`, result.details)

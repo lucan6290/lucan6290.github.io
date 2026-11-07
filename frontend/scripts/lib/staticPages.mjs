@@ -14,7 +14,13 @@ export function writeStaticPages({ outDir, manifest }) {
   const hasSection = (name) => manifest.tree.some(node => !node.article && node.name === name);
   if (!hasSection('tags')) {
     routes.add('/tags');
-    for (const tag of Object.keys(manifest.tags)) routes.add('/tags/' + tag);
+    for (const tag of Object.keys(manifest.tags)) {
+      // Keep labels that cannot share the filesystem namespace accessible through Vue Router.
+      if (!tag || Buffer.byteLength(tag) > 255 || tag.toLowerCase() === 'index.html'
+        || /[<>:"\/\\|?*\x00-\x1f]|[. ]$/.test(tag)
+        || /^(?:CON|PRN|AUX|NUL|COM[1-9¹²³]|LPT[1-9¹²³])(?:\.|$)/i.test(tag)) continue;
+      routes.add('/tags/' + tag);
+    }
   }
   if (!hasSection('archive')) routes.add('/archive');
 

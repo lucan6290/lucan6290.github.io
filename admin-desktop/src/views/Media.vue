@@ -1,159 +1,145 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { api } from '@/api'
-import { useAppStore } from '@/stores/app'
-import { formatFileSize, formatDate } from '@/utils/postDisplay'
-import type { ImageFolderInfo, ImageInfo } from '@/types/api'
+import { onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { contentApi } from '@/api/content'
+import { mediaApi, type ArticleImage, type MediaDeletePlan } from '@/api/media'
+import MediaThumbnail from '@/components/MediaThumbnail.vue'
+import type { DocumentSummary } from '@/types/content'
 
-const appStore = useAppStore()
+const route = useRoute()
+const articles = ref<DocumentSummary[]>([])
+const article = ref('')
+const images = ref<ArticleImage[]>([])
+const selected = ref<ArticleImage | null>(null)
+const plan = ref<MediaDeletePlan | null>(null)
+const error = ref('')
+const notice = ref('')
+const loading = ref(false)
+const changing = ref(false)
 
-const loading = ref(true)
-const folders = ref<ImageFolderInfo[]>([])
-const selectedFolder = ref<ImageFolderInfo | null>(null)
-const images = ref<ImageInfo[]>([])
-const uploading = ref(false)
+function failure(cause: unknown) {
+  return cause instanceof Error ? cause.message : '媒体库请求失败'
+}
 
-async function loadFolders() {
+async function refresh(path = article.value) {
+  selected.value = null
+  plan.value = null
+  images.value = []
+  error.value = ''
+  if (!path) return
   loading.value = true
   try {
-    folders.value = await api.getImageFolders()
-    if (folders.value.length > 0 && !selectedFolder.value) {
-      selectFolder(folders.value[0])
-    }
-  } catch {
-    appStore.showToast('加载图片列表失败', 'error')
+    const result = await mediaApi.list(path)
+    if (article.value === path) images.value = result.images
+  } catch (cause) {
+    if (article.value === path) error.value = failure(cause)
   } finally {
-    loading.value = false
+    if (article.value === path) loading.value = false
   }
 }
 
-function selectFolder(folder: ImageFolderInfo) {
-  selectedFolder.value = folder
-  images.value = folder.images
-}
-
-async function handleUpload(event: Event) {
-  const input = event.target as HTMLInputElement
-  if (!input.files || !input.files.length || !selectedFolder.value) return
-  uploading.value = true
+watch(article, path => { void refresh(path) })
+onMounted(async () => {
   try {
-    for (const file of Array.from(input.files)) {
-      const buffer = await file.arrayBuffer()
-      await api.uploadImage(selectedFolder.value.articlePath, buffer, file.name)
-    }
-    appStore.showToast('图片上传成功', 'success')
-    await loadFolders()
-    // 重新选中当前文件夹
-    if (selectedFolder.value) {
-      const updated = folders.value.find(f => f.articlePath === selectedFolder.value?.articlePath)
-      if (updated) selectFolder(updated)
-    }
-  } catch {
-    appStore.showToast('图片上传失败', 'error')
-  } finally {
-    uploading.value = false
-    input.value = ''
-  }
-}
+    articles.value = (await contentApi.list()).documents
+    const current = route.query.document
+    if (typeof current === 'string' && articles.value.some(item => item.relative_path === current)) article.value = current
+  } catch (cause) { error.value = failure(cause) }
+})
 
-async function handleDeleteImage(img: ImageInfo) {
-  if (!confirm(`确定要删除图片「${img.name}」吗？`)) return
+async function copy(image: ArticleImage) {
   try {
-    await api.deleteImage(img.path)
-    appStore.showToast('图片已删除', 'success')
-    await loadFolders()
-    if (selectedFolder.value) {
-      const updated = folders.value.find(f => f.articlePath === selectedFolder.value?.articlePath)
-      if (updated) selectFolder(updated)
-    }
-  } catch {
-    appStore.showToast('删除失败', 'error')
-  }
+    await navigator.clipboard.writeText(image.markdown)
+    notice.value = '已复制 Markdown 引用，可粘贴到该文档。'
+  } catch { error.value = '复制失败，请手动选中并复制引用。' }
 }
 
-function copyMarkdown(img: ImageInfo) {
-  if (img.markdown) {
-    navigator.clipboard.writeText(img.markdown)
-    appStore.showToast('Markdown 已复制', 'success')
-  }
+async function previewDelete(image: ArticleImage) {
+  plan.value = null
+  changing.value = true
+  error.value = ''
+  notice.value = ''
+  try { plan.value = await mediaApi.deletePlan(image.relative_path) }
+  catch (cause) { error.value = failure(cause) }
+  finally { changing.value = false }
 }
 
-onMounted(loadFolders)
+async function remove() {
+  if (!plan.value) return
+  changing.value = true
+  error.value = ''
+  try {
+    await mediaApi.remove(plan.value)
+    await refresh()
+    notice.value = '图片已删除。'
+  } catch (cause) {
+    plan.value = null
+    error.value = failure(cause)
+  } finally { changing.value = false }
+}
 </script>
 
 <template>
   <div>
-    <div class="main-header">
-      <div class="main-header-title">媒体库</div>
+    <header class="main-header">
+      <h1 class="main-header-title">媒体库</h1>
       <div class="main-header-actions">
-        <button class="btn btn-secondary btn-sm" @click="loadFolders">刷新</button>
-        <label class="btn btn-primary btn-sm" style="cursor: pointer;" v-if="selectedFolder">
-          <span v-if="uploading" class="spinner" style="width: 12px; height: 12px;"></span>
-          {{ uploading ? '上传中...' : '上传图片' }}
-          <input type="file" accept="image/*" multiple style="display: none;" @change="handleUpload" />
-        </label>
+        <RouterLink v-if="article" class="btn btn-secondary btn-sm" :to="{ name: 'Editor', query: { id: article } }">打开文档</RouterLink>
+        <button v-if="article" class="btn btn-secondary btn-sm" :disabled="loading || changing" @click="refresh()">刷新</button>
       </div>
-    </div>
-
-    <div class="main-content" v-if="!loading">
-      <div style="display: grid; grid-template-columns: 280px 1fr; gap: 16px; height: 100%;">
-        <!-- 文件夹列表 -->
-        <div>
-          <div style="font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">文章文件夹</div>
-          <div style="display: flex; flex-direction: column; gap: 4px;">
-            <div
-              v-for="folder in folders"
-              :key="folder.articlePath"
-              class="list-item"
-              :style="{ background: selectedFolder?.articlePath === folder.articlePath ? 'var(--bg-element)' : 'var(--bg-panel)', border: selectedFolder?.articlePath === folder.articlePath ? '1px solid var(--border-strong)' : '1px solid var(--border-subtle)' }"
-              @click="selectFolder(folder)"
-            >
-              <div class="list-item-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" stroke="currentColor" stroke-width="1.5"/>
-                </svg>
-              </div>
-              <div class="list-item-content">
-                <div class="list-item-title" style="font-size: 13px;">{{ folder.articlePath }}</div>
-                <div class="list-item-meta">{{ folder.imageCount }} 张图片</div>
-              </div>
-            </div>
+    </header>
+    <div class="main-content">
+      <label class="media-selector">按文档浏览
+        <select v-model="article" class="select" :disabled="changing">
+          <option value="">选择文档</option>
+          <option v-for="item in articles" :key="item.relative_path" :value="item.relative_path">{{ item.title }} · {{ item.relative_path }}</option>
+        </select>
+      </label>
+      <p v-if="error" role="alert">{{ error }}</p>
+      <p v-if="notice" role="status">{{ notice }}</p>
+      <p v-if="!article">请选择文档查看其配图。可从编辑器导入图片。</p>
+      <p v-else-if="loading" role="status">正在读取配图…</p>
+      <p v-else-if="!images.length && !error">该文档暂无配图。</p>
+      <ul v-else class="media-grid">
+        <li v-for="image in images" :key="image.relative_path" class="card media-card">
+          <strong>{{ image.name }}</strong>
+          <code>{{ image.markdown }}</code>
+          <div class="media-actions">
+            <button class="btn btn-secondary btn-sm" :disabled="changing" @click="selected = image">预览</button>
+            <button class="btn btn-secondary btn-sm" :disabled="changing" @click="copy(image)">复制引用</button>
+            <button class="btn btn-secondary btn-sm" :disabled="changing" @click="previewDelete(image)">查看删除影响</button>
           </div>
-          <div v-if="folders.length === 0" class="empty-state" style="padding: 24px;">
-            <div class="empty-state-description">暂无图片文件夹</div>
-          </div>
+        </li>
+      </ul>
+      <section v-if="selected" class="card media-preview" aria-label="图片预览">
+        <div class="media-actions">
+          <strong>{{ selected.name }}</strong>
+          <button class="btn btn-secondary btn-sm" @click="selected = null">关闭预览</button>
         </div>
-
-        <!-- 图片网格 -->
-        <div>
-          <div v-if="images.length === 0" class="empty-state">
-            <div class="empty-state-icon">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                <path d="M3 5h18v14H3V5zm2 2v10h14V7H5zm2 7l3-4 3 3 2-2 3 3H7z" stroke="currentColor" stroke-width="1.5"/>
-              </svg>
-            </div>
-            <div class="empty-state-title">暂无图片</div>
-            <div class="empty-state-description">选择文件夹后可上传图片</div>
-          </div>
-          <div v-else style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px;">
-            <div v-for="img in images" :key="img.path" class="card card-hover" style="padding: 8px; text-align: center;">
-              <div style="aspect-ratio: 1; display: flex; align-items: center; justify-content: center; background: var(--bg-element); border-radius: var(--radius-md); margin-bottom: 8px; overflow: hidden;">
-                <img :src="img.url" :alt="img.name" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
-              </div>
-              <div style="font-size: 12px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ img.name }}</div>
-              <div style="font-size: 11px; color: var(--text-tertiary); margin-bottom: 4px;">{{ formatFileSize(img.size) }}</div>
-              <div style="display: flex; gap: 4px; justify-content: center;">
-                <button class="btn btn-ghost btn-sm" style="padding: 2px 6px;" @click="copyMarkdown(img)" title="复制 Markdown">复制</button>
-                <button class="btn btn-ghost btn-sm" style="padding: 2px 6px; color: var(--status-error);" @click="handleDeleteImage(img)" title="删除">删除</button>
-              </div>
-            </div>
-          </div>
+        <MediaThumbnail :path="selected.relative_path" :name="selected.name" />
+      </section>
+      <section v-if="plan" class="card media-preview" aria-labelledby="delete-image-title">
+        <h2 id="delete-image-title">删除图片</h2>
+        <p>{{ plan.relative_path }}</p>
+        <template v-if="plan.references.length">
+          <p>以下文档引用此图片。删除后原引用保留，读者将无法加载图片。</p>
+          <ul><li v-for="reference in plan.references" :key="reference.relative_path">{{ reference.relative_path }}（{{ reference.count }} 处）</li></ul>
+        </template>
+        <p v-else>未在内容库 Markdown 中发现引用。</p>
+        <div class="media-actions">
+          <button class="btn btn-secondary btn-sm" :disabled="changing" @click="plan = null">取消</button>
+          <button class="btn btn-primary btn-sm" :disabled="changing" @click="remove">确认删除</button>
         </div>
-      </div>
-    </div>
-
-    <div v-else style="display: flex; align-items: center; justify-content: center; height: 300px;">
-      <div class="spinner" style="width: 24px; height: 24px;"></div>
+      </section>
     </div>
   </div>
 </template>
+
+<style scoped>
+.media-selector { display: grid; gap: 8px; max-width: 36rem; }
+.media-grid { padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
+.media-card { display: grid; gap: 12px; overflow-wrap: anywhere; }
+.media-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.media-preview { margin-top: 12px; overflow-wrap: anywhere; }
+.media-preview img { display: block; max-width: 100%; max-height: 50vh; margin-top: 12px; }
+</style>

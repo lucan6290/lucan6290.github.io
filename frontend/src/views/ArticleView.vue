@@ -40,9 +40,13 @@
           <div v-if="article.frontmatter.tags?.length" class="tags">
             <router-link v-for="tag in article.frontmatter.tags" :key="tag" :to="`/tags/${encodeURIComponent(tag)}`">{{ tag }}</router-link>
           </div>
+          <p v-if="article.frontmatter.series" class="series-entry">
+            <router-link :to="seriesHref(article.frontmatter.series.id)">系列专题 · {{ article.frontmatter.series.title }}</router-link>
+          </p>
         </header>
         <MarkdownRenderer :content="rawContent" :relative-path="article.relativePath" :title="article.frontmatter.title" />
       </article>
+      <PublicArticleTools :key="article.relativePath" :article-path="article.relativePath" />
       <PrevNext :prev="pn.prev" :next="pn.next" />
     </main>
     <FloatToc />
@@ -54,9 +58,11 @@ import { computed, watchEffect } from 'vue';
 import type { ArticleMeta } from '@/types/content';
 import { useContent } from '@/composables/useContent';
 import { sidebarNodes } from '@/composables/contentPaths';
+import { seriesHref } from '@/utils/seriesPaths';
 import TreeSidebar from '@/components/sidebar/TreeSidebar.vue';
 import ResizableSidebar from '@/components/sidebar/ResizableSidebar.vue';
 import MarkdownRenderer from '@/components/article/MarkdownRenderer.vue';
+import PublicArticleTools from '@/components/article/PublicArticleTools.vue';
 import ReadingProgress from '@/components/article/ReadingProgress.vue';
 import PrevNext from '@/components/article/PrevNext.vue';
 import FloatToc from '@/components/toc/FloatToc.vue';
@@ -160,6 +166,7 @@ function formatDate(iso: string) {
   font-weight: 600;
 }
 .tags a:hover { border-color: var(--site-accent); }
+.series-entry { margin: 12px 0 0; font-size: .88rem; }
 
 @media (max-width: 996px) {
   .article-layout { display: block; }

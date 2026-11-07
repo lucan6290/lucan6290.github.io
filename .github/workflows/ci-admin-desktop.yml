@@ -3,41 +3,64 @@ name: CI - admin-desktop
 on:
   pull_request:
     branches: [main]
-    paths:
-      - 'old/admin-desktop/**'
+    paths: ['admin-desktop/**', 'frontend/scripts/**', 'frontend/package.json', 'frontend/pnpm-lock.yaml', '.github/workflows/*-admin-desktop.yml']
   push:
     branches: [main]
-    paths:
-      - 'old/admin-desktop/**'
+    paths: ['admin-desktop/**', 'frontend/scripts/**', 'frontend/package.json', 'frontend/pnpm-lock.yaml', '.github/workflows/*-admin-desktop.yml']
+
+permissions:
+  contents: read
 
 concurrency:
   group: ci-admin-desktop-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  RUSTUP_TOOLCHAIN: '1.98.0'
+
 jobs:
   desktop:
-    runs-on: windows-latest
+    runs-on: windows-2025
     defaults:
       run:
-        working-directory: old/admin-desktop
+        working-directory: admin-desktop
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.11.1'
           cache: npm
-          cache-dependency-path: old/admin-desktop/package-lock.json
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build frontend (type check + bundle)
-        run: npm run build
-
-      - name: Check Rust backend
-        run: cargo check --manifest-path src-tauri/Cargo.toml
+          cache-dependency-path: admin-desktop/package-lock.json
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '10.21.0'
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.13.7'
+      - name: Install Windows x64 dependencies
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          rustup toolchain install $env:RUSTUP_TOOLCHAIN --profile minimal --component rustfmt --target x86_64-pc-windows-msvc
+          npm ci
+          pnpm --dir ../frontend install --frozen-lockfile
+          uv venv --managed-python --python 3.12.15 src-backend/.venv
+          uv pip sync --python src-backend/.venv/Scripts/python.exe src-backend/requirements-windows-build.txt
+      - name: Run desktop checks
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          npm test
+          ./src-backend/.venv/Scripts/python.exe -m unittest discover -s src-backend/tests -v
+          cargo fmt --manifest-path src-tauri/Cargo.toml --check
+          cargo check --manifest-path src-tauri/Cargo.toml --locked
+          cargo test --manifest-path src-tauri/Cargo.toml --locked
+      - name: Build unsigned Windows x64 NSIS installer
+        run: npm run tauri:build
+      - name: Smoke test packaged content executable
+        run: ./src-tauri/.bundle/dist/luchuan-content/luchuan-content.exe --help
+      - uses: actions/upload-artifact@v4
+        with:
+          name: admin-desktop-windows-x64-unsigned
+          path: admin-desktop/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*-setup.exe
+          if-no-files-found: error

@@ -45,6 +45,7 @@
 | --- | --- |
 | 运行服务 | 下方「本地开发规范」 |
 | **新前端开发** | `frontend/README.md` → `frontend/src/` |
+| **站点互动服务** | [frontend/service/AGENTS.md](frontend/service/AGENTS.md) → [服务说明](frontend/service/README.md) |
 | **新前端内容写作** | 先读 `docs/SITE_CONTENT_GUIDE.md`（统一 YAML 六字段与时间语义）→ `frontend/content/`（零配置，目录即导航） |
 | **桌面管理端开发** | `admin-desktop/AGENTS.md` → `admin-desktop/docs/DOCUMENTATION_INDEX.md` |
 | **桌面内容接口变更** | `admin-desktop/docs/内容接口契约.md`（独立契约，不使用旧站接口） |

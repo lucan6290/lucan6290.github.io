@@ -1,0 +1,188 @@
+import json
+from concurrent.futures import ThreadPoolExecutor
+from multiprocessing import get_context
+from pathlib import Path
+import sys
+from tempfile import TemporaryDirectory
+from threading import BrokenBarrierError
+from unittest import TestCase
+from unittest.mock import patch
+from uuid import uuid4
+
+from fastapi.testclient import TestClient
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from public_api import Settings, create_app
+from content_store import ContentStore
+
+
+BASE = "/api/v1/admin"
+PATH = "blog/01-线上笔记.md"
+RAW = """---
+title: "线上笔记"
+date: "2026-10-29T10:00:00+08:00"
+updated: "2026-10-29T10:00:00+08:00"
+description: "文章摘要。"
+tags: []
+sticky: false
+---
+
+# 线上笔记
+"""
+
+
+def save_from_independent_process(settings, version, body, ready, snapshots, results):
+    checked_snapshot = ContentStore.checked_snapshot
+
+    def pause_after_check(store, target, expected_version):
+        previous = checked_snapshot(store, target, expected_version)
+        try:
+            snapshots.wait(timeout=2)
+        except BrokenBarrierError:
+            pass
+        return previous
+
+    with TestClient(create_app(settings)) as client, patch.object(ContentStore, "checked_snapshot", pause_after_check):
+        ready.wait(timeout=10)
+        response = client.put(f"{BASE}/document", headers={"Authorization": f"Bearer {settings.admin_token}"},
+                              json={"relative_path": PATH, "raw_content": RAW + body, "expected_version": version})
+        results.put((response.status_code, response.json()))
+
+
+class AuthorTests(TestCase):
+    def setUp(self):
+        temporary = TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.content = self.root / "frontend" / "content"
+        (self.content / "blog").mkdir(parents=True)
+        (self.content / "blog" / "images").mkdir()
+        self.manifest = self.root / "content-manifest.json"
+        self.manifest.write_text(json.dumps({"articles": {}}), encoding="utf-8")
+        self.token = uuid4().hex + uuid4().hex
+        self.admin = {"Authorization": f"Bearer {self.token}"}
+
+    def client(self, *, writing=True, admin=True, root_path=""):
+        settings = Settings(
+            "https://site.example.test", self.manifest, self.root / "interactions.sqlite3",
+            self.token if admin else "", author_project_root=self.root if writing else None,
+        )
+        client = TestClient(create_app(settings), root_path=root_path)
+        self.addCleanup(client.close)
+        return client
+
+    def create(self, client, raw=RAW, path=PATH):
+        return client.post(f"{BASE}/documents", headers=self.admin,
+                           json={"relative_path": path, "raw_content": raw})
+
+    def save(self, client, raw, version, path=PATH):
+        return client.put(f"{BASE}/document", headers=self.admin,
+                          json={"relative_path": path, "raw_content": raw, "expected_version": version})
+
+    def test_authentication_required_and_authoring_can_be_disabled(self):
+        client = self.client()
+        self.assertEqual(client.get(f"{BASE}/session").status_code, 401)
+        self.assertEqual(client.get(f"{BASE}/documents").status_code, 401)
+        self.assertEqual(client.post(f"{BASE}/documents", json={"relative_path": PATH, "raw_content": RAW}).status_code, 401)
+        self.assertFalse((self.content / PATH).exists())
+        session = client.get(f"{BASE}/session", headers=self.admin)
+        self.assertEqual(session.json(), {"writing_enabled": True})
+        self.assertEqual(session.headers["Cache-Control"], "no-store")
+        disabled = self.client(writing=False)
+        self.assertEqual(disabled.get(f"{BASE}/session", headers=self.admin).json(), {"writing_enabled": False})
+        self.assertEqual(self.create(disabled).status_code, 503)
+        self.assertEqual(self.client(admin=False, writing=False).get(f"{BASE}/session", headers=self.admin).status_code, 503)
+
+    def test_create_open_list_and_versioned_save_use_canonical_markdown(self):
+        client = self.client()
+        created = self.create(client)
+        self.assertEqual(created.status_code, 201, created.text)
+        self.assertEqual(self.create(client).status_code, 409)
+        self.assertEqual((self.content / PATH).read_text(encoding="utf-8"), RAW)
+        listed = client.get(f"{BASE}/documents", headers=self.admin).json()
+        self.assertEqual(listed["documents"], [{"relative_path": PATH, "title": "线上笔记"}])
+        opened = client.get(f"{BASE}/document", headers=self.admin, params={"relative_path": PATH}).json()
+        self.assertEqual(opened["raw_content"], RAW)
+        self.assertEqual(opened["version"], created.json()["version"])
+        saved = self.save(client, RAW + "\n新段落。\n", opened["version"])
+        self.assertEqual(saved.status_code, 200, saved.text)
+        self.assertNotEqual(saved.json()["version"], opened["version"])
+        self.assertEqual((self.content / PATH).read_text(encoding="utf-8"), saved.json()["raw_content"])
+        self.assertEqual(self.save(client, RAW, opened["version"]).status_code, 409)
+        self.assertIn("新段落。", (self.content / PATH).read_text(encoding="utf-8"))
+        self.assertIn('date: "2026-10-29T10:00:00+08:00"', saved.json()["raw_content"])
+        article = client.get("/api/v1/article", params={"article_path": PATH})
+        self.assertEqual(article.status_code, 404)
+
+    def test_parallel_saves_of_same_version_do_not_overwrite_the_winner(self):
+        client = self.client()
+        version = self.create(client).json()["version"]
+        with ThreadPoolExecutor(max_workers=2) as workers:
+            responses = list(workers.map(lambda body: self.save(client, RAW + body, version), ["甲\n", "乙\n"]))
+        self.assertEqual(sorted(r.status_code for r in responses), [200, 409])
+        winner = next(r for r in responses if r.status_code == 200)
+        self.assertEqual((self.content / PATH).read_text(encoding="utf-8"), winner.json()["raw_content"])
+
+    def test_reverse_proxy_root_path_keeps_admin_and_public_body_limits(self):
+        client = self.client(root_path="/service")
+        raw = RAW + "\n" + ("x" * 40_000)
+        response = client.post(f"/service{BASE}/documents", headers=self.admin,
+                               json={"relative_path": PATH, "raw_content": raw})
+        self.assertEqual(response.status_code, 201, response.text)
+        self.assertEqual((self.content / PATH).read_text(encoding="utf-8"), raw)
+        public = client.post("/service/api/v1/comments", json={"body": raw})
+        self.assertEqual(public.status_code, 413)
+
+    def test_create_requires_section_path_and_keeps_existing_root_markdown_readable(self):
+        client = self.client()
+        for path in ("孤立文章.md", "about.md", "projects.md", "README.md"):
+            with self.subTest(path=path):
+                result = self.create(client, path=path)
+                self.assertEqual((result.status_code, result.json().get("code")), (400, "invalid_path"))
+                self.assertFalse((self.content / path).exists())
+        (self.content / "about.md").write_text("# 关于\n", encoding="utf-8", newline="\n")
+        opened = client.get(f"{BASE}/document", headers=self.admin, params={"relative_path": "about.md"})
+        self.assertEqual(opened.status_code, 200)
+        self.assertEqual(opened.json()["raw_content"], "# 关于\n")
+        saved = self.save(client, "# 关于\n\n已有文档。\n", opened.json()["version"], path="about.md")
+        self.assertEqual(saved.status_code, 200)
+
+    def test_independent_processes_and_databases_cannot_save_same_version(self):
+        version = self.create(self.client()).json()["version"]
+        context = get_context("spawn")
+        ready = context.Barrier(2)
+        snapshots = context.Barrier(2)
+        results = context.Queue()
+        self.addCleanup(results.close)
+        processes = []
+        for index, body in enumerate(("甲\n", "乙\n")):
+            settings = Settings("https://site.example.test", self.manifest, self.root / f"process-{index}.sqlite3",
+                                self.token, author_project_root=self.root)
+            process = context.Process(target=save_from_independent_process,
+                                      args=(settings, version, body, ready, snapshots, results))
+            process.start()
+            processes.append(process)
+
+        try:
+            responses = [results.get(timeout=15) for _ in processes]
+        finally:
+            for process in processes:
+                process.join(timeout=2)
+                if process.is_alive():
+                    process.terminate()
+                    process.join()
+        self.assertEqual(sorted(status for status, _ in responses), [200, 409])
+        winner = next(data for status, data in responses if status == 200)
+        self.assertEqual((self.content / PATH).read_text(encoding="utf-8"), winner["raw_content"])
+
+    def test_invalid_input_and_path_are_rejected_before_writing(self):
+        client = self.client()
+        invalid = self.create(client, RAW.replace("文章摘要。", ""))
+        self.assertEqual((invalid.status_code, invalid.json()["code"]), (400, "invalid_article"))
+        for path in ("../secret.md", "blog/_private.md", "blog/images/secret.md", "blog/evil.txt"):
+            with self.subTest(path=path):
+                self.assertEqual(self.create(client, path=path).status_code, 400)
+        self.assertFalse((self.content / PATH).exists())
+        self.assertEqual(self.create(client).status_code, 201)
+        self.assertEqual(self.save(client, RAW + "新内容", None).status_code, 428)
+        self.assertEqual((self.content / PATH).read_text(encoding="utf-8"), RAW)

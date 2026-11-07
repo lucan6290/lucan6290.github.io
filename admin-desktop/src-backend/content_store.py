@@ -59,7 +59,7 @@ def parse_markdown(raw):
 def first_heading(body):
     without_code = re.sub(r"^ {0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?^ {0,3}\1[^\n]*$", "", body, flags=re.MULTILINE)
     match = re.search(r"^ {0,3}#[\t ]+(.+)$", without_code, flags=re.MULTILINE)
-    return re.sub(r"[\t ]+#+[\t ]*$", "", match[1]).strip() if match else None
+    return re.sub(r"[\t ]+#+[\t ]*$", "", match[1].rstrip("\r")).strip() if match else None
 
 
 class ContentStore:

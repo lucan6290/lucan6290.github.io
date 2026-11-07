@@ -1,3 +1,6 @@
+export type SeriesMembership = { id: string; title: string; order: number };
+export type SeriesMeta = { id: string; title: string; articlePaths: string[] };
+
 export type FrontMatter = {
   title?: string;
   date?: string;
@@ -5,6 +8,7 @@ export type FrontMatter = {
   tags?: string[];
   description?: string;
   sticky?: boolean;
+  series?: SeriesMembership;
 };
 
 export type ArticleMeta = {
@@ -43,6 +47,7 @@ export type ContentManifest = {
   tags: Record<string, string[]>;
   archive: Record<string, Record<string, string[]>>;
   recent: string[];
+  series: Record<string, SeriesMeta>;
 };
 
 export type NavItem = {

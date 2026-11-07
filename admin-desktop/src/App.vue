@@ -1,15 +1,20 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, provide, ref } from 'vue'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { contentApi, setContentConnection } from '@/api/content'
 import { useAppStore } from '@/stores/app'
+import { clearEditorTabs, editorTabs } from '@/utils/editorTabs'
+import { openFavorites } from '@/utils/editorFavorites'
+import { workspaceControlsKey } from '@/utils/workspaceControls'
 import WindowTitlebar from '@/components/WindowTitlebar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import ToastContainer from '@/components/ToastContainer.vue'
 interface Connection { base_url: string; token: string; content_root?: string }
 const appStore = useAppStore()
 const connected = ref(false)
+const workspace = ref('')
+const workspaceError = ref('')
 const connecting = ref(false)
 const error = ref('')
 const token = ref('')
@@ -21,6 +26,11 @@ async function connect(connection: Connection) {
   if (health.service !== 'xiaocancoding-content' || health.api_version !== 1) throw new Error('18000 端口不是当前内容服务。')
   if (connection.content_root && connection.content_root !== health.content_root) throw new Error('内容根目录已变化，请重新连接当前项目。')
   await contentApi.list()
+  if (workspace.value !== health.content_root) {
+    clearEditorTabs()
+    openFavorites(health.content_root)
+    workspace.value = health.content_root
+  }
   appStore.backendReady = true
   appStore.backendPort = 18000
   if (!desktop) sessionStorage.setItem('content-session', JSON.stringify({ ...connection, content_root: health.content_root }))
@@ -49,6 +59,37 @@ async function chooseDirectory() {
     error.value = cause instanceof Error ? cause.message : String(cause)
   }
 }
+async function switchWorkspace() {
+  if (!desktop || connecting.value || editorTabs.value.some(tab => tab.session.dirty || tab.session.saving)) return
+  const selected = await open({ directory: true, multiple: false, title: '更换博客目录' }).catch(cause => {
+    workspaceError.value = cause instanceof Error ? cause.message : String(cause)
+    return null
+  })
+  if (!selected || typeof selected !== 'string') return
+  connecting.value = true
+  workspaceError.value = ''
+  try {
+    const next = await invoke<Connection>('switch_blog_workspace', { projectRoot: selected })
+    await connect(next)
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : String(cause)
+    try {
+      const previous = await invoke<Connection | null>('get_backend_connection')
+      if (!previous) throw new Error('没有已连接的工作区')
+      await connect(previous)
+      workspaceError.value = message
+    } catch (restore) {
+      error.value = message + '\n重新连接失败：' + (restore instanceof Error ? restore.message : String(restore))
+      appStore.backendReady = false
+      connected.value = false
+    }
+  } finally { connecting.value = false }
+}
+
+provide(workspaceControlsKey, {
+  available: desktop, root: workspace, busy: connecting, error: workspaceError, select: switchWorkspace,
+})
+
 onMounted(async () => {
   appStore.init()
   if (desktop) { await reconnect(); return }
@@ -64,7 +105,7 @@ onMounted(async () => {
   <div class="desktop-shell" :class="{ 'sidebar-collapsed': appStore.sidebarCollapsed }">
     <WindowTitlebar /><AppSidebar />
     <main class="desktop-main">
-      <router-view v-if="connected" />
+      <router-view v-if="connected" :key="workspace" />
       <div v-else class="main-content" style="max-width: 680px; margin: 60px auto;">
         <div class="card">
           <h2>连接本地内容库</h2><p>文档直接保存在当前项目的 frontend/content，供桌面端、编辑器和 AI 共同维护。</p>

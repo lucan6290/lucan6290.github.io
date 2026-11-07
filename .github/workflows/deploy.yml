@@ -51,6 +51,8 @@ jobs:
 
       - name: 构建站点
         env:
+          SITE_URL: ${{ steps.pages.outputs.origin }}
+          VITE_PUBLIC_SERVICE_URL: ${{ vars.VITE_PUBLIC_SERVICE_URL }}
           PAGES_BASE_PATH: ${{ steps.pages.outputs.base_path }}
         run: pnpm build --base "$PAGES_BASE_PATH/"
 

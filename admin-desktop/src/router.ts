@@ -23,14 +23,26 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/media',
     name: 'Media',
-    component: () => import('@/views/Unavailable.vue'),
+    component: () => import('@/views/Media.vue'),
     meta: { title: '媒体库', icon: 'media' }
   },
   {
     path: '/ai-writing',
     name: 'AIWriting',
-    component: () => import('@/views/Unavailable.vue'),
+    component: () => import('@/views/AIWriting.vue'),
     meta: { title: 'AI 写作', icon: 'ai' }
+  },
+  {
+    path: '/graph',
+    name: 'KnowledgeGraph',
+    component: () => import('@/views/KnowledgeGraph.vue'),
+    meta: { title: '知识图谱', icon: 'graph' }
+  },
+  {
+    path: '/git',
+    name: 'GitWorkspace',
+    component: () => import('@/views/GitWorkspace.vue'),
+    meta: { title: 'Git 工作区', icon: 'git' }
   },
   {
     path: '/settings',

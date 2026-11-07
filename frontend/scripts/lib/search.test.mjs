@@ -17,6 +17,7 @@ test('全文索引覆盖摘要后的正文及代码，排除隐藏文档和分�
   fs.writeFileSync(article, '---\ntitle: 安装笔记\ndescription: 简短摘要\nsecret: 不索引的元数据\n---\n' + '开头文字。'.repeat(60) + '\n环境变量配置\n```ts\nconst uniqueCodeToken = 1;\n```\n![配图](./private-image.png)\n[文档](https://private-url.invalid)');
   fs.writeFileSync(path.join(category, 'README.md'), '# 分类介绍');
   fs.writeFileSync(path.join(category, '_草稿.md'), '# 私有草稿');
+  fs.writeFileSync(path.join(contentDir, 'about.md'), '# 根级占位文档');
   const options = { contentDir, outDir: path.join(root, 'generated') };
   const { searchDocs } = build(options);
   assert.equal(searchDocs.length, 1);

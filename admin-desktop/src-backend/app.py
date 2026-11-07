@@ -9,7 +9,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, StrictBool
 
+from ai_routes import create_ai_router
+from article_form_routes import create_article_form_router
 from content_store import ContentError, ContentStore
+from git_routes import create_git_router
+from media_routes import create_media_router
+from move_routes import create_move_router
 
 
 class Payload(BaseModel):
@@ -35,7 +40,7 @@ class DeletePayload(Payload):
     confirm: StrictBool = False
 
 
-def create_app(project_root: Path, token: str):
+def create_app(project_root: Path, token: str, state_dir: Path | None = None):
     if not token:
         raise ValueError("会话 token 不能为空")
     store = ContentStore(project_root)
@@ -66,10 +71,20 @@ def create_app(project_root: Path, token: str):
                 "project_root": str(store.project_root), "content_root": str(store.content_root)}
 
     dependencies = [Depends(authenticate)]
+    if state_dir is not None:
+        state_dir = state_dir.resolve()
+        if state_dir.is_relative_to(store.content_root):
+            raise RuntimeError("应用状态目录不得位于博客内容目录内")
+        app.include_router(create_ai_router(state_dir), dependencies=dependencies)
+    app.include_router(create_article_form_router(), dependencies=dependencies)
+    app.include_router(create_media_router(store), dependencies=dependencies)
+    app.include_router(create_git_router(store.project_root), dependencies=dependencies)
+    app.include_router(create_move_router(store), dependencies=dependencies)
 
     @app.get("/api/v1/content", dependencies=dependencies)
     def content(query: str = Query(default="", max_length=200)):
-        return store.list_content(query)
+        with store.lock:
+            return store.list_content(query)
 
     @app.get("/api/v1/images", dependencies=dependencies)
     def image(path: str):
@@ -78,11 +93,13 @@ def create_app(project_root: Path, token: str):
 
     @app.get("/api/v1/documents/version", dependencies=dependencies)
     def version(path: str):
-        return store.version(path)
+        with store.lock:
+            return store.version(path)
 
     @app.get("/api/v1/documents", dependencies=dependencies)
     def document(path: str):
-        return store.detail(path)
+        with store.lock:
+            return store.detail(path)
 
     @app.post("/api/v1/documents", status_code=201, dependencies=dependencies)
     def create(payload: CreatePayload):

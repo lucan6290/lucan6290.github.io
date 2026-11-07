@@ -2,9 +2,10 @@ import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { fileURLToPath, URL } from 'node:url';
 import { contentManifestPlugin } from './src/vite/contentManifestPlugin';
+import { desktopSitePlugin } from './src/vite/desktopSitePlugin';
 
 export default defineConfig({
-  plugins: [vue(), contentManifestPlugin()],
+  plugins: [vue(), contentManifestPlugin(), desktopSitePlugin()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
