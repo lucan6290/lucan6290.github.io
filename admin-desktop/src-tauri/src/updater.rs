@@ -100,6 +100,9 @@ pub(crate) mod windows {
         *candidate = None;
         let update = app
             .updater_builder()
+            // ShellExecuteW can fail after this hook. Keep the window alive so it can report
+            // the error. Windows closes our kill-on-close Jobs when the updater exits.
+            .on_before_exit(|| {})
             .timeout(Duration::from_secs(180))
             .build()
             .map_err(|error| error.to_string())?
