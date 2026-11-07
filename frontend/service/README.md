@@ -18,7 +18,9 @@ python -m uvicorn public_api:create_app --factory --app-dir frontend/service --h
 
 `PUBLIC_ADMIN_TOKEN` 留空时，匿名提交仍可用，管理员功能关闭，留言保留在待审队列。启用时由密码管理器或服务端密钥管理器生成并注入至少 32 字符的高熵随机令牌。请用站点管理页访问审核队列。浏览器只需服务地址，令牌通过 HTTPS Authorization 请求头发送，并仅保留在当前页面内存。
 
-设置 `PUBLIC_AUTHOR_PROJECT_ROOT` 指向独立作者检出目录的根路径后，站长可在站点部署前缀下打开 `/manage-content/`，选择已有 Markdown 或在已有栏目目录中新建。新文档必须包含栏目路径，例如 `blog/随笔.md`。已有根级 Markdown 仍可打开和保存。服务只写该检出目录的 `frontend/content/`。使用单个写入进程，避免让桌面后台和其他写入者同时编辑此目录。作者保留首次写作时间，更新保留服务返回的版本。保存后的内容在下一次按既有流程构建并发布时上线。
+设置 `PUBLIC_AUTHOR_PROJECT_ROOT` 指向独立作者检出目录的根路径后，站长可在站点部署前缀下打开 `/manage-content/`，选择已有 Markdown 或在已有栏目目录中新建。新文档必须包含栏目路径，例如 `blog/随笔.md`。已有根级 Markdown 仍可打开和保存。服务只写该检出目录的 `frontend/content/`。作者保留首次写作时间，更新保留服务返回的版本。保存后的内容在下一次按既有流程构建并发布时上线。
+
+同一作者目录中的服务进程共用 `frontend/content/.codex-tmp/public-author-lock.sqlite3`。版本比较和原子保存由同一把锁保护，即使互动数据库不同也能避免覆盖。作者目录须位于支持 SQLite 文件锁的本地文件系统，锁文件应保留在原路径。锁暂不可用时 API 返回 503。桌面后台、外部编辑器和 Git 操作应在独立检出目录使用，或与在线写作错开。
 
 ## 部署边界
 

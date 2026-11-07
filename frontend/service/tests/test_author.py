@@ -1,15 +1,19 @@
 import json
 from concurrent.futures import ThreadPoolExecutor
+from multiprocessing import get_context
 from pathlib import Path
 import sys
 from tempfile import TemporaryDirectory
+from threading import BrokenBarrierError
 from unittest import TestCase
+from unittest.mock import patch
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from public_api import Settings, create_app
+from content_store import ContentStore
 
 
 BASE = "/api/v1/admin"
@@ -25,6 +29,24 @@ sticky: false
 
 # 线上笔记
 """
+
+
+def save_from_independent_process(settings, version, body, ready, snapshots, results):
+    checked_snapshot = ContentStore.checked_snapshot
+
+    def pause_after_check(store, target, expected_version):
+        previous = checked_snapshot(store, target, expected_version)
+        try:
+            snapshots.wait(timeout=2)
+        except BrokenBarrierError:
+            pass
+        return previous
+
+    with TestClient(create_app(settings)) as client, patch.object(ContentStore, "checked_snapshot", pause_after_check):
+        ready.wait(timeout=10)
+        response = client.put(f"{BASE}/document", headers={"Authorization": f"Bearer {settings.admin_token}"},
+                              json={"relative_path": PATH, "raw_content": RAW + body, "expected_version": version})
+        results.put((response.status_code, response.json()))
 
 
 class AuthorTests(TestCase):
@@ -124,6 +146,34 @@ class AuthorTests(TestCase):
         self.assertEqual(opened.json()["raw_content"], "# 关于\n")
         saved = self.save(client, "# 关于\n\n已有文档。\n", opened.json()["version"], path="about.md")
         self.assertEqual(saved.status_code, 200)
+
+    def test_independent_processes_and_databases_cannot_save_same_version(self):
+        version = self.create(self.client()).json()["version"]
+        context = get_context("spawn")
+        ready = context.Barrier(2)
+        snapshots = context.Barrier(2)
+        results = context.Queue()
+        self.addCleanup(results.close)
+        processes = []
+        for index, body in enumerate(("甲\n", "乙\n")):
+            settings = Settings("https://site.example.test", self.manifest, self.root / f"process-{index}.sqlite3",
+                                self.token, author_project_root=self.root)
+            process = context.Process(target=save_from_independent_process,
+                                      args=(settings, version, body, ready, snapshots, results))
+            process.start()
+            processes.append(process)
+
+        try:
+            responses = [results.get(timeout=15) for _ in processes]
+        finally:
+            for process in processes:
+                process.join(timeout=2)
+                if process.is_alive():
+                    process.terminate()
+                    process.join()
+        self.assertEqual(sorted(status for status, _ in responses), [200, 409])
+        winner = next(data for status, data in responses if status == 200)
+        self.assertEqual((self.content / PATH).read_text(encoding="utf-8"), winner["raw_content"])
 
     def test_invalid_input_and_path_are_rejected_before_writing(self):
         client = self.client()

@@ -1,6 +1,8 @@
 """Authenticated Markdown endpoints backed by the desktop content store."""
 
+from contextlib import ExitStack, closing, contextmanager
 from pathlib import Path
+import sqlite3
 import sys
 from typing import Annotated
 
@@ -42,13 +44,29 @@ def validate_path(content, relative_path):
         raise ContentError(400, "invalid_path", "写作只支持内容分类中的 Markdown")
 
 
+@contextmanager
+def lock_author_content(content_root):
+    lock_path = content_root / ".codex-tmp" / "public-author-lock.sqlite3"
+    with ExitStack() as resources:
+        try:
+            lock_path.parent.mkdir(exist_ok=True)
+            lock = resources.enter_context(closing(sqlite3.connect(lock_path, timeout=5)))
+            # Keep the reserved lock until close, including across worker processes.
+            lock.execute("BEGIN IMMEDIATE")
+        except (OSError, sqlite3.Error) as error:
+            raise ContentError(503, "author_lock_unavailable", "暂时无法锁定作者工作区，请稍后重试") from error
+        yield
+
+
 def attach_author_routes(admin: APIRouter, project_root: Path | None):
     content = ContentStore(project_root) if project_root is not None else None
 
-    def require_writer():
+    @contextmanager
+    def author_access():
         if content is None:
             raise ContentError(503, "writing_disabled", "站点尚未启用在线写作")
-        return content
+        with lock_author_content(content.content_root):
+            yield content
 
     @admin.get("/session")
     def session():
@@ -56,8 +74,7 @@ def attach_author_routes(admin: APIRouter, project_root: Path | None):
 
     @admin.get("/documents")
     def documents():
-        store = require_writer()
-        with store.lock:
+        with author_access() as store:
             listing = store.list_content()
         return {
             "documents": [document_summary(document) for document in listing["documents"]],
@@ -69,15 +86,13 @@ def attach_author_routes(admin: APIRouter, project_root: Path | None):
 
     @admin.get("/document")
     def open_document(relative_path: AuthorPath):
-        store = require_writer()
-        with store.lock:
+        with author_access() as store:
             validate_path(store, relative_path)
             return document_detail(store.detail(relative_path))
 
     @admin.post("/documents", status_code=201)
     def create_document(payload: DocumentRequest):
-        store = require_writer()
-        with store.lock:
+        with author_access() as store:
             validate_path(store, payload.relative_path)
             if "/" not in payload.relative_path:
                 raise ContentError(400, "invalid_path", "新文档必须位于内容栏目内，例如 blog/随笔.md")
@@ -85,7 +100,6 @@ def attach_author_routes(admin: APIRouter, project_root: Path | None):
 
     @admin.put("/document")
     def save_document(payload: SaveRequest):
-        store = require_writer()
-        with store.lock:
+        with author_access() as store:
             validate_path(store, payload.relative_path)
             return document_detail(store.save(payload.relative_path, payload.raw_content, payload.expected_version))
