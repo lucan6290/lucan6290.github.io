@@ -167,4 +167,3 @@ def document_route(path):
 
 def route_reference(path):
     return "/".join(quote(part) for part in path.split("/"))
-
