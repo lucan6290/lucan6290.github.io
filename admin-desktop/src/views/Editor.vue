@@ -46,6 +46,7 @@ const saveAsName = ref('')
 const leaveVisible = ref(false)
 const leaveTargets = shallowRef<EditorTab[]>([])
 const editor = ref<HTMLTextAreaElement | null>(null)
+const articleForm = ref<InstanceType<typeof ArticleForm> | null>(null)
 const quickSwitch = ref<InstanceType<typeof EditorQuickSwitch> | null>(null)
 const imagePicker = ref<HTMLInputElement | null>(null)
 const importingImages = ref(false)
@@ -80,6 +81,10 @@ async function applyCommand(command: MarkdownCommand) {
   editor.value?.setSelectionRange(result.start, result.end)
 }
 
+function toggleReading() {
+  if (readingMode.value || articleForm.value?.allowDiscard() !== false) readingMode.value = !readingMode.value
+}
+
 function editorShortcut(event: KeyboardEvent) {
   if (event.isComposing) return
   const key = event.key.toLowerCase()
@@ -99,7 +104,7 @@ function editorShortcut(event: KeyboardEvent) {
     }
   } else if (event.altKey && key === 'r') {
     event.preventDefault()
-    readingMode.value = !readingMode.value
+    toggleReading()
   }
 }
 
@@ -205,8 +210,10 @@ function addTab() {
 }
 
 async function closeTab(tab: EditorTab) {
-  if (leaveVisible.value || !(await confirmLeave([tab]))) return
   const selected = activeTab.value === tab
+  if (leaveVisible.value || (selected && articleForm.value?.allowDiscard() === false)) return
+  if (!(await confirmLeave([tab]))) return
+  if (selected) articleForm.value?.discard()
   removeEditorTab(tab)
   if (!selected) return
   const fallback = editorTabs.value.slice(-1)[0]
@@ -330,7 +337,7 @@ async function saveAs() {
 }
 
 function confirmLeave(tabs = editorTabs.value): Promise<boolean> {
-  if (pendingLeave) return pendingLeave
+  if (pendingLeave) return Promise.resolve(false)
   if (importingImages.value || tabs.some(tab => tab.session.saving)) {
     appStore.showToast('请等待当前保存或图片导入结束', 'warning')
     return Promise.resolve(false)
@@ -359,14 +366,14 @@ async function chooseLeave(action: 'save' | 'discard' | 'cancel') {
   leaveTargets.value = []
 }
 
-onBeforeRouteLeave(() => confirmLeave())
+onBeforeRouteLeave(() => !pendingLeave && articleForm.value?.allowDiscard() !== false && confirmLeave())
 onBeforeRouteUpdate(() => {
   if (importingImages.value || editorTabs.value.some(tab => tab.session.saving)) return false
-  return !leaveVisible.value
+  return !leaveVisible.value && articleForm.value?.allowDiscard() !== false
 })
 
 function beforeUnload(event: BeforeUnloadEvent) {
-  if (editorTabs.value.some(tab => tab.session.dirty || tab.session.saving) || importingImages.value) {
+  if (editorTabs.value.some(tab => tab.session.dirty || tab.session.saving) || importingImages.value || articleForm.value?.hasUnapplied()) {
     event.preventDefault()
     event.returnValue = ''
   }
@@ -384,9 +391,9 @@ onMounted(async () => {
   if (isTauri()) {
     try {
       const unlisten = await getCurrentWindow().onCloseRequested(async event => {
-        if (!editorTabs.value.some(tab => tab.session.dirty || tab.session.saving) && !importingImages.value) return
+        if (!editorTabs.value.some(tab => tab.session.dirty || tab.session.saving) && !importingImages.value && !articleForm.value?.hasUnapplied()) return
         event.preventDefault()
-        if (closing) return
+        if (closing || pendingLeave || articleForm.value?.allowDiscard() === false) return
         closing = true
         try { if (await confirmLeave()) await getCurrentWindow().destroy() }
         catch (cause) { error.value = `关闭窗口失败：${message(cause)}` }
@@ -410,7 +417,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div>
-    <div class="main-header">
+    <div class="main-header" :inert="leaveVisible || saveAsVisible">
       <div class="main-header-title">{{ session.path ? '编辑文档' : '新建文档' }}{{ session.dirty ? ' · 未保存' : '' }}</div>
       <div class="main-header-actions">
         <button class="btn btn-secondary btn-sm" @click="router.back()">返回</button>
@@ -418,7 +425,7 @@ onBeforeUnmount(() => {
         <button class="btn btn-primary btn-sm" :disabled="session.saving || loading || (!!session.path && !session.baseline)" @click="handleSave()">{{ session.saving ? '保存中...' : '保存' }}</button>
       </div>
     </div>
-    <div class="main-content">
+    <div class="main-content" :inert="leaveVisible || saveAsVisible">
       <div class="editor-tabs" aria-label="打开的文档">
         <div v-for="tab in editorTabs" :key="tab.id" class="editor-tab" :class="{ selected: tab === activeTab }">
           <button class="btn btn-ghost btn-sm" :aria-current="tab === activeTab ? 'true' : undefined"
@@ -475,13 +482,13 @@ onBeforeUnmount(() => {
         </details>
       </div>
       <p v-else-if="session.externalUpdated" role="status">已读取外部更新。</p>
-      <ArticleForm v-if="!readingMode && !loading && (session.baseline || articleDocument)" :key="activeTab.id + ':' + session.generation" :text="session.text"
+      <ArticleForm ref="articleForm" v-if="!readingMode && !loading && (session.baseline || articleDocument)" :key="activeTab.id + ':' + session.generation" :text="session.text"
         @apply="(before, after) => { if (session.text === before) session.text = after }" />
       <div class="card" style="padding: 0; overflow: hidden;">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; border-bottom: 1px solid var(--border-subtle);">
           <span style="font-size: 12px; color: var(--text-secondary);">{{ loading ? '读取中...' : 'Markdown 源码编辑' }}</span>
           <span style="font-size: 12px; color: var(--text-tertiary); overflow-wrap: anywhere;">{{ session.path || '尚未创建' }}</span>
-          <button class="btn btn-secondary btn-sm" type="button" :aria-pressed="readingMode" title="Alt+R" @click="readingMode = !readingMode">
+          <button class="btn btn-secondary btn-sm" type="button" :aria-pressed="readingMode" title="Alt+R" @click="toggleReading">
             {{ readingMode ? '返回编辑' : '阅读模式' }}
           </button>
           <button v-if="!readingMode" class="btn btn-secondary btn-sm" :aria-pressed="showPreview" @click="showPreview = !showPreview">{{ showPreview ? '隐藏预览' : '显示预览' }}</button>
@@ -504,9 +511,9 @@ onBeforeUnmount(() => {
             @open-document="path => router.push({ path: '/editor', query: { id: path } })" />
         </div>
       </div>
+      <section v-if="!readingMode && session.path && session.baseline" class="card editor-site"><SiteActions :document-path="session.path" /></section>
       <AiWritingPanel v-if="!readingMode && !loading && (!session.path || session.baseline)" :buffer="session.text"
         :document-key="activeTab.id + ':' + session.generation + ':' + (session.path || '')" @accept="session.text = $event" />
-      <section v-if="!readingMode && session.path && session.baseline" class="card editor-site"><SiteActions :document-path="session.path" /></section>
       <DocumentBacklinks v-if="session.path && session.baseline" :path="session.path" />
     </div>
     <div v-if="leaveVisible" class="editor-modal-backdrop">

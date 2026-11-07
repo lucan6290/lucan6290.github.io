@@ -70,7 +70,14 @@ def set_body_title(raw, title):
     data = raw.encode("utf-8")
     offset = body_offset(data)
     body = data[offset:]
+    newline = b"\r\n" if b"\r\n" in data else b"\n"
     for node in descendants(Parser(BLOCK).parse(body).root_node):
+        if node.type == "setext_heading" and any(child.type == "setext_h1_underline" for child in node.named_children):
+            line_start = body.rfind(b"\n", 0, node.start_byte) + 1
+            leading = body[line_start:node.start_byte]
+            if len(leading) <= 3 and not leading.strip(b" "):
+                result = body[:node.start_byte] + b"# " + title.encode("utf-8") + newline + body[node.end_byte:]
+                return (data[:offset] + result).decode("utf-8")
         if node.type != "atx_heading":
             continue
         marker = next((child for child in node.named_children if child.type == "atx_h1_marker"), None)
@@ -91,7 +98,6 @@ def set_body_title(raw, title):
                 end += 1
             result = body[:marker.end_byte] + b" " + title.encode("utf-8") + body[end:]
         return (data[:offset] + result).decode("utf-8")
-    newline = b"\r\n" if b"\r\n" in data else b"\n"
     return (data[:offset] + newline + b"# " + title.encode("utf-8") + newline * 2 + body).decode("utf-8")
 
 

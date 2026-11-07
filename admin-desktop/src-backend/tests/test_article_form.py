@@ -47,3 +47,10 @@ class ArticleFormTests(unittest.TestCase):
         raw = RAW.removeprefix("\ufeff").split("---\r\n\r\n", 1)[0] + "---\r\n\r\n# \r\n"
         updated = patch_fields(raw, {"title": "开始写作"})
         self.assertTrue(updated.endswith("# 开始写作\r\n"))
+
+
+    def test_updates_first_setext_h1_without_creating_duplicate_heading(self):
+        raw = RAW.replace("# 文章 ###\r\n", "文章\r\n===\r\n").replace("正文\r\n", "# 后续标题\r\n")
+        updated = patch_fields(raw, {"title": "新标题"})
+        self.assertIn("# 新标题\r\n\r\n# 后续标题", updated)
+        self.assertNotIn("文章\r\n===", updated)

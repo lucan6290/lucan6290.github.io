@@ -8,10 +8,16 @@ const emit = defineEmits<{ apply: [before: string, after: string] }>()
 const visible = ref(false)
 const fields = ref<Fields | null>(null)
 const tags = ref('')
+const initial = ref('')
 const source = ref('')
 const error = ref('')
 const busy = ref(false)
 const stale = computed(() => fields.value !== null && props.text !== source.value)
+const valuesKey = () => JSON.stringify([fields.value?.title, fields.value?.description, fields.value?.sticky, tags.value])
+const hasUnapplied = () => fields.value !== null && valuesKey() !== initial.value
+const allowDiscard = () => !hasUnapplied() || window.confirm('文章表单还有未应用的内容。放弃表单修改？')
+function discard() { fields.value = null; visible.value = false }
+defineExpose({ hasUnapplied, allowDiscard, discard })
 
 async function load() {
   const before = props.text
@@ -22,6 +28,7 @@ async function load() {
     source.value = before
     fields.value = result
     tags.value = result.tags.join('\n')
+    initial.value = valuesKey()
   } catch (cause) {
     fields.value = null
     error.value = cause instanceof Error ? cause.message : '无法读取表单字段'
@@ -29,6 +36,7 @@ async function load() {
 }
 
 function toggle() {
+  if (visible.value && !allowDiscard()) return
   visible.value = !visible.value
   if (visible.value) void load()
 }
@@ -36,16 +44,20 @@ function toggle() {
 async function apply() {
   if (!fields.value || stale.value) return
   const before = source.value
+  const nextTags = tags.value === fields.value.tags.join('\n') ? fields.value.tags : tags.value.split('\n').map(tag => tag.trim()).filter(Boolean)
   busy.value = true
   error.value = ''
   try {
     const result = await request<{ raw_content: string }>('/api/v1/article-form/patch', 'POST', {
       raw_content: before,
-      values: { ...fields.value, tags: tags.value.split('\n').map(tag => tag.trim()).filter(Boolean) },
+      values: { ...fields.value, tags: nextTags },
     })
     if (props.text !== before) return
     emit('apply', before, result.raw_content)
     source.value = result.raw_content
+    fields.value.tags = nextTags
+    tags.value = nextTags.join('\n')
+    initial.value = valuesKey()
   } catch (cause) { error.value = cause instanceof Error ? cause.message : '无法更新表单字段' }
   finally { busy.value = false }
 }
