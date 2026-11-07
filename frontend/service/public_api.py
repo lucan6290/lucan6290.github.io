@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, StringConstraints, UUID4, field_validator
 from starlette.datastructures import Headers, MutableHeaders
 
+from author_routes import ContentError, attach_author_routes
 from interaction_store import InteractionStore
 
 
@@ -34,6 +35,7 @@ class Settings:
     manifest: Path
     database: Path
     admin_token: str = field(default="", repr=False)
+    author_project_root: Path | None = None
 
     def __post_init__(self):
         parsed = urlsplit(self.origin)
@@ -45,14 +47,18 @@ class Settings:
             raise ValueError("PUBLIC_SITE_ORIGIN 必须为 HTTPS 站点源，或本地 HTTP 站点源")
         if self.admin_token and not re.fullmatch(r"[!-~]{32,512}", self.admin_token):
             raise ValueError("管理员密钥必须为 32–512 个可打印 ASCII 字符")
+        if self.author_project_root is not None and not self.admin_token:
+            raise ValueError("启用在线写作时必须配置管理员密钥")
 
     @classmethod
     def from_env(cls):
+        author_root = os.environ.get("PUBLIC_AUTHOR_PROJECT_ROOT")
         return cls(
             origin=os.environ["PUBLIC_SITE_ORIGIN"],
             manifest=Path(os.environ["PUBLIC_CONTENT_MANIFEST"]),
             database=Path(os.environ["PUBLIC_INTERACTION_DB"]),
             admin_token=os.environ.get("PUBLIC_ADMIN_TOKEN", ""),
+            author_project_root=Path(author_root) if author_root else None,
         )
 
 
@@ -164,6 +170,7 @@ def create_app(settings=None):
                        allow_headers=["Authorization", "Content-Type"])
 
     @app.exception_handler(ServiceError)
+    @app.exception_handler(ContentError)
     async def service_error(_request, error):
         return error_response(error.status, error.code, error.message)
 
@@ -221,6 +228,7 @@ def create_app(settings=None):
             raise ServiceError(404, "comment_not_found", "评论不存在")
         return result
 
+    attach_author_routes(admin, settings.author_project_root)
     app.include_router(public)
     app.include_router(admin)
     return app

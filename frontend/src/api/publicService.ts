@@ -90,3 +90,35 @@ export const articleService = {
     });
   },
 };
+
+export type CommentStatus = 'pending' | 'published' | 'rejected';
+export type AdminComment = PublicComment & { article_path: string; status: CommentStatus };
+export type DocumentSummary = { relative_path: string; title: string };
+export type AuthorDocument = DocumentSummary & { raw_content: string; version: string };
+type DocumentListing = { documents: DocumentSummary[]; directories: { relative_path: string; label: string }[] };
+
+export const authorService = {
+  session(token: string, signal: AbortSignal) {
+    return request<{ writing_enabled: boolean }>('/admin/session', { token, signal });
+  },
+  documents(token: string, signal: AbortSignal) {
+    return request<DocumentListing>('/admin/documents', { token, signal });
+  },
+  open(token: string, path: string, signal: AbortSignal) {
+    return request<AuthorDocument>(`/admin/document?${query({ relative_path: path })}`, { token, signal });
+  },
+  save(token: string, path: string, raw: string, version: string | null, signal: AbortSignal) {
+    const body = { relative_path: path, raw_content: raw };
+    return version === null
+      ? request<AuthorDocument>('/admin/documents', { method: 'POST', body, token, signal })
+      : request<AuthorDocument>('/admin/document', {
+        method: 'PUT', body: { ...body, expected_version: version }, token, signal,
+      });
+  },
+  comments(token: string, status: CommentStatus, signal: AbortSignal, before?: number) {
+    return request<CommentPage<AdminComment>>(`/admin/comments?${query({ status }, before)}`, { token, signal });
+  },
+  moderate(token: string, id: number, status: 'published' | 'rejected', signal: AbortSignal) {
+    return request<AdminComment>(`/admin/comments/${id}`, { method: 'PATCH', body: { status }, token, signal });
+  },
+};
