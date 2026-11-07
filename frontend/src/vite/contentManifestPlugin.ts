@@ -2,6 +2,7 @@ import type { Plugin } from 'vite';
 import { watch } from 'chokidar';
 import path from 'node:path';
 import { build } from '../../scripts/lib/buildContent.mjs';
+import { writeStaticPages } from '../../scripts/lib/staticPages.mjs';
 
 const VIRTUAL_ID = 'virtual:content-manifest';
 const RESOLVED_ID = '\0' + VIRTUAL_ID;
@@ -12,6 +13,7 @@ const RESOLVED_ID = '\0' + VIRTUAL_ID;
 export function contentManifestPlugin(): Plugin {
   let watcher: ReturnType<typeof watch> | null = null;
   let reloadTimer: ReturnType<typeof setTimeout> | null = null;
+  let manifest: ReturnType<typeof build> | null = null;
 
   return {
     name: 'content-manifest',
@@ -21,10 +23,17 @@ export function contentManifestPlugin(): Plugin {
     },
     load(id) {
       if (id === RESOLVED_ID) {
-        const manifest = build();
-        return `export default ${JSON.stringify(manifest)};`;
+        manifest = build();
+        const { tree, articles, prevNext, tags, archive, recent } = manifest;
+        return `export default ${JSON.stringify({ tree, articles, prevNext, tags, archive, recent })};`;
       }
       return null;
+    },
+    writeBundle(options) {
+      if (manifest && options.dir) {
+        const count = writeStaticPages({ outDir: options.dir, manifest });
+        console.log(`[pages] ${count} route entries, 404.html, .nojekyll`);
+      }
     },
     configureServer(server) {
       const contentDir = path.resolve(process.cwd(), 'content');

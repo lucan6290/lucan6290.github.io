@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createMemoryHistory, createRouter } from 'vue-router';
-import { CONTENT_ROUTE_PATH, contentHref, contentPath, resolveContentUrl, sidebarNodes } from '../../src/composables/contentPaths.ts';
+import { CONTENT_ROUTE_PATH, contentHref, contentPath, resolveContentUrl, sidebarNodes, withBasePath, stripBasePath } from '../../src/composables/contentPaths.ts';
 import { createNavEntries } from '../../src/config/nav.ts';
 
 test('知识库侧栏只展示所属一级目录，其他自定义栏目维持原样', () => {
@@ -27,6 +27,32 @@ test('博客与知识库、项目采用相同的目录导航规则', () => {
     ] }]);
     assert.deepEqual(entries[0].items.slice(1).map(item => item.label), ['分类一', '分类二']);
   }
+});
+
+test('部署 base 只作用于站内绝对路径，去除时匹配完整路径段', () => {
+  assert.equal(withBasePath('/img/favicon.png', '/'), '/img/favicon.png');
+  assert.equal(withBasePath('/img/favicon.png', '/repo/'), '/repo/img/favicon.png');
+  for (const value of ['https://example.com/a', '//cdn.example.com/image.png', '#章节', 'mailto:a@example.com']) {
+    assert.equal(withBasePath(value, '/repo/'), value);
+  }
+  assert.equal(stripBasePath('/repo/knowledge/中文', '/repo/'), '/knowledge/中文');
+  assert.equal(stripBasePath('/repo/', '/repo/'), '/');
+  assert.equal(stripBasePath('/repo', '/repo/'), '/');
+  assert.equal(stripBasePath('/knowledge/a', '/'), '/knowledge/a');
+  assert.equal(stripBasePath('/repository/a', '/repo/'), null);
+  assert.equal(stripBasePath('/knowledge/a', '/repo/'), null);
+});
+
+test('子路径部署下 Markdown 内链、README 与资源地址保留正确 base', () => {
+  const source = 'knowledge/中文目录/01-安装.md';
+  const resolve = value => resolveContentUrl(value, source, { 'knowledge/中文目录/配图.png': '/repo/assets/image.png' }, '/repo/');
+  assert.equal(resolve('./下一章.md?q=a%20b#标题'), '/repo/knowledge/%E4%B8%AD%E6%96%87%E7%9B%AE%E5%BD%95/%E4%B8%8B%E4%B8%80%E7%AB%A0?q=a%20b#%E6%A0%87%E9%A2%98');
+  assert.equal(resolve('./README.md#目录'), '/repo/knowledge/%E4%B8%AD%E6%96%87%E7%9B%AE%E5%BD%95#%E7%9B%AE%E5%BD%95');
+  assert.equal(resolve('/projects/01-我的项目'), '/repo/projects/01-我的项目');
+  assert.equal(resolve('/img/favicon.png'), '/repo/img/favicon.png');
+  assert.equal(resolve('./配图.png'), '/repo/assets/image.png');
+  assert.equal(resolve('#目录'), '#目录');
+  assert.equal(resolve('//cdn.example.com/image.png'), '//cdn.example.com/image.png');
 });
 
 test('项目栏目按一级目录限制侧栏和下拉菜单', () => {
