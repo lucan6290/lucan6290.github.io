@@ -7,6 +7,7 @@
           <li><router-link to="/knowledge">知识库</router-link></li>
           <li><router-link to="/blog">博客</router-link></li>
           <li><router-link to="/projects">项目</router-link></li>
+          <li v-if="hasSeriesRoute(manifest.tree)"><router-link :to="SERIES_ROOT">系列专题</router-link></li>
         </ul>
       </div>
       <div class="footer__col">
@@ -22,6 +23,10 @@
 </template>
 
 <script setup lang="ts">
+import { useContent } from '@/composables/useContent';
+import { hasSeriesRoute, SERIES_ROOT } from '@/utils/seriesPaths';
+
+const { manifest } = useContent();
 const year = new Date().getFullYear();
 </script>
 

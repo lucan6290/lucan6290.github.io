@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { sectionLabel } from '../../src/config/nav.ts';
 import { publicPageHref, withPublicBase } from '../../src/utils/publicPaths.ts';
+import { hasSeriesRoute, SERIES_ROOT, seriesHref } from '../../src/utils/seriesPaths.js';
 import { renderPublicMarkdown } from './publicMarkdown.mjs';
 
 const SITE_NAME = '箓川码笺';
@@ -16,21 +17,24 @@ function escapeMarkup(value) {
 
 function publicOrigin(value) {
   if (!value?.trim()) return '';
-  const url = URL.parse(value.trim());
-  if (!url || !['http:', 'https:'].includes(url.protocol) || url.href !== url.origin + '/') {
-    throw new Error('SITE_URL 必须是 HTTP(S) origin，例如 https://example.com，部署前缀请通过 Vite base 提供。');
+  try {
+    const url = new URL(value.trim());
+    if (['http:', 'https:'].includes(url.protocol) && url.href === url.origin + '/') return url.origin;
+  } catch {
+    // 统一报告无效地址。
   }
-  return url.origin;
+  throw new Error('SITE_URL 必须是 HTTP(S) origin，例如 https://example.com，部署前缀请通过 Vite base 提供。');
 }
 
 function collectPages(manifest) {
-  const pages = new Map([['/', { title: SITE_NAME, children: manifest.tree.filter(node => !node.article) }]]);
+  const home = { title: SITE_NAME, children: manifest.tree.filter(node => !node.article && node.path !== '/about') };
+  const pages = new Map([['/', home]]);
   function visit(nodes, top = false) {
     for (const node of nodes) {
       // Vue 固定路由覆盖 /about，内容路由只展示一级目录下的文章。
-      if (top && (node.article || node.path === '/about')) continue;
+      if (top && node.article) continue;
       const { article, introduction, children } = node;
-      pages.set(node.path, {
+      if (!top || node.path !== '/about') pages.set(node.path, {
         title: top ? sectionLabel(node.name) : node.label,
         description: article?.excerpt || introduction?.excerpt,
         article,
@@ -41,6 +45,24 @@ function collectPages(manifest) {
     }
   }
   visit(manifest.tree, true);
+  if (hasSeriesRoute(manifest.tree)) {
+    const label = '系列专题';
+    const groups = Object.values(manifest.series);
+    home.children.push({ path: SERIES_ROOT, label });
+    pages.set(SERIES_ROOT, {
+      title: label,
+      children: groups.map(group => ({ path: seriesHref(group.id), label: group.title })),
+      note: groups.length ? '' : '暂无系列专题。',
+    });
+    for (const group of groups) {
+      pages.set(seriesHref(group.id), {
+        title: group.title,
+        description: `系列专题 · ${group.title}`,
+        ordered: true,
+        children: group.articlePaths.map(path => ({ path, label: manifest.articles[path].frontmatter.title })),
+      });
+    }
+  }
   return pages;
 }
 
@@ -52,7 +74,12 @@ function pageBody(page, route, base, assets) {
   const parent = route.slice(0, route.lastIndexOf('/'));
   const nav = route === '/' ? '' : `<nav aria-label="页面位置"><a href="${href('/')}">首页</a>${parent ? ` · <a href="${href(parent)}">上一级</a>` : ''}</nav>`;
   const title = escapeMarkup(page.title);
-  return `<main class="prerendered-page">${nav}<article class="markdown-body"><h1>${title}</h1>${markdown}${children ? `<ul>${children}</ul>` : ''}</article></main>`;
+  const series = page.article?.frontmatter.series;
+  const seriesEntry = series ? `<p><a href="${href(seriesHref(series.id))}">系列专题 · ${escapeMarkup(series.title)}</a></p>` : '';
+  const listTag = page.ordered ? 'ol' : 'ul';
+  const list = children ? `<${listTag}>${children}</${listTag}>` : '';
+  const note = page.note ? `<p>${escapeMarkup(page.note)}</p>` : '';
+  return `<main class="prerendered-page">${nav}<article class="markdown-body"><h1>${title}</h1>${seriesEntry}${markdown}${list}${note}</article></main>`;
 }
 
 function pageHtml(template, { title, description, article }, route, origin, base, body) {

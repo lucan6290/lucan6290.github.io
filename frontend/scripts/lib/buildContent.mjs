@@ -8,6 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import matter from 'gray-matter';
 import { getProcessor } from 'bytemd';
+import { buildSeries, parseSeries } from './contentSeries.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -106,6 +107,9 @@ function walkTree(dir, relativeRoot) {
       const slug = path.basename(entry.name, path.extname(entry.name));
       const rawBody = parsed.content;
       const wordCount = countWords(rawBody);
+      const series = rel.includes('/') && !/^readme\.md$/i.test(entry.name)
+        ? parseSeries(fm.series, rel)
+        : undefined;
       const article = {
         slug,
         path: urlPath,
@@ -117,6 +121,7 @@ function walkTree(dir, relativeRoot) {
           tags: Array.isArray(fm.tags) ? fm.tags.map(String) : [],
           description: fm.description || '',
           sticky: Boolean(fm.sticky),
+          ...(series ? { series } : {}),
         },
         sortKey: parseSortKey(entry.name),
         mtimeMs: stat.mtimeMs,
@@ -250,13 +255,14 @@ export function build({ contentDir = CONTENT_DIR, outDir = OUT_DIR } = {}) {
   const tags = buildTags(articles);
   const archive = buildArchive(articles);
   const recent = buildRecent(articles);
+  const series = buildSeries(articles, tree);
   const searchDocs = buildSearchIndex(articles);
 
-  fs.writeFileSync(path.join(outDir, 'content-manifest.json'), JSON.stringify({ tree, articles, prevNext, tags, archive, recent }, null, 2));
+  fs.writeFileSync(path.join(outDir, 'content-manifest.json'), JSON.stringify({ tree, articles, prevNext, tags, archive, recent, series }, null, 2));
   fs.writeFileSync(path.join(outDir, 'search-index.json'), JSON.stringify(searchDocs, null, 2));
   fs.writeFileSync(path.join(outDir, 'tags.json'), JSON.stringify(tags, null, 2));
   fs.writeFileSync(path.join(outDir, 'archive.json'), JSON.stringify(archive, null, 2));
 
   console.log(`[build-content] ${Object.keys(articles).length} articles, ${Object.keys(tags).length} tags, ${recent.length} recent.`);
-  return { tree, articles, prevNext, tags, archive, recent, searchDocs };
+  return { tree, articles, prevNext, tags, archive, recent, series, searchDocs };
 }

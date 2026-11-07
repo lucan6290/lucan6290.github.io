@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
 import manifest from 'virtual:content-manifest';
 import { CONTENT_ROUTE_PATH } from '@/composables/contentPaths';
+import { hasSeriesRoute, SERIES_ROOT } from '@/utils/seriesPaths';
 
 const hasSection = (name: string) => manifest.tree.some((node) => !node.article && node.name === name);
 
@@ -13,6 +14,9 @@ const routes: RouteRecordRaw[] = [
   ] : []),
   ...(!hasSection('archive') ? [
     { path: '/archive', name: 'archive', component: () => import('@/views/ArchiveView.vue') },
+  ] : []),
+  ...(hasSeriesRoute(manifest.tree) ? [
+    { path: `${SERIES_ROOT}/:id?`, name: 'series', component: () => import('@/views/SeriesView.vue') },
   ] : []),
   { path: CONTENT_ROUTE_PATH, name: 'content', component: () => import('@/views/ContentRoute.vue') },
 ];
