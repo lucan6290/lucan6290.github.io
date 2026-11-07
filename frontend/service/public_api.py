@@ -107,7 +107,11 @@ class RequestLimits:
             return await response(scope, receive, send_no_store)
 
         if scope["method"] in {"POST", "PUT", "PATCH"}:
-            limit = 2 * 1024 * 1024 if scope["path"].startswith(f"{BASE}/admin/") else 32 * 1024
+            path = scope["path"]
+            root_path = scope.get("root_path", "")
+            if root_path and path.startswith(root_path + "/"):
+                path = path[len(root_path):]
+            limit = 2 * 1024 * 1024 if path.startswith(f"{BASE}/admin/") else 32 * 1024
             declared = headers.get("content-length", "0")
             if not declared.isascii() or not declared.isdecimal() or len(declared) > 10 or int(declared) > limit:
                 response = error_response(413, "body_too_large", "请求内容过长")

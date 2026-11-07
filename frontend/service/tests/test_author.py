@@ -40,12 +40,12 @@ class AuthorTests(TestCase):
         self.token = uuid4().hex + uuid4().hex
         self.admin = {"Authorization": f"Bearer {self.token}"}
 
-    def client(self, *, writing=True, admin=True):
+    def client(self, *, writing=True, admin=True, root_path=""):
         settings = Settings(
             "https://site.example.test", self.manifest, self.root / "interactions.sqlite3",
             self.token if admin else "", author_project_root=self.root if writing else None,
         )
-        client = TestClient(create_app(settings))
+        client = TestClient(create_app(settings), root_path=root_path)
         self.addCleanup(client.close)
         return client
 
@@ -100,6 +100,16 @@ class AuthorTests(TestCase):
         self.assertEqual(sorted(r.status_code for r in responses), [200, 409])
         winner = next(r for r in responses if r.status_code == 200)
         self.assertEqual((self.content / PATH).read_text(encoding="utf-8"), winner.json()["raw_content"])
+
+    def test_reverse_proxy_root_path_keeps_admin_and_public_body_limits(self):
+        client = self.client(root_path="/service")
+        raw = RAW + "\n" + ("x" * 40_000)
+        response = client.post(f"/service{BASE}/documents", headers=self.admin,
+                               json={"relative_path": PATH, "raw_content": raw})
+        self.assertEqual(response.status_code, 201, response.text)
+        self.assertEqual((self.content / PATH).read_text(encoding="utf-8"), raw)
+        public = client.post("/service/api/v1/comments", json={"body": raw})
+        self.assertEqual(public.status_code, 413)
 
     def test_invalid_input_and_path_are_rejected_before_writing(self):
         client = self.client()

@@ -24,6 +24,8 @@ python -m uvicorn public_api:create_app --factory --app-dir frontend/service --h
 
 静态站构建时设置 `VITE_PUBLIC_SERVICE_URL` 为 HTTPS 服务地址。把同一构建的 `frontend/src/generated/content-manifest.json` 提供给互动服务进程并重启以刷新文章白名单。配置 `PUBLIC_SITE_ORIGIN` 为协议、域名与可选端口组成的完整站点源，末尾不加路径或斜杠。互动服务从同一代码检出目录复用桌面端内容存储模块。部署在 TLS 反向代理后，服务只监听私有网络。代理应覆盖转发头，Uvicorn 只信任明确列出的代理 IP。也应在代理设置请求大小、并发和时间限制，避免记录 Authorization 或请求体。参见 [FastAPI 的 HTTPS 部署说明](https://fastapi.tiangolo.com/deployment/https/) 和 [可信代理说明](https://fastapi.tiangolo.com/advanced/behind-a-proxy/)。
 
+如果代理以 `/service` 作为外部路径前缀并在转发时去掉它，可设置 `VITE_PUBLIC_SERVICE_URL=https://api.example.com/service`，并向 Uvicorn 传入 `--root-path /service`。应用会按实际 API 路由限制请求体，公开接口 32 KiB，管理接口 2 MiB。参见 [FastAPI 的代理前缀说明](https://fastapi.tiangolo.com/advanced/behind-a-proxy/#proxy-with-a-stripped-path-prefix)。
+
 SQLite 应位于本地持久卷并使用 SQLite 在线备份接口或停机一致性备份。阅读量按每篇文章的随机会话累计，同一会话重复打开、刷新和重试只计一次。会话 ID 由浏览器在会话存储生成，SQLite 保存哈希。更换文件路径会开启独立计数。匿名评论经管理员审核后显示，评论记录正文、关联文章、时间、状态及用于防重复提交的随机标识。评论每 10 分钟最多提交 5 次，阅读登记每分钟最多 120 次，失败认证每分钟最多 10 次，均按可信客户端地址计算固定窗口。限流只保存短期带密钥散列，窗口过期后在下一次受限请求时清理。
 
 HTTP 详见 [方案与契约](../../docs/superpowers/specs/2026-11-07-public-site-service-design.md)。本地验证从根目录执行：
