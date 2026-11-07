@@ -1,5 +1,6 @@
 """Versioned content moves, link repairs and graph lookup."""
 
+from contextlib import suppress
 from dataclasses import dataclass
 import hashlib
 import os
@@ -8,8 +9,8 @@ import tempfile
 
 from content_mutations import document_snapshots, mutable_path, plan_digest
 from content_store import ContentError, RESOURCE_DIRECTORY
-from markdown_links import (decoded_parts, destinations, document_route, relative_reference, resolve_reference,
-                            rewrite_destinations, route_reference, split_reference)
+from markdown_links import (category_route, decoded_parts, destinations, document_route, relative_reference,
+                            resolve_reference, rewrite_destinations, route_reference, split_reference)
 from media_library import image_directory, image_owner
 
 
@@ -72,13 +73,40 @@ def tree_signature(root):
     return signature
 
 
-def destination_exists(path):
-    return any(item.name.casefold() == path.name.casefold() for item in path.parent.iterdir())
+def case_only_rename(source, target):
+    return (source.parent == target.parent and source.name != target.name
+            and source.name.casefold() == target.name.casefold())
 
 
-def relocate(source, target):
-    if destination_exists(target):
+def destination_exists(path, source):
+    original_name = source.name if case_only_rename(source, path) else None
+    return any(item.name.casefold() == path.name.casefold() and item.name != original_name
+               for item in path.parent.iterdir())
+
+
+def relocate(source, target, root):
+    if destination_exists(target, source):
         raise ContentError(409, "already_exists", "目标已有同名文件或目录")
+    if case_only_rename(source, target):
+        temporary = Path(tempfile.mkdtemp(dir=source.parent, prefix=".desktop-"))
+        staged = temporary / source.name
+        try:
+            os.rename(source, staged)
+            try:
+                relocate(staged, target, root)
+            except (OSError, ContentError):
+                try:
+                    relocate(staged, source, root)
+                except (OSError, ContentError) as error:
+                    paths = [path.relative_to(root).as_posix() for path in (staged, source)]
+                    raise ContentError(500, "rollback_failed", "移动中断，部分路径需人工核对",
+                                       {"paths": paths}) from error
+                raise
+        finally:
+            # A nonempty staging directory still holds the original data.
+            with suppress(OSError):
+                temporary.rmdir()
+        return
     if os.name == "nt" or source.is_dir():
         os.rename(source, target)
         return
@@ -120,7 +148,7 @@ class ContentMoves:
         origin, target = self.path(source), self.path(destination)
         if not target.parent.is_dir():
             raise ContentError(404, "not_found", "目标的父目录不存在")
-        if destination_exists(target):
+        if destination_exists(target, origin):
             raise ContentError(409, "already_exists", "目标已有同名文件或目录")
         return Relocation(source, destination, tree_signature(origin))
 
@@ -132,6 +160,8 @@ class ContentMoves:
         mutable_path(self.store, destination, directory=directory)
         if not (origin.is_dir() if directory else origin.is_file()):
             raise ContentError(404, "not_found", "移动源已不存在")
+        if not directory and "/" in source and "/" not in destination:
+            raise ContentError(400, "unpublishable_destination", "文档须保留在可发布的栏目下")
         if directory and destination.casefold().startswith(source.casefold() + "/"):
             raise ContentError(400, "invalid_path", "不能把目录移动到自己的下级")
         parent_parts = destination.split("/") if directory else destination.split("/")[:-1]
@@ -140,12 +170,14 @@ class ContentMoves:
         moves = [self.relocation(source, destination)]
         if not directory:
             media_source = image_directory(source)
+            media_destination = image_directory(destination)
             if self.path(media_source).exists():
                 if not self.path(media_source).is_dir():
                     raise ContentError(409, "already_exists", "源配图目录被同名文件占用")
                 image_owner(self.path(media_source))
-                moves.append(self.relocation(media_source, image_directory(destination)))
-            elif self.path(image_directory(destination)).exists():
+                if media_source != media_destination:
+                    moves.append(self.relocation(media_source, media_destination))
+            elif self.path(media_destination).exists():
                 raise ContentError(409, "already_exists", "目标配图目录已存在")
         index = self.store.list_content()
         snapshots = dict(document_snapshots(self.store, index))
@@ -156,24 +188,29 @@ class ContentMoves:
         routes = {}
         for old in sorted(directories):
             new = moved_path(old, moves)
-            if old != new:
-                routes["/" + old] = "/" + new
+            old_route, new_route = category_route(old), category_route(new)
+            if old_route != new_route:
+                routes[old_route] = new_route
         for old in sorted(snapshots):
             new = moved_path(old, moves)
             old_route, new_route = document_route(old), document_route(new)
             if old_route != new_route:
                 routes[old_route] = new_route
 
-        unchanged_routes = {"/" + old for old in directories if moved_path(old, moves) == old}
+        unchanged_categories = {category_route(old) for old in directories if moved_path(old, moves) == old}
         # A category and its README share their public URL.
-        unchanged_routes.update(document_route(old) for old in snapshots if moved_path(old, moves) == old)
-        for old_route, new_route in routes.items():
+        unchanged_routes = unchanged_categories | {
+            document_route(old) for old in snapshots if moved_path(old, moves) == old
+        }
+        for new_route in routes.values():
             if new_route in unchanged_routes or new_route in {"/", "/about", "/series"}:
                 # Moving README between categories intentionally changes their introduction.
                 if not (not directory
                         and PurePosixPath(destination).name.lower() == "readme.md"
-                        and new_route in {"/" + old for old in directories}):
+                        and new_route in unchanged_categories):
                     raise ContentError(409, "route_conflict", "目标与已有博客 URL 冲突", {"route": new_route})
+        # The site's fixed About page keeps this URL even when a directory moves.
+        routes.pop("/about", None)
 
         changes_absolute_routes = directory or PurePosixPath(source).name.lower() != 'readme.md'
         rewrites = []
@@ -184,7 +221,7 @@ class ContentMoves:
                 absolute = absolute_route(value)
                 if changes_absolute_routes and absolute and absolute[0] in routes:
                     trailing = "/" if split_reference(value)[0].endswith("/") and routes[absolute[0]] != "/" else ""
-                    return route_reference(routes[absolute[0]]) + trailing + absolute[1]
+                    return route_reference(routes[absolute[0]]) + trailing
                 reference = resolve_reference(old, value)
                 if not reference:
                     return None
@@ -192,7 +229,7 @@ class ContentMoves:
                 destination = moved_path(target, moves)
                 if resolve_reference(new, value) == (destination, suffix):
                     return None
-                return relative_reference(new, destination) + suffix
+                return relative_reference(new, destination)
 
             updated = rewrite_destinations(data, replacement)
             if updated != data:
@@ -242,13 +279,15 @@ class ContentMoves:
                     original = self.path(move.source)
                     if tree_signature(original) != move.signature:
                         raise ContentError(409, "stale_plan", "移动范围内文件已改变")
-                    relocate(original, self.path(move.destination))
+                    relocate(original, self.path(move.destination), self.store.content_root)
                     moved.append(move)
                 for rewrite in rewrites:
                     replace_version(self.path(rewrite.destination), rewrite.original, rewrite.updated)
                     written.append(rewrite)
             except (OSError, ContentError) as error:
                 failed = self.rollback(moved, written)
+                if isinstance(error, ContentError) and error.code == "rollback_failed":
+                    failed.extend(error.details["paths"])
                 if failed:
                     raise ContentError(500, "rollback_failed", "移动中断，部分路径需人工核对",
                                        {"paths": failed}) from error
@@ -269,15 +308,19 @@ class ContentMoves:
                 destination = self.path(move.destination)
                 if tree_signature(destination) != move.signature:
                     raise ContentError(409, "stale_plan", "回滚期间发现外部修改")
-                relocate(destination, self.path(move.source))
-            except (OSError, ContentError):
-                failed.append(move.destination)
+                relocate(destination, self.path(move.source), self.store.content_root)
+            except (OSError, ContentError) as error:
+                if isinstance(error, ContentError) and error.code == "rollback_failed":
+                    failed.extend(error.details["paths"])
+                else:
+                    failed.append(move.destination)
         return failed
 
     def graph(self):
         with self.store.lock:
             snapshots = dict(document_snapshots(self.store))
             by_route = {document_route(path): path for path in snapshots}
+            by_route.pop("/about", None)
             edges = set()
             for source, data in snapshots.items():
                 for span in destinations(data):

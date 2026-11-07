@@ -41,3 +41,13 @@ class MarkdownLinkTests(unittest.TestCase):
         raw = b"![image](./a\\&copy;.png) and ![other](./a&copy;.png)"
         self.assertEqual([item.value for item in destinations(raw)], ["./a&copy;.png", "./a©.png"])
 
+
+    def test_rewrite_keeps_original_destination_suffix(self):
+        raw = b'[Link](./old.md?q=\\(one "caption") [other](./old.md&#63;q=x&#32;y#id)'
+        self.assertEqual([item.value for item in destinations(raw)], ["./old.md?q=(one", "./old.md?q=x y#id"])
+        self.assertEqual(rewrite_destinations(raw, lambda value: "./new.md"), raw.replace(b"./old.md", b"./new.md"))
+
+    def test_multiline_blockquote_destinations_keep_original_byte_spans(self):
+        raw = b'> > [Link](\r\n> > ./old.md?q=\\(one\r\n> > "caption")\r\n\r\n[Other](./old.md)'
+        self.assertEqual([item.value for item in destinations(raw)], ["./old.md?q=(one", "./old.md"])
+        self.assertEqual(rewrite_destinations(raw, lambda value: "./new.md"), raw.replace(b"./old.md", b"./new.md"))

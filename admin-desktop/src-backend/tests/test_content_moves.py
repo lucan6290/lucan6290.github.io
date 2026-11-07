@@ -113,3 +113,75 @@ class ContentMoveTests(unittest.TestCase):
         self.assertIn({"source": self.other, "target": self.source}, graph["edges"])
         self.assertIn({"source": self.source, "target": "blog/来源/README.md"}, graph["edges"])
         self.assertEqual(sum(edge["source"] == self.other for edge in graph["edges"]), 1)
+
+    def test_published_document_cannot_move_to_content_root(self):
+        with self.assertRaises(ContentError) as failure:
+            self.plan(self.source, "new-root.md")
+        self.assertEqual(failure.exception.code, "unpublishable_destination")
+
+    def test_category_suffix_matches_site_scanner(self):
+        self.write(self.other, "[category](/blog/来源)\n[descendant](/blog/来源/文章%20一)\n".encode())
+        source, target = "blog/来源", "blog/目录.MD"
+        plan = self.plan(source, target, "directory")
+        self.assertIn({"before": "/blog/来源", "after": "/blog/目录"}, plan["routes"])
+        self.assertIn({"before": "/blog/来源/文章 一", "after": "/blog/目录.MD/文章 一"}, plan["routes"])
+        self.moves.apply(source, target, "directory", plan["plan_id"])
+        self.assertEqual((self.content / self.other).read_bytes(),
+                         b"[category](/blog/%E7%9B%AE%E5%BD%95)\n"
+                         b"[descendant](/blog/%E7%9B%AE%E5%BD%95.MD/%E6%96%87%E7%AB%A0%20%E4%B8%80)\n")
+
+    def test_about_url_remains_fixed_when_about_directory_moves(self):
+        self.write("about/README.md", b"# Old category introduction")
+        self.write("about/nested/note.md", b"# Nested article")
+        self.write(self.other, b"[fixed](/about?view=1#top)\n[descendant](/about/nested/note)\n")
+        graph = self.moves.graph()
+        self.assertNotIn({"source": self.other, "target": "about/README.md"}, graph["edges"])
+        plan = self.plan("about", "renamed", "directory")
+        self.assertNotIn("/about", {route["before"] for route in plan["routes"]})
+        self.moves.apply("about", "renamed", "directory", plan["plan_id"])
+        self.assertEqual((self.content / self.other).read_bytes(),
+                         b"[fixed](/about?view=1#top)\n[descendant](/renamed/nested/note)\n")
+
+    def test_case_only_document_and_sidecar_rename(self):
+        source, target = "blog/来源/Note.md", "blog/来源/note.md"
+        self.write(source, b"# note")
+        self.write("blog/来源/Note-images/Image.png", b"asset")
+        self.write(self.other, b"[note](./%E6%9D%A5%E6%BA%90/Note.md)\n")
+        plan = self.plan(source, target)
+        self.moves.apply(source, target, "document", plan["plan_id"])
+        names = {entry.name for entry in (self.content / "blog/来源").iterdir()}
+        self.assertIn("note.md", names)
+        self.assertIn("note-images", names)
+        self.assertNotIn("Note.md", names)
+        self.assertNotIn("Note-images", names)
+        self.assertEqual((self.content / "blog/来源/note-images/Image.png").read_bytes(), b"asset")
+        self.assertIn("来源/note.md".encode(), (self.content / self.other).read_bytes())
+
+    def test_same_stem_extension_change_keeps_sidecar_in_place(self):
+        target = self.source + "x"
+        plan = self.plan(self.source, target)
+        self.assertEqual(plan["moves"], [{"before": self.source, "after": target}])
+        self.moves.apply(self.source, target, "document", plan["plan_id"])
+        self.assertEqual((self.content / self.image).read_bytes(), b"asset bytes")
+        self.assertIn("./文章 一-images/".encode(), (self.content / target).read_bytes())
+
+    def test_obstructed_case_only_rollback_preserves_original_and_external_bytes(self):
+        source, target = "blog/来源/Note.md", "blog/来源/note.md"
+        self.write(source, b"# original")
+        plan = self.plan(source, target)
+        operation = "rename" if os.name == "nt" else "link"
+        real_relocate = getattr(os, operation)
+
+        def obstruct(original, destination):
+            if Path(destination).name == "note.md":
+                self.write(source, b"# external")
+                raise OSError("simulated obstruction after staging")
+            return real_relocate(original, destination)
+
+        with patch("content_moves.os." + operation, side_effect=obstruct), self.assertRaises(ContentError) as failure:
+            self.moves.apply(source, target, "document", plan["plan_id"])
+        self.assertEqual(failure.exception.code, "rollback_failed")
+        self.assertEqual((self.content / source).read_bytes(), b"# external")
+        paths = failure.exception.details["paths"]
+        self.assertTrue(any((self.content / path).is_file() and (self.content / path).read_bytes() == b"# original"
+                            for path in paths))
