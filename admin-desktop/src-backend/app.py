@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, StrictBool
 
+from article_form_routes import create_article_form_router
 from content_store import ContentError, ContentStore
 from media_routes import create_media_router
 from move_routes import create_move_router
@@ -68,6 +69,7 @@ def create_app(project_root: Path, token: str):
                 "project_root": str(store.project_root), "content_root": str(store.content_root)}
 
     dependencies = [Depends(authenticate)]
+    app.include_router(create_article_form_router(), dependencies=dependencies)
     app.include_router(create_media_router(store), dependencies=dependencies)
     app.include_router(create_move_router(store), dependencies=dependencies)
 

@@ -13,6 +13,8 @@ import { createArticleTemplate, fillArticleTitle, isArticleDocument } from '@/ut
 import type { ContentDirectory } from '@/types/content'
 import MarkdownPreview from '@/components/MarkdownPreview.vue'
 import DocumentBacklinks from '@/components/DocumentBacklinks.vue'
+import ArticleForm from '@/components/ArticleForm.vue'
+import { applyMarkdownCommand, markdownCommands, type MarkdownCommand } from '@/utils/editorCommands'
 
 const route = useRoute()
 const router = useRouter()
@@ -36,6 +38,7 @@ const editor = ref<HTMLTextAreaElement | null>(null)
 const imagePicker = ref<HTMLInputElement | null>(null)
 const importingImages = ref(false)
 const showPreview = ref(true)
+const readingMode = ref(false)
 const previewDirectory = computed(() => session.path?.split('/').slice(0, -1).join('/') ?? directory.value)
 let resolveLeave: ((allow: boolean) => void) | null = null
 let pendingLeave: Promise<boolean> | null = null
@@ -50,6 +53,38 @@ function message(cause: unknown) {
     return `${cause.message}${details} (${cause.status})`
   }
   return cause instanceof Error ? cause.message : '请求失败，请检查后端连接'
+}
+
+async function applyCommand(command: MarkdownCommand) {
+  const input = editor.value
+  if (!input || input.disabled || readingMode.value) return
+  const generation = session.generation
+  const result = applyMarkdownCommand(session.text, input.selectionStart, input.selectionEnd, command)
+  session.text = result.text
+  await nextTick()
+  if (generation !== session.generation) return
+  editor.value?.focus()
+  editor.value?.setSelectionRange(result.start, result.end)
+}
+
+function editorShortcut(event: KeyboardEvent) {
+  if (event.isComposing) return
+  const key = event.key.toLowerCase()
+  if ((event.ctrlKey || event.metaKey) && !event.altKey) {
+    if (key === 's') {
+      event.preventDefault()
+      if (!leaveVisible.value && !saveAsVisible.value) void handleSave()
+    } else if (event.target === editor.value) {
+      const command = key === 'b' ? 'bold' : key === 'i' ? 'italic' : key === 'k' ? 'link' : null
+      if (command) {
+        event.preventDefault()
+        void applyCommand(command)
+      }
+    }
+  } else if (event.altKey && key === 'r') {
+    event.preventDefault()
+    readingMode.value = !readingMode.value
+  }
 }
 
 async function importImages(files: File[]) {
@@ -295,6 +330,7 @@ onMounted(async () => {
   interval = setInterval(() => { void checkExternal() }, 2000)
   window.addEventListener('focus', onFocus)
   window.addEventListener('beforeunload', beforeUnload)
+  window.addEventListener('keydown', editorShortcut)
   if (isTauri()) {
     try {
       const unlisten = await getCurrentWindow().onCloseRequested(async event => {
@@ -317,6 +353,7 @@ onBeforeUnmount(() => {
   unlistenClose?.()
   window.removeEventListener('focus', onFocus)
   window.removeEventListener('beforeunload', beforeUnload)
+  window.removeEventListener('keydown', editorShortcut)
   resolveLeave?.(false)
 })
 </script>
@@ -377,22 +414,32 @@ onBeforeUnmount(() => {
         </details>
       </div>
       <p v-else-if="session.externalUpdated" role="status">已读取外部更新。</p>
+      <ArticleForm v-if="!readingMode && !loading && (session.baseline || articleDocument)" :key="session.generation" :text="session.text"
+        @apply="(before, after) => { if (session.text === before) session.text = after }" />
       <div class="card" style="padding: 0; overflow: hidden;">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; border-bottom: 1px solid var(--border-subtle);">
           <span style="font-size: 12px; color: var(--text-secondary);">{{ loading ? '读取中...' : 'Markdown 源码编辑' }}</span>
           <span style="font-size: 12px; color: var(--text-tertiary); overflow-wrap: anywhere;">{{ session.path || '尚未创建' }}</span>
-          <button class="btn btn-secondary btn-sm" :aria-pressed="showPreview" @click="showPreview = !showPreview">{{ showPreview ? '隐藏预览' : '显示预览' }}</button>
+          <button class="btn btn-secondary btn-sm" type="button" :aria-pressed="readingMode" title="Alt+R" @click="readingMode = !readingMode">
+            {{ readingMode ? '返回编辑' : '阅读模式' }}
+          </button>
+          <button v-if="!readingMode" class="btn btn-secondary btn-sm" :aria-pressed="showPreview" @click="showPreview = !showPreview">{{ showPreview ? '隐藏预览' : '显示预览' }}</button>
           <input ref="imagePicker" type="file" multiple hidden :accept="imageExtensions" @change="selectImages" />
-          <button type="button" class="btn btn-secondary btn-sm" :disabled="!session.baseline || session.missing || importingImages" @click="imagePicker?.click()">
+          <button type="button" class="btn btn-secondary btn-sm" :disabled="readingMode || !session.baseline || session.missing || importingImages" @click="imagePicker?.click()">
             {{ importingImages ? '导入中…' : '插入图片' }}
           </button>
           <RouterLink v-if="session.path && session.baseline" class="btn btn-secondary btn-sm" :to="{ name: 'Media', query: { document: session.path } }">配图</RouterLink>
           <button v-if="session.path" class="btn btn-secondary btn-sm" :disabled="session.saving || loading" @click="checkExternal">检查外部变化</button>
           <button v-if="session.path && !session.baseline" class="btn btn-secondary btn-sm" @click="reloadFromDisk">重试读取</button>
         </div>
-        <div class="editor-panes" :class="{ split: showPreview }">
-          <textarea ref="editor" v-model="session.text" class="editor-content" :disabled="loading || (!!session.path && !session.baseline)" aria-label="完整 Markdown 源码" spellcheck="false" @paste="pasteImages" @dragover="allowFileDrop" @drop="dropImages" />
-          <MarkdownPreview v-if="showPreview" :text="session.text" :document-directory="previewDirectory"
+        <div v-if="!readingMode" class="markdown-toolbar" role="group" aria-label="Markdown 工具栏">
+          <button v-for="item in markdownCommands" :key="item.action" class="btn btn-ghost btn-sm" type="button"
+            :title="item.shortcut || item.label" :disabled="loading || (!!session.path && !session.baseline)"
+            @mousedown.prevent @click="applyCommand(item.action)">{{ item.label }}</button>
+        </div>
+        <div class="editor-panes" :class="{ split: showPreview && !readingMode }">
+          <textarea v-if="!readingMode" ref="editor" v-model="session.text" class="editor-content" :disabled="loading || (!!session.path && !session.baseline)" aria-label="完整 Markdown 源码" spellcheck="false" @paste="pasteImages" @dragover="allowFileDrop" @drop="dropImages" />
+          <MarkdownPreview v-if="showPreview || readingMode" :text="session.text" :document-directory="previewDirectory"
             @open-document="path => router.push({ path: '/editor', query: { id: path } })" />
         </div>
       </div>
@@ -422,6 +469,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.markdown-toolbar { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 12px; border-bottom: 1px solid var(--border-subtle); }
 .editor-content { width: 100%; min-height: 500px; padding: 16px; font-family: var(--font-mono); font-size: 13px; line-height: 1.7; border: none; outline: none; resize: vertical; background: var(--bg-panel); color: var(--text-primary); }
 .editor-panes.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .editor-panes.split .editor-content { border-right: 1px solid var(--border-subtle); }
