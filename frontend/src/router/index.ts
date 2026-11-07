@@ -18,6 +18,9 @@ const routes: RouteRecordRaw[] = [
   ...(hasSeriesRoute(manifest.tree) ? [
     { path: `${SERIES_ROOT}/:id?`, name: 'series', component: () => import('@/views/SeriesView.vue') },
   ] : []),
+  ...(!hasSection('manage-content') ? [
+    { path: '/manage-content', name: 'manage-content', component: () => import('@/views/PublicAdminView.vue') },
+  ] : []),
   { path: CONTENT_ROUTE_PATH, name: 'content', component: () => import('@/views/ContentRoute.vue') },
 ];
 

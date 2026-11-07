@@ -93,3 +93,20 @@ test('无 SITE_URL 时仍输出根路径正文，无效的公开 origin 会报�
   assert.equal(fs.existsSync(path.join(outDir, 'sitemap.xml')), false);
   assert.equal(fs.existsSync(path.join(outDir, 'rss.xml')), false);
 });
+
+test('在线管理有子路径静态入口并排除索引，同名内容栏目保留正文', async (t) => {
+  const { manifest, outDir, read } = fixture(t);
+  const { writePublicPages } = await import('./publicPages.mjs');
+  writePublicPages({ manifest, outDir, base: '/repo/', siteUrl: 'https://example.com' });
+  const manage = read('manage-content/index.html');
+  assert.match(manage, /<title>在线管理 - 箓川码笺<\/title>/);
+  assert.match(manage, /name="robots" content="noindex"/);
+  assert.match(manage, /src="\/repo\/assets\/app.js"/);
+  assert.doesNotMatch(read('sitemap.xml'), /manage-content/);
+
+  fs.writeFileSync(path.join(outDir, 'index.html'), '<title>首页</title></head><div id="app"></div>');
+  manifest.tree.push({ name: 'manage-content', label: '栏目', path: '/manage-content', children: [] });
+  writePublicPages({ manifest, outDir, base: '/repo/', siteUrl: 'https://example.com' });
+  assert.match(read('manage-content/index.html'), /<main class="prerendered-page">/);
+  assert.doesNotMatch(read('manage-content/index.html'), /noindex/);
+});

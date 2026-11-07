@@ -14,6 +14,7 @@
         <h4>站点</h4>
         <ul>
           <li><router-link to="/about">关于</router-link></li>
+          <li v-if="!manifest.tree.some(node => !node.article && node.name === 'manage-content')"><router-link to="/manage-content">在线管理</router-link></li>
           <li><a href="https://github.com/lucan6290" target="_blank" rel="noopener">GitHub</a></li>
         </ul>
       </div>

@@ -46,6 +46,7 @@
         </header>
         <MarkdownRenderer :content="rawContent" :relative-path="article.relativePath" :title="article.frontmatter.title" />
       </article>
+      <PublicArticleTools :key="article.relativePath" :article-path="article.relativePath" />
       <PrevNext :prev="pn.prev" :next="pn.next" />
     </main>
     <FloatToc />
@@ -61,6 +62,7 @@ import { seriesHref } from '@/utils/seriesPaths';
 import TreeSidebar from '@/components/sidebar/TreeSidebar.vue';
 import ResizableSidebar from '@/components/sidebar/ResizableSidebar.vue';
 import MarkdownRenderer from '@/components/article/MarkdownRenderer.vue';
+import PublicArticleTools from '@/components/article/PublicArticleTools.vue';
 import ReadingProgress from '@/components/article/ReadingProgress.vue';
 import PrevNext from '@/components/article/PrevNext.vue';
 import FloatToc from '@/components/toc/FloatToc.vue';

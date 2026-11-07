@@ -146,6 +146,12 @@ export function writePublicPages({ outDir, manifest, base, siteUrl, assets = {},
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, pageHtml(template, page, route, origin, base, pageBody(page, route, base, assets)));
   }
+  if (!manifest.tree.some(node => !node.article && node.name === 'manage-content')) {
+    const adminDir = path.join(root, 'manage-content');
+    fs.mkdirSync(adminDir, { recursive: true });
+    const admin = pageHtml(template, { title: '在线管理' }, '/manage-content', '', base, '');
+    fs.writeFileSync(path.join(adminDir, 'index.html'), admin.replace('</head>', '<meta name="robots" content="noindex">\n</head>'));
+  }
   if (origin) writeFeeds(root, pages, origin, base);
   return pages.size;
 }
