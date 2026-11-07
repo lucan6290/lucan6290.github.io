@@ -2,11 +2,11 @@
 from pathlib import Path
 import secrets
 
-from fastapi import Depends, FastAPI, Header
+from fastapi import Depends, FastAPI, Header, Query
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, StrictBool
 
 from content_store import ContentError, ContentStore
@@ -68,8 +68,13 @@ def create_app(project_root: Path, token: str):
     dependencies = [Depends(authenticate)]
 
     @app.get("/api/v1/content", dependencies=dependencies)
-    def content():
-        return store.list_content()
+    def content(query: str = Query(default="", max_length=200)):
+        return store.list_content(query)
+
+    @app.get("/api/v1/images", dependencies=dependencies)
+    def image(path: str):
+        target, media_type = store.image(path)
+        return FileResponse(target, media_type=media_type, headers={"X-Content-Type-Options": "nosniff"})
 
     @app.get("/api/v1/documents/version", dependencies=dependencies)
     def version(path: str):

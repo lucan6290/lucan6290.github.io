@@ -228,6 +228,42 @@ fn find_project_root() -> Result<PathBuf, String> {
     )
 }
 
+fn installed_workspace(state: &Path, selected: Option<&Path>) -> Result<Option<PathBuf>, String> {
+    let saved: PathBuf;
+    let path = if let Some(path) = selected {
+        path
+    } else {
+        let raw = match fs::read(state) {
+            Ok(raw) => raw,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+            Err(error) => return Err(format!("无法读取上次打开的博客目录：{error}")),
+        };
+        saved = serde_json::from_slice(&raw).map_err(|_| "上次打开的博客目录记录无效。")?;
+        &saved
+    };
+    let root = fs::canonicalize(path)
+        .map_err(|error| format!("无法打开博客目录（{}）：{error}", path.display()))?;
+    if root.is_dir() && root.ends_with("frontend/content") {
+        if let Some(project) = root.parent().and_then(Path::parent) {
+            return Ok(Some(project.to_path_buf()));
+        }
+    }
+    let content = root.join("frontend/content").canonicalize();
+    if !content.is_ok_and(|content| content.is_dir() && content.starts_with(&root)) {
+        return Err("请选择博客仓库根目录或其中的 frontend/content。".into());
+    }
+    Ok(Some(root))
+}
+
+fn remember_workspace(state: &Path, root: &Path) -> Result<(), String> {
+    let raw = serde_json::to_vec(root).map_err(|error| format!("无法记录博客目录：{error}"))?;
+    let temporary = state.with_extension(format!("{}.tmp", std::process::id()));
+    fs::create_dir_all(state.parent().expect("workspace state has a parent"))
+        .and_then(|()| fs::write(&temporary, raw))
+        .and_then(|()| fs::rename(&temporary, state))
+        .map_err(|error| format!("无法保存博客目录：{error}"))
+}
+
 fn same_absolute_path(actual: &str, expected: &Path) -> bool {
     let path = Path::new(actual);
     if !path.is_absolute() {
@@ -291,6 +327,7 @@ fn connect_existing(
     client: &reqwest::blocking::Client,
     base_url: &str,
     root: &Path,
+    state_dir: &Path,
 ) -> Result<BackendConnection, String> {
     let health: Health = client
         .get(format!("{base_url}/health"))
@@ -299,7 +336,7 @@ fn connect_existing(
         .and_then(|response| response.json())
         .map_err(|error| format!("18000 端口健康检查失败：{error}"))?;
     validate_health(&health, root)?;
-    let session_path = root.join(".codex-tmp/admin-desktop/session.json");
+    let session_path = state_dir.join("session.json");
     let session: Session =
         serde_json::from_str(&fs::read_to_string(&session_path).map_err(|error| {
             format!(
@@ -334,28 +371,37 @@ fn connect_existing(
     })
 }
 
-fn spawn_backend(root: &Path) -> Result<OwnedBackend, String> {
-    if !cfg!(debug_assertions) {
-        return Err("当前生产包尚未配置内容后端 sidecar（externalBin）；请先启动本项目内容后端于 18000，或使用开发模式。".into());
-    }
-    let entry = root.join("admin-desktop/src-backend/main.py");
-    if !entry.is_file() {
-        return Err(format!("找不到内容后端入口：{}", entry.display()));
-    }
-    let backend_dir = root.join("admin-desktop/src-backend");
-    let venv = if cfg!(windows) {
-        backend_dir.join(".venv/Scripts/python.exe")
+fn spawn_backend(
+    root: &Path,
+    state_dir: &Path,
+    executable: Option<&Path>,
+) -> Result<OwnedBackend, String> {
+    let mut command = if let Some(executable) = executable {
+        if !executable.is_file() {
+            return Err("安装包缺少内容后端，请重新安装箓川码笺。".into());
+        }
+        Command::new(executable)
     } else {
-        backend_dir.join(".venv/bin/python")
+        let backend_dir = root.join("admin-desktop/src-backend");
+        let entry = backend_dir.join("main.py");
+        if !entry.is_file() {
+            return Err(format!("找不到内容后端入口：{}", entry.display()));
+        }
+        let venv = backend_dir.join(if cfg!(windows) {
+            ".venv/Scripts/python.exe"
+        } else {
+            ".venv/bin/python"
+        });
+        let mut command = Command::new(if venv.is_file() {
+            venv
+        } else {
+            PathBuf::from("python")
+        });
+        command.arg(entry).arg("--reload");
+        command
     };
-    let python = if venv.is_file() {
-        venv
-    } else {
-        PathBuf::from("python")
-    };
-    let log_dir = root.join(".codex-tmp/admin-desktop");
-    fs::create_dir_all(&log_dir).map_err(|error| format!("无法创建后端日志目录：{error}"))?;
-    let log_path = log_dir.join("backend.log");
+    fs::create_dir_all(state_dir).map_err(|error| format!("无法创建后端日志目录：{error}"))?;
+    let log_path = state_dir.join("backend.log");
     let log = OpenOptions::new()
         .create(true)
         .append(true)
@@ -364,13 +410,16 @@ fn spawn_backend(root: &Path) -> Result<OwnedBackend, String> {
     let stderr = log
         .try_clone()
         .map_err(|error| format!("无法打开后端错误日志：{error}"))?;
-    let mut command = Command::new(python);
     command
-        .arg(entry)
         .arg("--project-root")
         .arg(root)
-        .args(["--port", "18000", "--reload"])
-        .current_dir(root)
+        .args(["--port", "18000", "--session-file"])
+        .arg(state_dir.join("session.json"))
+        .current_dir(if executable.is_some() {
+            state_dir
+        } else {
+            root
+        })
         .env("PYTHONUNBUFFERED", "1")
         .stdin(Stdio::null())
         .stdout(Stdio::from(log))
@@ -378,12 +427,16 @@ fn spawn_backend(root: &Path) -> Result<OwnedBackend, String> {
     OwnedBackend::spawn(&mut command)
 }
 
-fn initialize_backend(runtime: &BackendRuntime) -> Result<BackendConnection, String> {
-    let root = find_project_root()?;
+fn initialize_backend(
+    runtime: &BackendRuntime,
+    root: &Path,
+    state_dir: &Path,
+    executable: Option<&Path>,
+) -> Result<BackendConnection, String> {
     let client = local_client()?;
     let address: SocketAddr = "127.0.0.1:18000".parse().unwrap();
     if TcpStream::connect_timeout(&address, Duration::from_millis(500)).is_ok() {
-        return connect_existing(&client, BASE_URL, &root);
+        return connect_existing(&client, BASE_URL, root, state_dir);
     }
     {
         let mut process = runtime.process.lock().map_err(|_| "后端进程状态不可用。")?;
@@ -401,7 +454,7 @@ fn initialize_backend(runtime: &BackendRuntime) -> Result<BackendConnection, Str
             }
         }
         if process.is_none() {
-            *process = Some(spawn_backend(&root)?);
+            *process = Some(spawn_backend(root, state_dir, executable)?);
         }
     }
     let start = Instant::now();
@@ -418,12 +471,12 @@ fn initialize_backend(runtime: &BackendRuntime) -> Result<BackendConnection, Str
                     process.take();
                     return Err(format!(
                         "内容后端已退出（{status}）；请查看 {}。",
-                        root.join(".codex-tmp/admin-desktop/backend.log").display()
+                        state_dir.join("backend.log").display()
                     ));
                 }
             }
         }
-        match connect_existing(&client, BASE_URL, &root) {
+        match connect_existing(&client, BASE_URL, root, state_dir) {
             Ok(connection) => return Ok(connection),
             Err(error) => last_error = error,
         }
@@ -436,19 +489,49 @@ fn initialize_backend(runtime: &BackendRuntime) -> Result<BackendConnection, Str
         .take();
     Err(format!(
         "内容后端启动失败：{last_error} 日志：{}",
-        root.join(".codex-tmp/admin-desktop/backend.log").display()
+        state_dir.join("backend.log").display()
     ))
 }
 
 #[tauri::command]
-async fn get_backend_connection(app: tauri::AppHandle) -> Result<BackendConnection, String> {
+async fn get_backend_connection(
+    app: tauri::AppHandle,
+    project_root: Option<PathBuf>,
+) -> Result<Option<BackendConnection>, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let runtime: State<BackendRuntime> = app.state();
         let _initializing = runtime
             .initialization
             .lock()
             .map_err(|_| "后端连接状态不可用。")?;
-        let result = initialize_backend(&runtime);
+        let result = (|| {
+            if cfg!(debug_assertions) {
+                let root = match project_root.as_deref() {
+                    Some(root) => validate_project_root(root)?,
+                    None => find_project_root()?,
+                };
+                let state_dir = root.join(".codex-tmp/admin-desktop");
+                return initialize_backend(&runtime, &root, &state_dir, None).map(Some);
+            }
+            let state_dir = app
+                .path()
+                .app_local_data_dir()
+                .map_err(|error| error.to_string())?;
+            let workspace = state_dir.join("workspace.json");
+            let Some(root) = installed_workspace(&workspace, project_root.as_deref())? else {
+                return Ok(None);
+            };
+            let executable = app
+                .path()
+                .resource_dir()
+                .map_err(|error| error.to_string())?
+                .join("content-backend/luchuan-content.exe");
+            let connection = initialize_backend(&runtime, &root, &state_dir, Some(&executable))?;
+            if project_root.is_some() {
+                remember_workspace(&workspace, &root)?;
+            }
+            Ok(Some(connection))
+        })();
         if result.is_err() {
             if let Ok(mut process) = runtime.process.lock() {
                 process.take();
@@ -538,6 +621,27 @@ mod tests {
                 content_root,
             },
         )
+    }
+
+    #[test]
+    fn installed_workspace_remembers_blog_without_desktop_source() {
+        let root = fixture("installed-workspace");
+        fs::remove_dir(root.join("admin-desktop")).unwrap();
+        let state = root.join("app data/workspace.json");
+        assert_eq!(installed_workspace(&state, None).unwrap(), None);
+        let selected = installed_workspace(&state, Some(&root)).unwrap().unwrap();
+        assert_eq!(selected, root);
+        assert_eq!(
+            installed_workspace(&state, Some(&root.join("frontend/content"))).unwrap(),
+            Some(root.clone())
+        );
+        assert!(installed_workspace(&state, Some(&root.join("missing"))).is_err());
+        remember_workspace(&state, &selected).unwrap();
+        assert_eq!(
+            installed_workspace(&state, None).unwrap(),
+            Some(root.clone())
+        );
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]
@@ -646,7 +750,13 @@ mod tests {
             });
             let client = local_client().unwrap();
             assert_eq!(
-                connect_existing(&client, &base_url, &root).is_ok(),
+                connect_existing(
+                    &client,
+                    &base_url,
+                    &root,
+                    &root.join(".codex-tmp/admin-desktop")
+                )
+                .is_ok(),
                 accepted
             );
             server.join().unwrap();

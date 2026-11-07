@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { invoke, isTauri } from '@tauri-apps/api/core'
+import { open } from '@tauri-apps/plugin-dialog'
 import { contentApi, setContentConnection } from '@/api/content'
 import { useAppStore } from '@/stores/app'
 import WindowTitlebar from '@/components/WindowTitlebar.vue'
@@ -12,6 +13,7 @@ const connected = ref(false)
 const connecting = ref(false)
 const error = ref('')
 const token = ref('')
+const needsDirectory = ref(false)
 const desktop = isTauri()
 async function connect(connection: Connection) {
   setContentConnection(connection.base_url, connection.token)
@@ -25,15 +27,27 @@ async function connect(connection: Connection) {
   connected.value = true
   token.value = ''
 }
-async function reconnect() {
+async function reconnect(projectRoot?: string) {
   connecting.value = true
   error.value = ''
   try {
-    await connect(desktop ? await invoke<Connection>('get_backend_connection') : { base_url: 'http://127.0.0.1:18000', token: token.value.trim() })
+    const connection = desktop
+      ? await invoke<Connection | null>('get_backend_connection', { projectRoot })
+      : { base_url: 'http://127.0.0.1:18000', token: token.value.trim() }
+    needsDirectory.value = !connection
+    if (connection) await connect(connection)
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : String(cause)
     appStore.backendReady = false
   } finally { connecting.value = false }
+}
+async function chooseDirectory() {
+  try {
+    const selected = await open({ directory: true, multiple: false, title: '选择博客目录' })
+    if (selected) await reconnect(selected)
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : String(cause)
+  }
 }
 onMounted(async () => {
   appStore.init()
@@ -55,14 +69,22 @@ onMounted(async () => {
         <div class="card">
           <h2>连接本地内容库</h2><p>文档直接保存在当前项目的 frontend/content，供桌面端、编辑器和 AI 共同维护。</p>
           <p v-if="error" role="alert" style="color: var(--status-error); white-space: pre-wrap;">{{ error }}</p>
-          <form v-if="!desktop" @submit.prevent="reconnect">
+          <form v-if="!desktop" @submit.prevent="reconnect()">
             <label for="session-token">本地会话令牌</label><p style="font-size: 13px; color: var(--text-secondary);">启动内容后端后，使用本次会话的令牌连接；桌面应用会自动连接。</p>
             <input id="session-token" v-model="token" class="input" type="password" autocomplete="off" required />
             <button class="btn btn-primary" style="margin-top: 12px;" :disabled="connecting">{{ connecting ? '连接中…' : '连接' }}</button>
           </form>
-          <button v-else class="btn btn-primary" :disabled="connecting" @click="reconnect">{{ connecting ? '启动内容服务中…' : '重新连接' }}</button>
+          <div v-else class="workspace-actions">
+            <p v-if="needsDirectory">选择博客仓库根目录或其中的 frontend/content。</p>
+            <button class="btn btn-primary" :disabled="connecting" @click="chooseDirectory">{{ connecting ? '启动内容服务中…' : '选择博客目录' }}</button>
+            <button v-if="!needsDirectory && error" class="btn btn-secondary" :disabled="connecting" @click="reconnect()">重新连接</button>
+          </div>
         </div>
       </div>
     </main><ToastContainer />
   </div>
 </template>
+
+<style scoped>
+.workspace-actions button + button { margin-left: 8px; }
+</style>

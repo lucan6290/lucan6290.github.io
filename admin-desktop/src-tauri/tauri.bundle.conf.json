@@ -1,0 +1,7 @@
+{
+  "bundle": {
+    "resources": {
+      ".bundle/dist/luchuan-content/": "content-backend/"
+    }
+  }
+}

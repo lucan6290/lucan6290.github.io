@@ -24,6 +24,10 @@ export interface ContentDirectory {
   section: string
 }
 
+export interface DirectoryNode extends ContentDirectory {
+  children: DirectoryNode[]
+}
+
 export interface ContentIndex {
   directories: ContentDirectory[]
   documents: DocumentSummary[]

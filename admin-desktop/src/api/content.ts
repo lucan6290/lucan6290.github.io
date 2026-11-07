@@ -34,7 +34,16 @@ async function request<T>(path: string, method = 'GET', data?: unknown): Promise
 
 export const contentApi = {
   health: () => request<ContentHealth>('/health'),
-  list: () => request<ContentIndex>('/api/v1/content'),
+  list: (query = '') => request<ContentIndex>(query ? `/api/v1/content?${new URLSearchParams({ query })}` : '/api/v1/content'),
+  async image(path: string, signal: AbortSignal) {
+    const response = await fetch(`${connection.base_url}/api/v1/images?${new URLSearchParams({ path })}`, {
+      headers: { Authorization: `Bearer ${connection.token}` },
+      cache: 'no-store',
+      signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]),
+    })
+    if (!response.ok) throw new Error('无法读取预览图片')
+    return response.blob()
+  },
   read: (path: string) => request<ContentDetail>(`/api/v1/documents?${new URLSearchParams({ path })}`),
   version: (path: string) => request<ContentVersion>(`/api/v1/documents/version?${new URLSearchParams({ path })}`),
   create: (path: string, raw: string, article = true) => request<ContentDetail>('/api/v1/documents', 'POST', { relative_path: path, raw_content: raw, article }),

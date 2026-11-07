@@ -54,6 +54,36 @@ class ContentTests(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertIn("code", response.json())
 
+    def test_search_finds_body_and_metadata_without_changing_directories(self):
+        self.write("blog/技术/01-部署.md", "---\ntags: [Tauri]\n---\n# 部署\n安装程序读取本地文章\n")
+        self.write("blog/技术/02-其它.md", "# 其它\n安装程序\n")
+        self.write("blog/.草稿.md", "---\ntags: [Tauri]\n---\n安装程序\n")
+        all_content = self.client.get("/api/v1/content").json()
+        found = self.client.get("/api/v1/content", params={"query": "TAURI 安装程序"}).json()
+        self.assertEqual(found["directories"], all_content["directories"])
+        self.assertEqual([item["relative_path"] for item in found["documents"]], ["blog/技术/01-部署.md"])
+        self.assertNotIn("raw_content", found["documents"][0])
+
+    def test_preview_image_is_authenticated_and_cannot_read_other_files(self):
+        asset = self.content / "blog/文章-images/中文 空格.png"
+        asset.parent.mkdir(parents=True)
+        asset.write_bytes(b"image bytes")
+        params = {"path": "blog/文章-images/中文 空格.png"}
+        self.assertEqual(self.client.get("/api/v1/images", params=params, headers={"Authorization": "Bearer wrong"}).status_code, 401)
+        response = self.client.get("/api/v1/images", params=params)
+        self.assertEqual((response.status_code, response.headers["content-type"], response.content), (200, "image/png", b"image bytes"))
+        for path in ("../outside.png", "blog/secret.md", "blog/.hidden.png"):
+            self.assertEqual(self.client.get("/api/v1/images", params={"path": path}).status_code, 400)
+
+    def test_installed_content_service_accepts_blog_without_desktop_source(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "frontend/content").mkdir(parents=True)
+            client = TestClient(create_app(root, "test-token"))
+            response = client.get("/api/v1/content", headers={"Authorization": "Bearer test-token"})
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()["documents"], [])
+
     def test_full_yaml_and_original_bytes_survive_body_edit(self):
         raw = '\ufeff---\r\n# preserve comment\r\ntitle: 测试\r\ntags: [Python, AI]\r\ncustom:\r\n  nested: [1, true]\r\ndate: 2026-10-29\r\n---\r\n# 正文\r\n旧内容\r\n'
         target = self.write("knowledge/01-中文 空格.md", raw)
@@ -220,6 +250,31 @@ class ContentTests(unittest.TestCase):
             results = list(pool.map(lambda text: self.save("note.md", text, version), ["# one\n", "# two\n"]))
         self.assertEqual(sorted(result.status_code for result in results), [200, 409])
         self.assertIn(target.read_bytes(), [b"# one\n", b"# two\n"])
+
+    @unittest.skipUnless(shutil.which("node"), "frontend scanner comparison needs Node")
+    def test_desktop_save_is_visible_in_blog_manifest(self):
+        path = "blog/技术/01-安装.md"
+        date = "2026-10-29T10:00:00+08:00"
+        raw = (f'---\ntitle: "安装"\ndate: "{date}"\nupdated: "{date}"\n'
+               'description: "安装说明"\ntags: ["桌面"]\nsticky: false\n# 保留注释\n---\n'
+               '# 安装\n\n旧正文\n\n![示例](./01-安装-images/图.png)\n')
+        (self.content / "blog/技术").mkdir(parents=True)
+        created = self.client.post("/api/v1/documents", json={"relative_path": path, "raw_content": raw})
+        self.assertEqual(created.status_code, 201, created.text)
+        saved = self.save(path, raw.replace("旧正文", "已通过桌面端更新"), created.json()["version"])
+        self.assertEqual(saved.status_code, 200, saved.text)
+        self.assertIn("# 保留注释", saved.json()["raw_content"])
+        scanner = BACKEND.parents[1] / "frontend/scripts/lib/buildContent.mjs"
+        code = """const {build} = await import(process.argv[1]); console.log = () => {};
+const {articles} = build({contentDir: process.argv[2], outDir: process.argv[3]});
+process.stdout.write(JSON.stringify(Object.values(articles)[0]));"""
+        result = subprocess.run(["node", "--input-type=module", "-e", code, scanner.as_uri(), str(self.content), str(self.root / "generated")], check=True, capture_output=True, encoding="utf-8")
+        article = json.loads(result.stdout)
+        self.assertEqual(article["relativePath"], path)
+        self.assertEqual(article["frontmatter"]["date"], date)
+        self.assertEqual(article["frontmatter"]["updated"], saved.json()["updated"])
+        self.assertIn("已通过桌面端更新", article["rawContent"])
+        self.assertIn("![示例](./01-安装-images/图.png)", article["rawContent"])
 
     @unittest.skipUnless(shutil.which("node"), "frontend scanner comparison needs Node")
     def test_shared_fixture_matches_frontend_scanner_discovery_and_numeric_order(self):

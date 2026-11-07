@@ -9,6 +9,7 @@ import { DocumentSession } from '@/utils/documentSession'
 import { compareContentPaths } from '@/utils/contentOrder'
 import { createArticleTemplate, fillArticleTitle, isArticleDocument } from '@/utils/articleTemplate'
 import type { ContentDirectory } from '@/types/content'
+import MarkdownPreview from '@/components/MarkdownPreview.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -29,6 +30,8 @@ const saveAsDirectory = ref('')
 const saveAsName = ref('')
 const leaveVisible = ref(false)
 const editor = ref<HTMLTextAreaElement | null>(null)
+const showPreview = ref(true)
+const previewDirectory = computed(() => session.path?.split('/').slice(0, -1).join('/') ?? directory.value)
 let resolveLeave: ((allow: boolean) => void) | null = null
 let pendingLeave: Promise<boolean> | null = null
 let interval: ReturnType<typeof setInterval> | undefined
@@ -305,10 +308,15 @@ onBeforeUnmount(() => {
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; border-bottom: 1px solid var(--border-subtle);">
           <span style="font-size: 12px; color: var(--text-secondary);">{{ loading ? '读取中...' : 'Markdown 源码编辑' }}</span>
           <span style="font-size: 12px; color: var(--text-tertiary); overflow-wrap: anywhere;">{{ session.path || '尚未创建' }}</span>
+          <button class="btn btn-secondary btn-sm" :aria-pressed="showPreview" @click="showPreview = !showPreview">{{ showPreview ? '隐藏预览' : '显示预览' }}</button>
           <button v-if="session.path" class="btn btn-secondary btn-sm" :disabled="session.saving || loading" @click="checkExternal">检查外部变化</button>
           <button v-if="session.path && !session.baseline" class="btn btn-secondary btn-sm" @click="reloadFromDisk">重试读取</button>
         </div>
-        <textarea ref="editor" v-model="session.text" class="editor-content" :disabled="loading || (!!session.path && !session.baseline)" aria-label="完整 Markdown 源码" spellcheck="false" />
+        <div class="editor-panes" :class="{ split: showPreview }">
+          <textarea ref="editor" v-model="session.text" class="editor-content" :disabled="loading || (!!session.path && !session.baseline)" aria-label="完整 Markdown 源码" spellcheck="false" />
+          <MarkdownPreview v-if="showPreview" :text="session.text" :document-directory="previewDirectory"
+            @open-document="path => router.push({ path: '/editor', query: { id: path } })" />
+        </div>
       </div>
     </div>
     <div v-if="leaveVisible" class="editor-modal-backdrop">
@@ -336,6 +344,9 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .editor-content { width: 100%; min-height: 500px; padding: 16px; font-family: var(--font-mono); font-size: 13px; line-height: 1.7; border: none; outline: none; resize: vertical; background: var(--bg-panel); color: var(--text-primary); }
+.editor-panes.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.editor-panes.split .editor-content { border-right: 1px solid var(--border-subtle); }
+@media (max-width: 960px) { .editor-panes.split { grid-template-columns: 1fr; } }
 .editor-modal-backdrop { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(0, 0, 0, 0.4); }
 .editor-dialog { width: min(560px, 100%); max-height: 90vh; overflow: auto; background: var(--bg-panel); }
 .editor-dialog label { display: block; margin: 12px 0; }

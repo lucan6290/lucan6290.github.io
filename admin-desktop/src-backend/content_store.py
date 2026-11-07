@@ -12,6 +12,9 @@ import yaml
 from article_frontmatter import ArticleError, FIELDS, exempt, maintain_updated, validate
 
 MD_EXTENSIONS = {".md", ".mdx"}
+IMAGE_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+               ".gif": "image/gif", ".svg": "image/svg+xml", ".webp": "image/webp",
+               ".avif": "image/avif", ".bmp": "image/bmp", ".ico": "image/x-icon"}
 NUMERIC_PREFIX = re.compile(r"^(\d+)[-_]")
 RESOURCE_DIRECTORY = re.compile(r"^(?:images|assets|.*-imgs)$", re.IGNORECASE)
 RESERVED_NAME = re.compile(r"^(?:CON|PRN|AUX|NUL|COM[1-9¹²³]|LPT[1-9¹²³])(?:\.|$)", re.IGNORECASE)
@@ -63,8 +66,8 @@ class ContentStore:
     def __init__(self, project_root: Path):
         self.project_root = project_root.resolve()
         self.content_root = (self.project_root / "frontend/content").resolve()
-        if not self.content_root.is_dir() or not (self.project_root / "admin-desktop").is_dir():
-            raise RuntimeError("项目根必须包含 frontend/content 与 admin-desktop")
+        if not self.content_root.is_dir() or not self.content_root.is_relative_to(self.project_root):
+            raise RuntimeError("博客目录必须包含位于其内部的 frontend/content")
         self.lock = threading.RLock()
 
     def path(self, relative_path, *, directory=False):
@@ -145,13 +148,23 @@ class ContentStore:
             raise
         return {"exists": True, "version": self.version_of(data)}
 
+    def image(self, relative_path):
+        target = self.path(relative_path, directory=True)
+        media_type = IMAGE_TYPES.get(target.suffix.lower())
+        if not media_type or target.resolve() != target:
+            raise ContentError(400, "invalid_path", "预览仅支持内容库内的图片文件")
+        if not target.is_file():
+            raise ContentError(404, "not_found", "图片不存在")
+        return target, media_type
+
     @staticmethod
     def directory_info(relative_path):
         name = relative_path.rsplit("/", 1)[-1]
         return {"relative_path": relative_path, "name": name, "label": strip_prefix(name),
                 "section": relative_path.split("/")[0] if relative_path else ""}
 
-    def list_content(self):
+    def list_content(self, query=""):
+        words = query.casefold().split()
         visited = {self.content_root}
 
         def walk(directory, relative):
@@ -189,7 +202,10 @@ class ContentStore:
                         if error.status == 404:
                             continue
                         raise
-                    documents.append({key: value for key, value in detail.items() if key not in {"raw_content", "frontmatter"}})
+                    searchable = "\n".join((detail["title"], rel, detail["description"],
+                                            *detail["tags"], detail["raw_content"])).casefold() if words else ""
+                    if all(word in searchable for word in words):
+                        documents.append({key: value for key, value in detail.items() if key not in {"raw_content", "frontmatter"}})
                     if detail["kind"] == "introduction":
                         has_introduction = True
                     else:

@@ -13,13 +13,14 @@ from uvicorn.supervisors import ChangeReload
 from app import create_app
 
 
-def resolve_project_root(explicit: Path | None = None):
+def resolve_project_root(explicit: Path | None = None, *, development=True):
     candidates = [explicit] if explicit is not None else [Path.cwd(), *Path.cwd().parents]
     for candidate in candidates:
         root = candidate.resolve()
-        if (root / "frontend/content").is_dir() and (root / "admin-desktop").is_dir():
+        content = (root / "frontend/content").resolve()
+        if content.is_dir() and content.is_relative_to(root) and (not development or (root / "admin-desktop").is_dir()):
             return root
-    raise RuntimeError("无法定位项目根：需要 frontend/content 与 admin-desktop")
+    raise RuntimeError("无法定位博客目录：需要 frontend/content" + (" 与 admin-desktop" if development else ""))
 
 
 def prepare_session(project_root: Path, session_file: Path):
@@ -52,9 +53,11 @@ def main():
     parser.add_argument("--session-file", type=Path)
     args = parser.parse_args()
     try:
-        root = resolve_project_root(args.project_root)
-        config = uvicorn.Config("main:create_runtime_app", factory=True, host="127.0.0.1", port=args.port,
+        root = resolve_project_root(args.project_root, development=args.reload or args.project_root is None)
+        entry = "main:create_runtime_app" if args.reload else create_runtime_app
+        config = uvicorn.Config(entry, factory=True, host="127.0.0.1", port=args.port,
                                 reload=args.reload, reload_dirs=[str(Path(__file__).resolve().parent)] if args.reload else None,
+                                loop="asyncio", http="h11", ws="none", lifespan="on",
                                 access_log=False)
         # 先持有监听 socket，再发布会话。Windows 排他绑定避免 SO_REUSEADDR 重绑；
         # socket 一直传给 Uvicorn/reloader，不能检查端口后关闭再重新绑定。
