@@ -9,6 +9,7 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use tauri::{Manager, State};
 
+mod site_runtime;
 mod updater;
 
 const BASE_URL: &str = "http://127.0.0.1:18000";
@@ -37,19 +38,42 @@ struct Session {
 
 #[derive(Default)]
 struct BackendRuntime {
+    active: Mutex<Option<ActiveWorkspace>>,
     initialization: Mutex<()>,
-    process: Mutex<Option<OwnedBackend>>,
+    process: Mutex<Option<OwnedProcess>>,
     exiting: AtomicBool,
 }
 
+#[derive(Clone)]
+struct ActiveWorkspace {
+    root: PathBuf,
+    state_dir: PathBuf,
+}
+
+impl BackendRuntime {
+    fn active_workspace(&self) -> Result<ActiveWorkspace, String> {
+        self.active
+            .lock()
+            .map_err(|_| "工作区状态不可用。")?
+            .clone()
+            .ok_or_else(|| "请先连接本地工作区。".into())
+    }
+
+    fn set_active_workspace(&self, root: PathBuf, state_dir: PathBuf) -> Result<(), String> {
+        *self.active.lock().map_err(|_| "工作区状态不可用。")? =
+            Some(ActiveWorkspace { root, state_dir });
+        Ok(())
+    }
+}
+
 /// 只有启动器创建的进程进入此句柄；外部服务不会被管理或终止。
-struct OwnedBackend {
+struct OwnedProcess {
     child: Child,
     #[cfg(windows)]
     job: windows_job::Job,
 }
 
-impl OwnedBackend {
+impl OwnedProcess {
     fn spawn(command: &mut Command) -> Result<Self, String> {
         #[cfg(windows)]
         {
@@ -64,14 +88,14 @@ impl OwnedBackend {
         }
         let mut child = command
             .spawn()
-            .map_err(|error| format!("无法启动内容后端：{error}"))?;
+            .map_err(|error| format!("无法启动进程：{error}"))?;
         #[cfg(windows)]
         let job = match windows_job::Job::attach_and_resume(&child) {
             Ok(job) => job,
             Err(error) => {
                 let _ = child.kill();
                 let _ = child.wait();
-                return Err(format!("无法隔离内容后端进程树：{error}"));
+                return Err(format!("无法隔离进程树：{error}"));
             }
         };
         Ok(Self {
@@ -82,7 +106,7 @@ impl OwnedBackend {
     }
 }
 
-impl Drop for OwnedBackend {
+impl Drop for OwnedProcess {
     fn drop(&mut self) {
         #[cfg(windows)]
         self.job.terminate();
@@ -114,7 +138,7 @@ mod windows_job {
     use windows_sys::Win32::System::Threading::{OpenThread, ResumeThread, THREAD_SUSPEND_RESUME};
 
     pub struct Job(HANDLE);
-    // 句柄仅由 BackendRuntime 的 Mutex 持有，Win32 Job 可跨线程关闭。
+    // 句柄由进程状态的 Mutex 持有，Win32 Job 可跨线程关闭。
     unsafe impl Send for Job {}
 
     impl Job {
@@ -145,7 +169,7 @@ mod windows_job {
                 let mut entry: THREADENTRY32 = std::mem::zeroed();
                 entry.dwSize = std::mem::size_of_val(&entry) as u32;
                 let mut present = Thread32First(snapshot, &mut entry);
-                let mut result = Err(io::Error::other("未找到内容后端的挂起主线程"));
+                let mut result = Err(io::Error::other("未找到进程的挂起主线程"));
                 while present != 0 {
                     if entry.th32OwnerProcessID == child.id() {
                         let thread = OpenThread(THREAD_SUSPEND_RESUME, 0, entry.th32ThreadID);
@@ -377,7 +401,7 @@ fn spawn_backend(
     root: &Path,
     state_dir: &Path,
     executable: Option<&Path>,
-) -> Result<OwnedBackend, String> {
+) -> Result<OwnedProcess, String> {
     let mut command = if let Some(executable) = executable {
         if !executable.is_file() {
             return Err("安装包缺少内容后端，请重新安装箓川码笺。".into());
@@ -426,7 +450,7 @@ fn spawn_backend(
         .stdin(Stdio::null())
         .stdout(Stdio::from(log))
         .stderr(Stdio::from(stderr));
-    OwnedBackend::spawn(&mut command)
+    OwnedProcess::spawn(&mut command).map_err(|error| format!("无法启动内容后端：{error}"))
 }
 
 fn initialize_backend(
@@ -513,7 +537,9 @@ async fn get_backend_connection(
                     None => find_project_root()?,
                 };
                 let state_dir = root.join(".codex-tmp/admin-desktop");
-                return initialize_backend(&runtime, &root, &state_dir, None).map(Some);
+                let connection = initialize_backend(&runtime, &root, &state_dir, None)?;
+                runtime.set_active_workspace(root, state_dir)?;
+                return Ok(Some(connection));
             }
             let state_dir = app
                 .path()
@@ -532,6 +558,7 @@ async fn get_backend_connection(
             if project_root.is_some() {
                 remember_workspace(&workspace, &root)?;
             }
+            runtime.set_active_workspace(root, state_dir)?;
             Ok(Some(connection))
         })();
         if result.is_err() {
@@ -576,6 +603,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
         .manage(BackendRuntime::default())
+        .manage(site_runtime::SiteRuntime::default())
         .setup(|app| {
             #[cfg(windows)]
             updater::configure(app)?;
@@ -583,6 +611,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             get_backend_connection,
+            site_runtime::open_site_preview,
+            site_runtime::build_blog_site,
             minimize_window,
             maximize_window,
             close_window,
@@ -599,6 +629,7 @@ pub fn run() {
         .expect("构建 Tauri 应用时出错")
         .run(|app, event| {
             if let tauri::RunEvent::Exit = event {
+                app.state::<site_runtime::SiteRuntime>().shutdown();
                 let runtime: State<BackendRuntime> = app.state();
                 runtime.exiting.store(true, Ordering::SeqCst);
                 if let Ok(mut process) = runtime.process.lock() {
@@ -612,7 +643,7 @@ pub fn run() {
 mod tests {
     use super::*;
 
-    fn fixture(name: &str) -> PathBuf {
+    pub(super) fn fixture(name: &str) -> PathBuf {
         let root = env::temp_dir().join(format!("luchuan-{}-{}", name, std::process::id()));
         std::fs::create_dir_all(root.join("frontend/content")).unwrap();
         std::fs::create_dir_all(root.join("admin-desktop")).unwrap();
@@ -839,7 +870,7 @@ mod tests {
             .env("LUCHUAN_PROCESS_TEST_FILE", &pid_file)
             .stdout(Stdio::null())
             .stderr(Stdio::null());
-        let backend = OwnedBackend::spawn(&mut command).unwrap();
+        let backend = OwnedProcess::spawn(&mut command).unwrap();
         let start = Instant::now();
         while !pid_file.exists() && start.elapsed() < Duration::from_secs(10) {
             std::thread::sleep(Duration::from_millis(20));
