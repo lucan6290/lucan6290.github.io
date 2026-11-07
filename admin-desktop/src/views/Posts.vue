@@ -9,6 +9,8 @@ import { compareContentPaths } from '@/utils/contentOrder'
 import DirectoryBranch from '@/components/DirectoryBranch.vue'
 import MoveContentDialog from '@/components/MoveContentDialog.vue'
 import type { MoveKind, MovePlan } from '@/api/contentMoves'
+import { newDraftId, relocateEditorTabs } from '@/utils/editorTabs'
+import { relocateFavorites } from '@/utils/editorFavorites'
 const router = useRouter()
 const route = useRoute()
 const appStore = useAppStore()
@@ -61,7 +63,7 @@ watch(search, (_value, _previous, onCleanup) => {
   onCleanup(() => clearTimeout(timer))
 })
 function edit(document?: DocumentSummary) {
-  router.push(document ? { path: '/editor', query: { id: document.relative_path } } : { path: '/editor', query: { directory: directory.value || section.value } })
+  router.push(document ? { path: '/editor', query: { id: document.relative_path } } : { path: '/editor', query: { directory: directory.value || section.value, draft: newDraftId() } })
 }
 async function createDirectory() {
   if (!newDirectory.value.trim() || creating.value) return
@@ -77,6 +79,8 @@ async function createDirectory() {
 }
 async function afterMove(plan: MovePlan) {
   moveTarget.value = null
+  relocateEditorTabs(plan.moves)
+  relocateFavorites(plan.moves)
   const parent = plan.destination.split('/').slice(0, -1).join('/')
   directory.value = plan.kind === 'directory' ? plan.destination : parent
   section.value = ''
