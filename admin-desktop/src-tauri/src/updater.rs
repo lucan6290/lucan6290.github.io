@@ -83,6 +83,8 @@ pub(crate) mod windows {
     use tauri_plugin_updater::{Update, UpdaterExt};
     use tokio::sync::Mutex;
 
+    const UPDATE_TIMEOUT: Duration = Duration::from_secs(180);
+
     #[derive(Default)]
     pub(crate) struct PendingUpdate(Mutex<Option<(Update, Option<Vec<u8>>)>>);
 
@@ -103,14 +105,18 @@ pub(crate) mod windows {
             // ShellExecuteW can fail after this hook. Keep the window alive so it can report
             // the error. Windows closes our kill-on-close Jobs when the updater exits.
             .on_before_exit(|| {})
-            .timeout(Duration::from_secs(180))
+            .timeout(UPDATE_TIMEOUT)
             .build()
             .map_err(|error| error.to_string())?
             .check()
             .await
             .map_err(|error| error.to_string())?;
         let version = update.as_ref().map(|update| update.version.clone());
-        *candidate = update.map(|update| (update, None));
+        *candidate = update.map(|mut update| {
+            // The manifest request timeout is not inherited by the download.
+            update.timeout = Some(UPDATE_TIMEOUT);
+            (update, None)
+        });
         Ok(version)
     }
 
