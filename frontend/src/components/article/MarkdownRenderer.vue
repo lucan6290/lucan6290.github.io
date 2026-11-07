@@ -9,7 +9,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import type { BytemdPlugin } from 'bytemd';
-import { contentPath } from '@/composables/contentPaths';
+import { contentPath, stripBasePath } from '@/composables/contentPaths';
 import { headingAnchor, resolvePublicMarkdownLink } from '@/utils/publicPaths';
 import { useContent } from '@/composables/useContent';
 import { transformDocusaurusAdmonitions } from '@/utils/markdownAdmonitions.js';
@@ -95,9 +95,9 @@ function navigate(event: MouseEvent) {
   if (!anchor || anchor.target || anchor.hasAttribute('download')) return;
   const url = new URL(anchor.href);
   if (url.origin !== location.origin) return;
-  const base = router.options.history.base;
-  if (base && url.pathname !== base && !url.pathname.startsWith(base + '/')) return;
-  const target = router.resolve((url.pathname.slice(base.length) || '/') + url.search + url.hash);
+  const pathname = stripBasePath(url.pathname, router.options.history.base);
+  if (pathname === null) return;
+  const target = router.resolve(pathname + url.search + url.hash);
   if (target.name !== 'content') return;
   const path = contentPath('/' + String(target.params.section), target.params.pathMatch);
   if (!getArticle(path) && !findNodeByPath(path)) return;

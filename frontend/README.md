@@ -120,17 +120,22 @@ pnpm build        # 输出到 dist/
 pnpm preview      # 本地预览构建产物
 ```
 
-## 不在本前端范围
+### GitHub Pages 部署
 
-- 评论区 / 阅读统计（P1）
-- SEO / RSS / SSG 预渲染（P2）
-- series 系列专题
-- 在线编辑 / admin 联动
-- 内容迁移（用户自行从 site/blog + site/docs 迁入）
+`.github/workflows/deploy.yml` 在推送 `main` 或手动运行时，使用 Node.js 24 和 pnpm 10.21.0 安装锁定依赖、运行测试、构建并发布 `frontend/dist/`。仓库 Settings → Pages 的 Source 需设为 **GitHub Actions**。
+
+- 构建使用 Pages 返回的站点 origin 生成 canonical、站点地图和 RSS。构建 base 取自 `actions/configure-pages` 的 `base_path`：当前 `lucan6290.github.io` 用户站为 `/`；项目站自动使用 `/<仓库名>/`；自定义域名以 Pages 返回值为准，无需硬编码仓库名。
+- 路由、导航、文内 Markdown 链接、Logo 和构建资源遵循相同 base。文档内容仍使用站内逻辑路径（如 `/projects/...`）或相对路径，不在内容中写死部署前缀。
+- 构建会为全部分类、文章、关于及未被内容栏目占用的标签/归档页输出对应目录的 `index.html`。直接打开或刷新文章可由 Pages 命中真实文件；无法作为可移植目录名的标签继续通过 Vue Router 访问。Pages 可能补充 URL 末尾的 `/`，查询参数和章节锚点保留。
+- `404.html` 用于未知地址，`.nojekyll` 保留静态资源目录。文章、栏目和系列页还会写入预渲染正文，关于、标签和归档保留 Vue 入口。
+- 本地验证子路径可执行 `pnpm build --base /仓库名/`；实际用户站使用 `pnpm build`。本地预览的 SPA 回退不能替代对生成目录和静态 HTTP 状态的检查。
+- 如需启用公开互动，在仓库变量中设置公开的 HTTPS 服务地址 `VITE_PUBLIC_SERVICE_URL`。配置及鉴权见 [站点互动服务](service/README.md)。
+
+内容迁移由作者从旧站复制到新前端内容目录。
 
 ## 读者搜索
 
 - 点击顶部“搜索”，输入中文或英文关键词，可检索文章标题、标签、摘要和正文（含代码关键词）。多个关键词共同匹配，标题命中优先，英文支持大小写忽略与前缀匹配；最多展示 30 条结果。
 - 结果显示标题、摘要和所属栏目，点击进入文章。手机端同样提供搜索入口；支持 Tab 选择、Enter 打开、Esc 关闭，关闭后返回搜索按钮。
-- 搜索由浏览器中的 MiniSearch 执行，首次打开搜索窗口时加载引擎和索引，无需后端或搜索服务。README 分类介绍和隐藏内容不参与文章搜索。
+- 搜索由浏览器中的 MiniSearch 执行，首次打开搜索窗口时加载引擎和索引，无需后端或搜索服务。README 分类介绍、隐藏内容和没有独立文章路由的根目录占位文件不参与文章搜索。
 - 搜索索引由内容管线自动生成，开发时随内容刷新；线上修改文章后需重新构建、部署 `dist/`。

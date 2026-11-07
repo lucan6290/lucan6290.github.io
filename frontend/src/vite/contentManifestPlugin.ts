@@ -3,6 +3,7 @@ import { watch } from 'chokidar';
 import path from 'node:path';
 import { build } from '../../scripts/lib/buildContent.mjs';
 import { writePublicPages } from '../../scripts/lib/publicPages.mjs';
+import { writeStaticPages } from '../../scripts/lib/staticPages.mjs';
 import { withPublicBase } from '../utils/publicPaths';
 
 const VIRTUAL_ID = 'virtual:content-manifest';
@@ -45,6 +46,8 @@ export function contentManifestPlugin(): Plugin {
           }
         }
       }
+      // Copy the untouched Vue shell first, then render public page bodies.
+      writeStaticPages({ outDir: dir, manifest });
       const count = writePublicPages({ outDir: dir, manifest, base, assets, siteUrl: process.env.SITE_URL });
       console.log(`[public-pages] ${count} pages with static content.`);
     },

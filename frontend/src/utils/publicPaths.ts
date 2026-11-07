@@ -1,23 +1,9 @@
-import { contentHref, resolveContentUrl } from '../composables/contentPaths.ts';
+import { contentHref, withBasePath } from '../composables/contentPaths.ts';
 
-export function withPublicBase(value: string, base: string) {
-  if (!value.startsWith('/') || value.startsWith('//')) return value;
-  return base.replace(/\/$/, '') + value;
-}
+export { withBasePath as withPublicBase, resolveContentUrl as resolvePublicMarkdownLink } from '../composables/contentPaths.ts';
 
 export function publicPageHref(route: string, base: string) {
-  return withPublicBase(contentHref(route === '/' ? route : route + '/'), base);
-}
-
-export function resolvePublicMarkdownLink(
-  value: string,
-  relativePath: string,
-  assets: Record<string, string>,
-  base: string,
-) {
-  const local = resolveContentUrl(value, relativePath, {});
-  if (local.startsWith('/')) return withPublicBase(local, base);
-  return resolveContentUrl(value, relativePath, assets);
+  return withBasePath(contentHref(route === '/' ? route : route + '/'), base);
 }
 
 export function headingAnchor(text: string, used: Set<string>) {

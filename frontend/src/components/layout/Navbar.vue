@@ -3,7 +3,7 @@
     <div class="navbar__inner">
       <!-- Logo + Title -->
       <router-link class="navbar__brand" to="/">
-        <img v-if="NAV_LOGO.src" :src="NAV_LOGO.src" :alt="NAV_LOGO.alt" class="navbar__logo" />
+        <img v-if="NAV_LOGO.src" :src="logoSrc" :alt="NAV_LOGO.alt" class="navbar__logo" />
         <span class="navbar__title">箓川码笺</span>
       </router-link>
 
@@ -67,7 +67,9 @@ import { createNavEntries, NAV_RIGHT_ITEMS, NAV_LOGO } from '@/config/nav';
 import { useContent } from '@/composables/useContent';
 import { useTheme } from '@/composables/useTheme';
 import SearchDialog from './SearchDialog.vue';
+import { withBasePath } from '@/composables/contentPaths';
 
+const logoSrc = withBasePath(NAV_LOGO.src, import.meta.env.BASE_URL);
 const { theme, toggle } = useTheme();
 const { manifest } = useContent();
 const navEntries = computed(() => createNavEntries(manifest.value.tree));
