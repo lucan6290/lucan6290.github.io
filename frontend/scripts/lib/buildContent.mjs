@@ -248,7 +248,7 @@ function searchText(content) {
 }
 
 function buildSearchIndex(articles) {
-  return Object.values(articles).map((a) => {
+  return Object.values(articles).filter(a => a.relativePath.includes('/')).map((a) => {
     const body = searchText(a.rawContent);
     const description = a.frontmatter.description ? searchText(a.frontmatter.description) : body;
     return {
