@@ -24,7 +24,8 @@ class PublicServiceTests(TestCase):
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
         self.manifest = self.root / "content-manifest.json"
-        articles = {f"/{path[:-3]}": {"relativePath": path} for path in (ARTICLE, OTHER_ARTICLE)}
+        source_paths = (ARTICLE, OTHER_ARTICLE, "about.md", "projects.md", "root.md")
+        articles = {f"/{path[:-3]}": {"relativePath": path} for path in source_paths}
         self.manifest.write_text(json.dumps({"articles": articles}), encoding="utf-8")
         self.token = uuid4().hex + uuid4().hex
         self.settings = Settings(SITE, self.manifest, self.root / "interactions.sqlite3", self.token)
@@ -64,6 +65,14 @@ class PublicServiceTests(TestCase):
                 self.assertEqual(self.article(path).status_code, 404)
                 self.assertEqual(self.view(uuid4(), path).status_code, 404)
         self.assertEqual(self.article().json()["views"], 0)
+
+    def test_root_manifest_documents_are_not_public_article_keys(self):
+        for path in ("about.md", "projects.md", "root.md"):
+            with self.subTest(path=path):
+                self.assertEqual(self.article(path).status_code, 404)
+                self.assertEqual(self.view(uuid4(), path).status_code, 404)
+                payload = {"article_path": path, "body": "留言", "submission_id": str(uuid4())}
+                self.assertEqual(self.client.post(f"{BASE}/comments", json=payload).status_code, 404)
 
     def test_anonymous_text_requires_approval_and_can_be_withdrawn(self):
         body = "<img src=x onerror=alert(1)>\n第二行"

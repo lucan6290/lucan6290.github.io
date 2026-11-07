@@ -111,6 +111,20 @@ class AuthorTests(TestCase):
         public = client.post("/service/api/v1/comments", json={"body": raw})
         self.assertEqual(public.status_code, 413)
 
+    def test_create_requires_section_path_and_keeps_existing_root_markdown_readable(self):
+        client = self.client()
+        for path in ("孤立文章.md", "about.md", "projects.md", "README.md"):
+            with self.subTest(path=path):
+                result = self.create(client, path=path)
+                self.assertEqual((result.status_code, result.json().get("code")), (400, "invalid_path"))
+                self.assertFalse((self.content / path).exists())
+        (self.content / "about.md").write_text("# 关于\n", encoding="utf-8", newline="\n")
+        opened = client.get(f"{BASE}/document", headers=self.admin, params={"relative_path": "about.md"})
+        self.assertEqual(opened.status_code, 200)
+        self.assertEqual(opened.json()["raw_content"], "# 关于\n")
+        saved = self.save(client, "# 关于\n\n已有文档。\n", opened.json()["version"], path="about.md")
+        self.assertEqual(saved.status_code, 200)
+
     def test_invalid_input_and_path_are_rejected_before_writing(self):
         client = self.client()
         invalid = self.create(client, RAW.replace("文章摘要。", ""))

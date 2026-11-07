@@ -79,6 +79,8 @@ def attach_author_routes(admin: APIRouter, project_root: Path | None):
         store = require_writer()
         with store.lock:
             validate_path(store, payload.relative_path)
+            if "/" not in payload.relative_path:
+                raise ContentError(400, "invalid_path", "新文档必须位于内容栏目内，例如 blog/随笔.md")
             return document_detail(store.create(payload.relative_path, payload.raw_content))
 
     @admin.put("/document")

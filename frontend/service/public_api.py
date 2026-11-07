@@ -73,7 +73,8 @@ def published_paths(manifest):
                 or parts[-1].lower() == "readme.md" or not ARTICLE_FILE.search(source)
                 or route != "/" + ARTICLE_FILE.sub("", source)):
             raise ValueError("公开文章清单包含无效路径")
-        paths.add(source)
+        if len(parts) > 1:
+            paths.add(source)
     return frozenset(paths)
 
 

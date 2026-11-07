@@ -14,11 +14,11 @@ $env:PUBLIC_INTERACTION_DB = Join-Path $env:TEMP 'xiaocancoding-interactions.sql
 python -m uvicorn public_api:create_app --factory --app-dir frontend/service --host 127.0.0.1 --port 18400 --workers 1
 ```
 
-先执行 `pnpm -C frontend build:content` 生成清单，并核对 18400 未被占用。该端口属于独立互动服务。另一个终端设置 `VITE_PUBLIC_SERVICE_URL=http://127.0.0.1:18400` 后启动 3400 的新前端。清单中只有正式文章，目录介绍、草稿和未知路径不接受评论和计数。
+先执行 `pnpm -C frontend build:content` 生成清单，并核对 18400 未被占用。该端口属于独立互动服务。另一个终端设置 `VITE_PUBLIC_SERVICE_URL=http://127.0.0.1:18400` 后启动 3400 的新前端。只有构建清单中位于栏目下的正式文章接受评论和计数。根级 Markdown、目录介绍、草稿和未知路径不参与互动。
 
 `PUBLIC_ADMIN_TOKEN` 留空时，匿名提交仍可用，管理员功能关闭，留言保留在待审队列。启用时由密码管理器或服务端密钥管理器生成并注入至少 32 字符的高熵随机令牌。请用站点管理页访问审核队列。浏览器只需服务地址，令牌通过 HTTPS Authorization 请求头发送，并仅保留在当前页面内存。
 
-设置 `PUBLIC_AUTHOR_PROJECT_ROOT` 指向独立作者检出目录的根路径后，站长可在站点部署前缀下打开 `/manage-content/`，选择已有 Markdown 或在已有目录中新建。服务只写该检出目录的 `frontend/content/`。使用单个写入进程，避免让桌面后台和其他写入者同时编辑此目录。作者保留首次写作时间，更新保留服务返回的版本。保存后的内容在下一次按既有流程构建并发布时上线。
+设置 `PUBLIC_AUTHOR_PROJECT_ROOT` 指向独立作者检出目录的根路径后，站长可在站点部署前缀下打开 `/manage-content/`，选择已有 Markdown 或在已有栏目目录中新建。新文档必须包含栏目路径，例如 `blog/随笔.md`。已有根级 Markdown 仍可打开和保存。服务只写该检出目录的 `frontend/content/`。使用单个写入进程，避免让桌面后台和其他写入者同时编辑此目录。作者保留首次写作时间，更新保留服务返回的版本。保存后的内容在下一次按既有流程构建并发布时上线。
 
 ## 部署边界
 
