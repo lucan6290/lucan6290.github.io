@@ -39,6 +39,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '知识图谱', icon: 'graph' }
   },
   {
+    path: '/git',
+    name: 'GitWorkspace',
+    component: () => import('@/views/GitWorkspace.vue'),
+    meta: { title: 'Git 工作区', icon: 'git' }
+  },
+  {
     path: '/settings',
     name: 'Settings',
     component: () => import('@/views/Settings.vue'),

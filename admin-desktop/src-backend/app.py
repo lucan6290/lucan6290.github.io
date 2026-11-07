@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, StrictBool
 
 from article_form_routes import create_article_form_router
 from content_store import ContentError, ContentStore
+from git_routes import create_git_router
 from media_routes import create_media_router
 from move_routes import create_move_router
 
@@ -71,6 +72,7 @@ def create_app(project_root: Path, token: str):
     dependencies = [Depends(authenticate)]
     app.include_router(create_article_form_router(), dependencies=dependencies)
     app.include_router(create_media_router(store), dependencies=dependencies)
+    app.include_router(create_git_router(store.project_root), dependencies=dependencies)
     app.include_router(create_move_router(store), dependencies=dependencies)
 
     @app.get("/api/v1/content", dependencies=dependencies)
