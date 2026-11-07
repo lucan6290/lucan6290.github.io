@@ -338,14 +338,7 @@ fn same_absolute_path(actual: &str, expected: &Path) -> bool {
     let Ok(expected) = fs::canonicalize(expected) else {
         return false;
     };
-    #[cfg(windows)]
-    {
-        actual.to_string_lossy().to_lowercase() == expected.to_string_lossy().to_lowercase()
-    }
-    #[cfg(not(windows))]
-    {
-        actual == expected
-    }
+    actual == expected
 }
 
 fn validate_health(health: &Health, root: &Path) -> Result<(), String> {
@@ -861,6 +854,34 @@ mod tests {
         session.token.clear();
         assert!(validate_identity(&health, &session, &root).is_err());
         std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_identity_distinguishes_case_sensitive_workspace_roots() {
+        let parent = env::temp_dir().join(format!("luchuan-case-sensitive-{}", std::process::id()));
+        fs::create_dir(&parent).unwrap();
+        let result = Command::new("fsutil.exe")
+            .args(["file", "setCaseSensitiveInfo"])
+            .arg(&parent)
+            .arg("enable")
+            .output()
+            .unwrap();
+        if !result.status.success() {
+            fs::remove_dir_all(parent).unwrap();
+            eprintln!("当前 Windows 临时目录不支持大小写敏感模式");
+            return;
+        }
+        let upper = parent.join("Blog");
+        let lower = parent.join("blog");
+        for root in [&upper, &lower] {
+            fs::create_dir(root).unwrap();
+            fs::create_dir_all(root.join("frontend/content")).unwrap();
+        }
+        let (health, session) = identities(&upper);
+        let same_workspace = validate_identity(&health, &session, &lower).is_ok();
+        fs::remove_dir_all(parent).unwrap();
+        assert!(!same_workspace, "大小写不同的独立目录不得共享会话");
     }
 
     #[cfg(windows)]
