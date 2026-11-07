@@ -36,3 +36,8 @@ class MarkdownLinkTests(unittest.TestCase):
                          "./文章-images/图%20%281%29%23100%25.png")
         self.assertEqual(relative_reference("blog/子/文章.md", "blog/README.md"), "../README.md")
 
+
+    def test_escaped_ampersand_does_not_start_an_entity(self):
+        raw = b"![image](./a\\&copy;.png) and ![other](./a&copy;.png)"
+        self.assertEqual([item.value for item in destinations(raw)], ["./a&copy;.png", "./a©.png"])
+

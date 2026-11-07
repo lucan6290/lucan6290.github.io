@@ -93,3 +93,19 @@ class MediaLibraryTests(unittest.TestCase):
             self.assertEqual(image.headers["content-type"], "image/png")
             listed = client.get("/api/v1/media", params={"document_path": self.document}, headers=headers)
             self.assertEqual(listed.json()["images"][0]["relative_path"], path)
+
+    def test_shared_stem_and_ownerless_sidecar_are_rejected(self):
+        self.write("blog/文章 一.mdx", "# 同名不同扩展名")
+        with self.assertRaises(ContentError) as ambiguous:
+            self.media.import_image(self.document, "图.png", PNG)
+        self.assertEqual(ambiguous.exception.status, 409)
+        other = self.content / "blog/孤立-images"
+        other.mkdir()
+        (other / "图.png").write_bytes(base64.b64decode(PNG))
+        with self.assertRaises(ContentError):
+            self.media.delete_plan("blog/孤立-images/图.png")
+
+    def test_svg_cannot_redirect_fragment_references_through_xml_base(self):
+        external = b'<svg xmlns="http://www.w3.org/2000/svg" xml:base="https://example.invalid/a.svg"><use href="#image"/></svg>'
+        with self.assertRaises(ContentError):
+            self.media.import_image(self.document, "unsafe.svg", base64.b64encode(external).decode())

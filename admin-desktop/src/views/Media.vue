@@ -55,6 +55,7 @@ async function copy(image: ArticleImage) {
 }
 
 async function previewDelete(image: ArticleImage) {
+  plan.value = null
   changing.value = true
   error.value = ''
   notice.value = ''

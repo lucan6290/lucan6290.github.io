@@ -59,23 +59,29 @@ async function importImages(files: File[]) {
     error.value = '请先保存文档，再导入图片。'
     return
   }
+  const generation = session.generation
+  const current = () => !disposed && session.path === documentPath && session.generation === generation
   importingImages.value = true
   error.value = ''
   const references: string[] = []
   const failures: string[] = []
   try {
     for (const file of files) {
+      if (!current()) return
       const name = file.name || '截图.png'
       try {
-        const image = await mediaApi.add(documentPath, name, await fileBase64(file))
+        const data = await fileBase64(file)
+        if (!current()) return
+        const image = await mediaApi.add(documentPath, name, data)
         references.push(image.markdown)
       } catch (cause) { failures.push(name + '：' + message(cause)) }
     }
-    if (disposed || session.path !== documentPath) return
+    if (!current()) return
     if (references.length) {
       const inserted = insertImageReferences(session.text, editor.value?.selectionEnd ?? session.text.length, references)
       session.text = inserted.text
       await nextTick()
+      if (!current()) return
       editor.value?.focus()
       editor.value?.setSelectionRange(inserted.caret, inserted.caret)
       appStore.showToast('配图已导入。保存后 Markdown 引用才会写入文档。', 'success')
@@ -321,7 +327,7 @@ onBeforeUnmount(() => {
       <div class="main-header-title">{{ session.path ? '编辑文档' : '新建文档' }}{{ session.dirty ? ' · 未保存' : '' }}</div>
       <div class="main-header-actions">
         <button class="btn btn-secondary btn-sm" @click="router.back()">返回</button>
-        <button class="btn btn-secondary btn-sm" :disabled="session.saving || loading || (!!session.path && !session.baseline)" @click="openSaveAs">另存为</button>
+        <button class="btn btn-secondary btn-sm" :disabled="session.saving || loading || importingImages || (!!session.path && !session.baseline)" @click="openSaveAs">另存为</button>
         <button class="btn btn-primary btn-sm" :disabled="session.saving || loading || (!!session.path && !session.baseline)" @click="handleSave">{{ session.saving ? '保存中...' : '保存' }}</button>
       </div>
     </div>
@@ -359,7 +365,7 @@ onBeforeUnmount(() => {
         <p>{{ session.missing ? '原文件已被删除或移动。本地文本已保留，保存不会自动重建原路径。' : '磁盘文件已变化。本地文本与原读取版本已保留，保存时仍会检查冲突。' }}</p>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
           <button class="btn btn-secondary btn-sm" @click="copyLocal">复制本地修改</button>
-          <button class="btn btn-secondary btn-sm" :disabled="session.saving || loading" @click="reloadFromDisk">放弃本地修改并重载</button>
+          <button class="btn btn-secondary btn-sm" :disabled="session.saving || loading || importingImages" @click="reloadFromDisk">放弃本地修改并重载</button>
           <button class="btn btn-secondary btn-sm" :disabled="session.saving" @click="openSaveAs">另存为新文件</button>
         </div>
         <details v-if="session.external" style="margin-top: 12px;" open>

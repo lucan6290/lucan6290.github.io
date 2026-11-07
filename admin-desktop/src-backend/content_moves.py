@@ -10,7 +10,7 @@ from content_mutations import document_snapshots, mutable_path, plan_digest
 from content_store import ContentError, RESOURCE_DIRECTORY
 from markdown_links import (decoded_parts, destinations, document_route, relative_reference, resolve_reference,
                             rewrite_destinations, route_reference, split_reference)
-from media_library import image_directory
+from media_library import image_directory, image_owner
 
 
 @dataclass(frozen=True)
@@ -143,6 +143,7 @@ class ContentMoves:
             if self.path(media_source).exists():
                 if not self.path(media_source).is_dir():
                     raise ContentError(409, "already_exists", "源配图目录被同名文件占用")
+                image_owner(self.path(media_source))
                 moves.append(self.relocation(media_source, image_directory(destination)))
             elif self.path(image_directory(destination)).exists():
                 raise ContentError(409, "already_exists", "目标配图目录已存在")

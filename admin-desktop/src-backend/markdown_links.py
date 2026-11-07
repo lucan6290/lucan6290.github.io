@@ -15,6 +15,7 @@ BLOCK = Language(tree_sitter_markdown.language())
 INLINE = Language(tree_sitter_markdown.inline_language())
 ESCAPE = re.compile(r"\\([" + re.escape(string.punctuation) + r"])")
 ENTITY = re.compile(r"&(?:#[xX][a-fA-F0-9]+|#[0-9]+|[A-Za-z][A-Za-z0-9]+);")
+MARKDOWN_ESCAPE = re.compile(ESCAPE.pattern + '|' + ENTITY.pattern)
 BAD_PERCENT = re.compile(r"%(?![0-9a-fA-F]{2})")
 SCHEME = re.compile(r"^[a-z][a-z\d+.-]*:", re.IGNORECASE)
 
@@ -51,7 +52,7 @@ def destination_at(node, offset):
     value = node.text.decode("utf-8")
     if value.startswith("<") and value.endswith(">"):
         start, end, value = start + 1, end - 1, value[1:-1]
-    value = ENTITY.sub(lambda match: html.unescape(match[0]), ESCAPE.sub(r"\1", value))
+    value = MARKDOWN_ESCAPE.sub(lambda match: match[1] if match[1] is not None else html.unescape(match[0]), value)
     return Destination(start, end, value)
 
 

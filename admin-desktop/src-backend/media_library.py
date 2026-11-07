@@ -10,7 +10,7 @@ import tempfile
 from xml.etree import ElementTree
 
 from content_mutations import document_snapshots, mutable_path, plan_digest
-from content_store import ContentError, IMAGE_TYPES
+from content_store import ContentError, IMAGE_TYPES, MD_EXTENSIONS
 from markdown_links import destinations, relative_reference, resolve_reference
 
 MAX_IMAGE_SIZE = 12 * 1024 * 1024
@@ -24,6 +24,20 @@ SVG_ELEMENTS = frozenset(
 def image_directory(document):
     path = PurePosixPath(document)
     return str(path.with_name(path.stem + "-images"))
+
+
+def image_owner(directory):
+    stem = directory.name.removesuffix("-images").casefold()
+    owners = [
+        path for path in directory.parent.iterdir()
+        if path.stem.casefold() == stem and path.suffix.lower() in MD_EXTENSIONS
+        and path.is_file() and not path.is_symlink() and path.resolve() == path
+    ]
+    if not owners:
+        raise ContentError(404, "not_found", "配图目录没有对应的 Markdown 文档")
+    if len(owners) != 1:
+        raise ContentError(409, "ambiguous_media_owner", "同名 Markdown 文档共享配图目录，请先处理同名文档")
+    return owners[0]
 
 
 def safe_svg(data):
@@ -43,7 +57,7 @@ def safe_svg(data):
             return False
         for name, value in element.attrib.items():
             local = name.rsplit("}", 1)[-1].lower()
-            if local.startswith("on") or local == "style" or "\\" in value:
+            if local.startswith("on") or local in {"style", "base"} or "\\" in value:
                 return False
             if local == "href" and not value.startswith("#"):
                 return False
@@ -93,7 +107,9 @@ class MediaLibrary:
         if not article.is_file():
             raise ContentError(404, "not_found", "请先保存文档再管理配图")
         relative = image_directory(document)
-        return relative, mutable_path(self.store, relative, directory=True)
+        directory = mutable_path(self.store, relative, directory=True)
+        image_owner(directory)
+        return relative, directory
 
     def list_images(self, document):
         with self.store.lock:
@@ -172,6 +188,7 @@ class MediaLibrary:
             if not target.parent.name.endswith("-images"):
                 raise ContentError(400, "invalid_path", "只可从文档配图目录删除图片")
             self.store.image(relative_path)
+            image_owner(target.parent)
             references = []
             versions = []
             for document, data in document_snapshots(self.store):
