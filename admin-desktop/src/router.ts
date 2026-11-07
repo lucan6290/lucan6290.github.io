@@ -23,7 +23,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/media',
     name: 'Media',
-    component: () => import('@/views/Unavailable.vue'),
+    component: () => import('@/views/Media.vue'),
     meta: { title: '媒体库', icon: 'media' }
   },
   {

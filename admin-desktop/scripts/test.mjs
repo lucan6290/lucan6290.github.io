@@ -6,7 +6,7 @@ import ts from 'typescript'
 
 const directory = await mkdtemp(join(tmpdir(), 'desktop-content-tests-'))
 try {
-  for (const name of ['utils/documentSession', 'utils/documentSession.test', 'utils/contentOrder', 'utils/contentOrder.test', 'utils/articleTemplate', 'utils/articleTemplate.test', 'utils/previewImage', 'utils/previewImage.test', 'api/content']) {
+  for (const name of ['utils/documentSession', 'utils/documentSession.test', 'utils/contentOrder', 'utils/contentOrder.test', 'utils/articleTemplate', 'utils/articleTemplate.test', 'utils/previewImage', 'utils/previewImage.test', 'api/content', 'utils/mediaImport', 'utils/mediaImport.test']) {
     const source = await readFile(new URL(`../src/${name}.ts`, import.meta.url), 'utf8')
     const output = ts.transpileModule(source, {
       compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext }
@@ -14,7 +14,7 @@ try {
     await mkdir(dirname(join(directory, `${name}.mjs`)), { recursive: true })
     await writeFile(join(directory, `${name}.mjs`), output)
   }
-  const result = spawnSync(process.execPath, ['--test', join(directory, 'utils/documentSession.test.mjs'), join(directory, 'utils/contentOrder.test.mjs'), join(directory, 'utils/articleTemplate.test.mjs'), join(directory, 'utils/previewImage.test.mjs')], { stdio: 'inherit' })
+  const result = spawnSync(process.execPath, ['--test', join(directory, 'utils/documentSession.test.mjs'), join(directory, 'utils/contentOrder.test.mjs'), join(directory, 'utils/articleTemplate.test.mjs'), join(directory, 'utils/previewImage.test.mjs'), join(directory, 'utils/mediaImport.test.mjs')], { stdio: 'inherit' })
   process.exitCode = result.status ?? 1
 } finally {
   await rm(directory, { recursive: true, force: true })

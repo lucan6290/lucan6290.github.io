@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, StrictBool
 
 from content_store import ContentError, ContentStore
+from media_routes import create_media_router
 
 
 class Payload(BaseModel):
@@ -66,6 +67,7 @@ def create_app(project_root: Path, token: str):
                 "project_root": str(store.project_root), "content_root": str(store.content_root)}
 
     dependencies = [Depends(authenticate)]
+    app.include_router(create_media_router(store), dependencies=dependencies)
 
     @app.get("/api/v1/content", dependencies=dependencies)
     def content(query: str = Query(default="", max_length=200)):

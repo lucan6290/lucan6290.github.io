@@ -4,6 +4,8 @@ import { useRoute, useRouter, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vu
 import { isTauri } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { contentApi, ContentApiError } from '@/api/content'
+import { mediaApi } from '@/api/media'
+import { fileBase64, imageExtensions, insertImageReferences } from '@/utils/mediaImport'
 import { useAppStore } from '@/stores/app'
 import { DocumentSession } from '@/utils/documentSession'
 import { compareContentPaths } from '@/utils/contentOrder'
@@ -30,6 +32,8 @@ const saveAsDirectory = ref('')
 const saveAsName = ref('')
 const leaveVisible = ref(false)
 const editor = ref<HTMLTextAreaElement | null>(null)
+const imagePicker = ref<HTMLInputElement | null>(null)
+const importingImages = ref(false)
 const showPreview = ref(true)
 const previewDirectory = computed(() => session.path?.split('/').slice(0, -1).join('/') ?? directory.value)
 let resolveLeave: ((allow: boolean) => void) | null = null
@@ -45,6 +49,64 @@ function message(cause: unknown) {
     return `${cause.message}${details} (${cause.status})`
   }
   return cause instanceof Error ? cause.message : '请求失败，请检查后端连接'
+}
+
+async function importImages(files: File[]) {
+  if (!files.length || importingImages.value) return
+  const documentPath = session.path
+  if (!documentPath || !session.baseline || session.missing) {
+    error.value = '请先保存文档，再导入图片。'
+    return
+  }
+  importingImages.value = true
+  error.value = ''
+  const references: string[] = []
+  const failures: string[] = []
+  try {
+    for (const file of files) {
+      const name = file.name || '截图.png'
+      try {
+        const image = await mediaApi.add(documentPath, name, await fileBase64(file))
+        references.push(image.markdown)
+      } catch (cause) { failures.push(name + '：' + message(cause)) }
+    }
+    if (disposed || session.path !== documentPath) return
+    if (references.length) {
+      const inserted = insertImageReferences(session.text, editor.value?.selectionEnd ?? session.text.length, references)
+      session.text = inserted.text
+      await nextTick()
+      editor.value?.focus()
+      editor.value?.setSelectionRange(inserted.caret, inserted.caret)
+      appStore.showToast('配图已导入。保存后 Markdown 引用才会写入文档。', 'success')
+    }
+    if (failures.length) error.value = failures.join('\n')
+  } finally { importingImages.value = false }
+}
+
+function pasteImages(event: ClipboardEvent) {
+  const files = Array.from(event.clipboardData?.files ?? []).filter(file => file.type.startsWith('image/'))
+  if (files.length) {
+    event.preventDefault()
+    void importImages(files)
+  }
+}
+
+function allowFileDrop(event: DragEvent) {
+  if (event.dataTransfer?.types.includes('Files')) event.preventDefault()
+}
+
+function dropImages(event: DragEvent) {
+  const files = Array.from(event.dataTransfer?.files ?? [])
+  if (files.length) {
+    event.preventDefault()
+    void importImages(files)
+  }
+}
+
+function selectImages(event: Event) {
+  const input = event.target as HTMLInputElement
+  void importImages(Array.from(input.files ?? []))
+  input.value = ''
 }
 
 async function loadDirectories() {
@@ -184,6 +246,10 @@ async function saveAs() {
 
 function confirmLeave(): Promise<boolean> {
   if (pendingLeave) return pendingLeave
+  if (importingImages.value) {
+    appStore.showToast('请等待图片导入结束', 'warning')
+    return Promise.resolve(false)
+  }
   if (session.saving) {
     appStore.showToast('保存正在进行，请完成后再离开', 'warning')
     return Promise.resolve(false)
@@ -211,7 +277,7 @@ onBeforeRouteUpdate(to => {
 })
 
 function beforeUnload(event: BeforeUnloadEvent) {
-  if (session.dirty || session.saving) { event.preventDefault(); event.returnValue = '' }
+  if (session.dirty || session.saving || importingImages.value) { event.preventDefault(); event.returnValue = '' }
 }
 
 function onFocus() { void loadDirectories(); void checkExternal() }
@@ -225,7 +291,7 @@ onMounted(async () => {
   if (isTauri()) {
     try {
       const unlisten = await getCurrentWindow().onCloseRequested(async event => {
-        if (!session.dirty && !session.saving) return
+        if (!session.dirty && !session.saving && !importingImages.value) return
         event.preventDefault()
         if (closing) return
         closing = true
@@ -309,11 +375,16 @@ onBeforeUnmount(() => {
           <span style="font-size: 12px; color: var(--text-secondary);">{{ loading ? '读取中...' : 'Markdown 源码编辑' }}</span>
           <span style="font-size: 12px; color: var(--text-tertiary); overflow-wrap: anywhere;">{{ session.path || '尚未创建' }}</span>
           <button class="btn btn-secondary btn-sm" :aria-pressed="showPreview" @click="showPreview = !showPreview">{{ showPreview ? '隐藏预览' : '显示预览' }}</button>
+          <input ref="imagePicker" type="file" multiple hidden :accept="imageExtensions" @change="selectImages" />
+          <button type="button" class="btn btn-secondary btn-sm" :disabled="!session.baseline || session.missing || importingImages" @click="imagePicker?.click()">
+            {{ importingImages ? '导入中…' : '插入图片' }}
+          </button>
+          <RouterLink v-if="session.path && session.baseline" class="btn btn-secondary btn-sm" :to="{ name: 'Media', query: { document: session.path } }">配图</RouterLink>
           <button v-if="session.path" class="btn btn-secondary btn-sm" :disabled="session.saving || loading" @click="checkExternal">检查外部变化</button>
           <button v-if="session.path && !session.baseline" class="btn btn-secondary btn-sm" @click="reloadFromDisk">重试读取</button>
         </div>
         <div class="editor-panes" :class="{ split: showPreview }">
-          <textarea ref="editor" v-model="session.text" class="editor-content" :disabled="loading || (!!session.path && !session.baseline)" aria-label="完整 Markdown 源码" spellcheck="false" />
+          <textarea ref="editor" v-model="session.text" class="editor-content" :disabled="loading || (!!session.path && !session.baseline)" aria-label="完整 Markdown 源码" spellcheck="false" @paste="pasteImages" @dragover="allowFileDrop" @drop="dropImages" />
           <MarkdownPreview v-if="showPreview" :text="session.text" :document-directory="previewDirectory"
             @open-document="path => router.push({ path: '/editor', query: { id: path } })" />
         </div>
