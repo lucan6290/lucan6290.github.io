@@ -35,6 +35,12 @@
 
       <!-- Right: GitHub link + theme toggle -->
       <div class="navbar__items navbar__items--right">
+        <button ref="searchToggle" class="navbar__link navbar__icon-button search-toggle" type="button" aria-label="搜索" title="搜索" aria-haspopup="dialog" :aria-expanded="searchOpen" @click="openSearch">
+          <svg class="navbar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false">
+            <circle cx="10.75" cy="10.75" r="7.25" />
+            <path d="m16 16 5 5" />
+          </svg>
+        </button>
         <button ref="mobileNavToggle" class="navbar__link mobile-nav-toggle" type="button" aria-controls="section-navigation" :aria-expanded="mobileOpen" @click="mobileOpen = !mobileOpen" @keydown.esc="closeMobileMenu">栏目</button>
         <a
           v-for="item in NAV_RIGHT_ITEMS"
@@ -51,14 +57,16 @@
       </div>
     </div>
   </header>
+  <SearchDialog v-if="searchOpen" @close="closeSearch" />
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { createNavEntries, NAV_RIGHT_ITEMS, NAV_LOGO } from '@/config/nav';
 import { useContent } from '@/composables/useContent';
 import { useTheme } from '@/composables/useTheme';
+import SearchDialog from './SearchDialog.vue';
 
 const { theme, toggle } = useTheme();
 const { manifest } = useContent();
@@ -67,8 +75,21 @@ const mobileOpen = ref(false);
 const mobileNavToggle = ref<HTMLButtonElement | null>(null);
 const route = useRoute();
 const active = ref<string | null>(null);
-watch(() => route.fullPath, () => { mobileOpen.value = false; active.value = null; });
+const searchOpen = ref(false);
+const searchToggle = ref<HTMLButtonElement | null>(null);
+watch(() => route.fullPath, () => { mobileOpen.value = false; active.value = null; searchOpen.value = false; });
 let timer: number | null = null;
+
+function openSearch() {
+  mobileOpen.value = false;
+  active.value = null;
+  searchOpen.value = true;
+}
+async function closeSearch() {
+  searchOpen.value = false;
+  await nextTick();
+  searchToggle.value?.focus();
+}
 
 function inSection(rootPath: string) {
   return route.path === rootPath || route.path.startsWith(`${rootPath}/`);
@@ -155,6 +176,8 @@ function close(key: string) {
 }
 .navbar__home.router-link-exact-active { color: var(--ifm-color-primary); background: var(--site-accent-soft); }
 .navbar__link--active { color: var(--ifm-color-primary); background: var(--site-accent-soft); }
+.navbar__icon-button { width: 44px; height: 44px; padding: 0; justify-content: center; flex-shrink: 0; }
+.navbar__icon { display: block; width: 22px; height: 22px; }
 
 .caret {
   display: inline-block;
@@ -210,6 +233,7 @@ function close(key: string) {
 }
 .theme-toggle:hover { background: var(--site-border); }
 .mobile-nav-toggle { display: none; }
+.search-toggle { min-height: 44px; }
 
 @media (max-width: 996px) {
   .navbar__items--left { display: none; }

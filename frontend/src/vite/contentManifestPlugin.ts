@@ -29,7 +29,8 @@ export function contentManifestPlugin(): Plugin {
     load(id) {
       if (id === RESOLVED_ID) {
         manifest = build();
-        return `export default ${JSON.stringify(manifest)};`;
+        const { tree, articles, prevNext, tags, archive, recent, series } = manifest;
+        return `export default ${JSON.stringify({ tree, articles, prevNext, tags, archive, recent, series })};`;
       }
       return null;
     },

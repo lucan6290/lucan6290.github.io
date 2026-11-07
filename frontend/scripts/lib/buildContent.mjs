@@ -233,14 +233,33 @@ function buildRecent(articles, limit = 10) {
     .map((a) => a.path);
 }
 
+function searchText(content) {
+  return content
+    // 同一次扫描先保留代码，再清理普通文本中的注释、链接地址和 HTML。
+    .replace(/(`+)([\s\S]*?)\1|(~{3,})([\s\S]*?)\3|<!--[\s\S]*?-->|!\[([^\]]*)\]\([^)]*\)|\[([^\]]+)\]\([^)]*\)|<[^>]*>/g,
+      (_match, ticks, code, tildes, tildeCode, alt, label) => {
+        if (ticks) return ticks.length >= 3 ? code.replace(/^[^\n]*\n/, '') : code;
+        if (tildes) return tildeCode.replace(/^[^\n]*\n/, '');
+        return alt ?? label ?? ' ';
+      })
+    .replace(/[#*>`~\[\]!]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function buildSearchIndex(articles) {
-  return Object.values(articles).map((a) => ({
-    id: a.path,
-    title: a.frontmatter.title,
-    description: a.frontmatter.description || a.excerpt,
-    tags: (a.frontmatter.tags || []).join(' '),
-    path: a.path,
-  }));
+  return Object.values(articles).map((a) => {
+    const body = searchText(a.rawContent);
+    const description = a.frontmatter.description ? searchText(a.frontmatter.description) : body;
+    return {
+      id: a.path,
+      title: a.frontmatter.title,
+      description: description.length > EXCERPT_MAX ? description.slice(0, EXCERPT_MAX) + '…' : description,
+      tags: (a.frontmatter.tags || []).join(' '),
+      path: a.path,
+      body,
+    };
+  });
 }
 
 export function build({ contentDir = CONTENT_DIR, outDir = OUT_DIR } = {}) {
