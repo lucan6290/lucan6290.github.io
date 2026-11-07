@@ -6,7 +6,7 @@
 
 **Architecture** 独立 FastAPI 服务通过 SQLite 保存互动记录，在线写作复用桌面端 ContentStore。Vue 在配置服务地址后访问 API，未配置时展示明确状态。
 
-**Tech Stack** Python 3.10+、FastAPI、SQLite、Vue 3、TypeScript、pnpm。
+**Tech Stack** Python 3.11+、FastAPI、SQLite、Vue 3、TypeScript、pnpm。
 
 **Spec** [方案与契约](../specs/2026-11-07-public-site-service-design.md)
 
@@ -27,14 +27,16 @@
 
 ## 1. 公开互动
 
-- [ ] 在 `frontend/service/tests/test_public_service.py` 写 HTTP 契约测试，先验证缺少服务时失败。
-- [ ] 实现 `frontend/service/public_api.py`、`interaction_store.py`，验证公开文章白名单、原子去重、审核流程和限流。
-- [ ] 实现 `frontend/src/api/publicService.ts` 和 `PublicArticleTools.vue`，使用浏览器验证评论和统计。
-- [ ] 提交公开互动的代码和相关测试。
+- [x] 在 `frontend/service/tests/test_public_service.py` 写 HTTP 契约测试，先验证缺少服务时失败。
+- [x] 实现 `frontend/service/public_api.py`、`interaction_store.py`，验证公开文章白名单、原子去重、审核流程和限流。
+- [x] 实现 `frontend/src/api/publicService.ts` 和 `PublicArticleTools.vue`，使用浏览器验证评论和统计。
+- [x] 提交公开互动的代码和相关测试。
 
 ## 2. 在线写作与集成
 
-- [ ] 增加管理员写作测试，先验证登录后的文档接口尚未实现。
-- [ ] 实现 `author_routes.py` 及 `PublicAdminView.vue`，验证版本冲突、六字段、路径边界和离开清除凭据。
-- [ ] 通过临时内容目录、真实 HTTP 及浏览器联调，再运行前端与桌面端回归。
-- [ ] 提交在线写作代码、测试和服务使用说明，将路由及文章挂载契约交给集成分支。
+- [x] 增加管理员写作测试，先验证登录后的文档接口尚未实现。
+- [x] 实现 `author_routes.py` 及 `PublicAdminView.vue`，验证版本冲突、六字段、路径边界和离开清除凭据。
+- [x] 通过临时内容目录、真实 HTTP 及浏览器联调，再运行前端与桌面端回归。
+- [x] 提交在线写作代码、测试和服务使用说明，将路由及文章挂载契约交给集成分支。
+
+本地 Chrome 在临时 SQLite 和作者目录中验证了阅读去重、服务重启、留言超时重试与审核、纯文本显示、写作冲突和刷新清除凭据。站点管理入口在静态站部署前缀下的 `/manage-content/`，文章组件传入 `article.relativePath`。生产连接、配置和部署需要另外验证。

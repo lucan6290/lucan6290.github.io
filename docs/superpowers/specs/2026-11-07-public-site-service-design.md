@@ -21,7 +21,7 @@
 | --- | --- | --- |
 | GET `/article` | `article_path`，可选 `before` | `{views, comments, next_before}`，已公开评论按 ID 从新到旧分页 |
 | POST `/views` | `{article_path, session_id}` | `{views}` |
-| POST `/comments` | `{article_path, body}` | 201，`{status: "pending"}` |
+| POST `/comments` | `{article_path, body, submission_id}` | 201，`{status: "accepted"}`；相同 UUID 与正文重试只接收一条 |
 | GET `/admin/session` | Bearer | `{writing_enabled}` |
 | GET `/admin/comments` | Bearer，`status` 和可选 `before` | `{comments, next_before}` |
 | PATCH `/admin/comments/{id}` | Bearer，`{status: "published" \| "rejected"}` | 更新后的评论 |
@@ -30,7 +30,7 @@
 | POST `/admin/documents` | Bearer，`{relative_path, raw_content}` | 201，Markdown 详情 |
 | PUT `/admin/document` | Bearer，`{relative_path, raw_content, expected_version}` | 保存后的 Markdown 详情 |
 
-公开评论包含 `id`、`body` 和 `created_at`，管理端额外包含 `article_path` 和 `status`。文档响应沿用桌面内容存储接口字段。无效凭据返回 401，未启用在线写作或管理密钥返回 503，未知文章或文件返回 404，非法输入返回 400 或 422，过大请求返回 413，超限返回 429，内容版本冲突返回 409。
+公开评论包含 `id`、`body` 和 `created_at`，管理端额外包含 `article_path` 和 `status`。文档列表包含 `relative_path` 和 `title`，详情再返回 `raw_content` 和 `version`。目录列表包含 `relative_path` 和 `label`。无效凭据返回 401，未启用在线写作或管理密钥返回 503，未知文章或文件返回 404，非法输入返回 400 或 422，过大请求返回 413，超限返回 429，内容版本冲突返回 409。
 
 ## 评审检查
 
