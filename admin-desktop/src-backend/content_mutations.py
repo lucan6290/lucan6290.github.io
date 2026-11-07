@@ -18,8 +18,8 @@ def plan_digest(data):
     return hashlib.sha256(serial.encode("utf-8")).hexdigest()
 
 
-def document_snapshots(store):
-    for document in store.list_content()["documents"]:
+def document_snapshots(store, index=None):
+    for document in (index if index is not None else store.list_content())["documents"]:
         relative_path = document["relative_path"]
         target = mutable_path(store, relative_path)
         data, _, _ = store.snapshot(target)

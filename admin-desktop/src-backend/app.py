@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, StrictBool
 
 from content_store import ContentError, ContentStore
 from media_routes import create_media_router
+from move_routes import create_move_router
 
 
 class Payload(BaseModel):
@@ -68,10 +69,12 @@ def create_app(project_root: Path, token: str):
 
     dependencies = [Depends(authenticate)]
     app.include_router(create_media_router(store), dependencies=dependencies)
+    app.include_router(create_move_router(store), dependencies=dependencies)
 
     @app.get("/api/v1/content", dependencies=dependencies)
     def content(query: str = Query(default="", max_length=200)):
-        return store.list_content(query)
+        with store.lock:
+            return store.list_content(query)
 
     @app.get("/api/v1/images", dependencies=dependencies)
     def image(path: str):
@@ -80,11 +83,13 @@ def create_app(project_root: Path, token: str):
 
     @app.get("/api/v1/documents/version", dependencies=dependencies)
     def version(path: str):
-        return store.version(path)
+        with store.lock:
+            return store.version(path)
 
     @app.get("/api/v1/documents", dependencies=dependencies)
     def document(path: str):
-        return store.detail(path)
+        with store.lock:
+            return store.detail(path)
 
     @app.post("/api/v1/documents", status_code=201, dependencies=dependencies)
     def create(payload: CreatePayload):

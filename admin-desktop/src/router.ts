@@ -33,6 +33,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'AI 写作', icon: 'ai' }
   },
   {
+    path: '/graph',
+    name: 'KnowledgeGraph',
+    component: () => import('@/views/KnowledgeGraph.vue'),
+    meta: { title: '知识图谱', icon: 'graph' }
+  },
+  {
     path: '/settings',
     name: 'Settings',
     component: () => import('@/views/Settings.vue'),

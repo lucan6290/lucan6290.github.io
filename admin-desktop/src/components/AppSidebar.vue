@@ -15,6 +15,7 @@ const icons: Record<string, string> = {
   registry: 'M4 6h16M4 10h16M4 14h16M4 18h16',
   media: 'M3 5h18v14H3V5zm2 2v10h14V7H5zm2 7l3-4 3 3 2-2 3 3H7z',
   ai: 'M12 2a7 7 0 1 1 0 14 7 7 0 0 1 0-14zm0 3l1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3z',
+  graph: 'M6 6l6 6m6-6l-6 6m0 0v7M4 4h4v4H4zM16 4h4v4h-4zM10 18h4v4h-4z',
   settings: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm8 4l-2-1-1-3 1-1-1-1-3 1-1-2-1-2 1-2 1-3 1-1 1 1 3 1 1-1 2 1 2 2-1 1 1-1 3 1 1 2-1 1z'
 }
 

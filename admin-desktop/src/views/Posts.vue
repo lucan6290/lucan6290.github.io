@@ -7,6 +7,8 @@ import { useAppStore } from '@/stores/app'
 import { formatDate } from '@/utils/postDisplay'
 import { compareContentPaths } from '@/utils/contentOrder'
 import DirectoryBranch from '@/components/DirectoryBranch.vue'
+import MoveContentDialog from '@/components/MoveContentDialog.vue'
+import type { MoveKind, MovePlan } from '@/api/contentMoves'
 const router = useRouter()
 const route = useRoute()
 const appStore = useAppStore()
@@ -20,6 +22,7 @@ const error = ref('')
 const newDirectory = ref('')
 const creating = ref(false)
 const deleting = ref('')
+const moveTarget = ref<{ source: string; kind: MoveKind } | null>(null)
 let latestRequest = 0
 const sections = computed(() => directories.value.filter(item => item.relative_path && !item.relative_path.includes('/')))
 const directoryTree = computed(() => {
@@ -72,6 +75,15 @@ async function createDirectory() {
   } catch (cause) { appStore.showToast(cause instanceof Error ? cause.message : '创建目录失败', 'error') }
   finally { creating.value = false }
 }
+async function afterMove(plan: MovePlan) {
+  moveTarget.value = null
+  const parent = plan.destination.split('/').slice(0, -1).join('/')
+  directory.value = plan.kind === 'directory' ? plan.destination : parent
+  section.value = ''
+  await refresh()
+  appStore.showToast('已移动并更新相关 Markdown 引用', 'success')
+}
+
 async function remove(document: DocumentSummary) {
   if (deleting.value || !confirm(`仅删除文档，不删除图片：\n${document.relative_path}\n确定继续？`)) return
   deleting.value = document.relative_path
@@ -84,7 +96,7 @@ onUnmounted(() => window.removeEventListener('focus', refresh))
 </script>
 <template>
   <div>
-    <div class="main-header"><div class="main-header-title">文档管理</div><div class="main-header-actions"><button class="btn btn-secondary btn-sm" :disabled="loading" @click="refresh">刷新</button><button class="btn btn-primary btn-sm" @click="edit()">新建文档</button></div></div>
+    <div class="main-header"><div class="main-header-title">文档管理</div><div class="main-header-actions"><button class="btn btn-secondary btn-sm" :disabled="loading" @click="refresh">刷新</button><button v-if="directory" class="btn btn-secondary btn-sm" @click="moveTarget = { source: directory, kind: 'directory' }">移动当前目录</button><button class="btn btn-primary btn-sm" @click="edit()">新建文档</button></div></div>
     <div class="main-content">
       <p v-if="error" role="alert" style="color: var(--status-error);">{{ error }}</p>
       <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
@@ -103,11 +115,12 @@ onUnmounted(() => window.removeEventListener('focus', refresh))
         <tbody><tr v-for="document in visibleDocuments" :key="document.relative_path">
           <td><div style="font-weight: 500;">{{ document.title }}</div><div style="font-size: 12px; color: var(--text-secondary);">{{ document.relative_path }}</div></td>
           <td><span class="badge" :class="document.kind === 'introduction' ? 'badge-info' : 'badge-success'">{{ document.kind === 'introduction' ? '目录介绍' : '文档' }}</span></td><td>{{ document.tags.join('、') || '—' }}</td><td>{{ formatDate(document.modified_at) }}</td>
-          <td><div style="display: flex; gap: 4px;"><button class="btn btn-ghost btn-sm" @click="edit(document)">编辑</button><button class="btn btn-ghost btn-sm" :disabled="!!deleting" @click="remove(document)">删除</button></div></td>
+          <td><div style="display: flex; gap: 4px;"><button class="btn btn-ghost btn-sm" @click="edit(document)">编辑</button><button class="btn btn-ghost btn-sm" @click="moveTarget = { source: document.relative_path, kind: 'document' }">移动</button><button class="btn btn-ghost btn-sm" :disabled="!!deleting" @click="remove(document)">删除</button></div></td>
         </tr><tr v-if="!visibleDocuments.length"><td colspan="5">{{ loading ? '读取中…' : search.trim() ? '没有匹配的文档。' : '此处还没有文档。' }}</td></tr></tbody>
       </table></div>
       </div>
     </div>
+    <MoveContentDialog v-if="moveTarget" :source="moveTarget.source" :kind="moveTarget.kind" @close="moveTarget = null" @moved="afterMove" />
   </div>
 </template>
 

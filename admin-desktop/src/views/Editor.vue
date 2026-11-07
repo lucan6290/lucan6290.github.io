@@ -12,6 +12,7 @@ import { compareContentPaths } from '@/utils/contentOrder'
 import { createArticleTemplate, fillArticleTitle, isArticleDocument } from '@/utils/articleTemplate'
 import type { ContentDirectory } from '@/types/content'
 import MarkdownPreview from '@/components/MarkdownPreview.vue'
+import DocumentBacklinks from '@/components/DocumentBacklinks.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -389,6 +390,7 @@ onBeforeUnmount(() => {
             @open-document="path => router.push({ path: '/editor', query: { id: path } })" />
         </div>
       </div>
+      <DocumentBacklinks v-if="session.path && session.baseline" :path="session.path" />
     </div>
     <div v-if="leaveVisible" class="editor-modal-backdrop">
       <section role="dialog" aria-modal="true" aria-labelledby="leave-title" class="card editor-dialog">
