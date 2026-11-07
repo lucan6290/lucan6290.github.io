@@ -15,6 +15,7 @@ import MarkdownPreview from '@/components/MarkdownPreview.vue'
 import DocumentBacklinks from '@/components/DocumentBacklinks.vue'
 import ArticleForm from '@/components/ArticleForm.vue'
 import EditorQuickSwitch from '@/components/EditorQuickSwitch.vue'
+import SiteActions from '@/components/SiteActions.vue'
 import AiWritingPanel from '@/components/AiWritingPanel.vue'
 import { applyMarkdownCommand, markdownCommands, type MarkdownCommand } from '@/utils/editorCommands'
 
@@ -505,6 +506,7 @@ onBeforeUnmount(() => {
       </div>
       <AiWritingPanel v-if="!readingMode && !loading && (!session.path || session.baseline)" :buffer="session.text"
         :document-key="activeTab.id + ':' + session.generation + ':' + (session.path || '')" @accept="session.text = $event" />
+      <section v-if="!readingMode && session.path && session.baseline" class="card editor-site"><SiteActions :document-path="session.path" /></section>
       <DocumentBacklinks v-if="session.path && session.baseline" :path="session.path" />
     </div>
     <div v-if="leaveVisible" class="editor-modal-backdrop">
@@ -532,6 +534,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.editor-site { margin-top: 12px; }
 .editor-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
 .editor-tab { display: inline-flex; align-items: center; max-width: 240px; border: 1px solid var(--border-subtle); border-radius: 6px; }
 .editor-tab.selected { border-color: var(--text-secondary); }

@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, provide, ref } from 'vue'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { contentApi, setContentConnection } from '@/api/content'
 import { useAppStore } from '@/stores/app'
-import { clearEditorTabs } from '@/utils/editorTabs'
+import { clearEditorTabs, editorTabs } from '@/utils/editorTabs'
 import { openFavorites } from '@/utils/editorFavorites'
+import { workspaceControlsKey } from '@/utils/workspaceControls'
 import WindowTitlebar from '@/components/WindowTitlebar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import ToastContainer from '@/components/ToastContainer.vue'
@@ -13,6 +14,7 @@ interface Connection { base_url: string; token: string; content_root?: string }
 const appStore = useAppStore()
 const connected = ref(false)
 const workspace = ref('')
+const workspaceError = ref('')
 const connecting = ref(false)
 const error = ref('')
 const token = ref('')
@@ -57,6 +59,37 @@ async function chooseDirectory() {
     error.value = cause instanceof Error ? cause.message : String(cause)
   }
 }
+async function switchWorkspace() {
+  if (!desktop || connecting.value || editorTabs.value.some(tab => tab.session.dirty || tab.session.saving)) return
+  const selected = await open({ directory: true, multiple: false, title: '更换博客目录' }).catch(cause => {
+    workspaceError.value = cause instanceof Error ? cause.message : String(cause)
+    return null
+  })
+  if (!selected || typeof selected !== 'string') return
+  connecting.value = true
+  workspaceError.value = ''
+  try {
+    const next = await invoke<Connection>('switch_blog_workspace', { projectRoot: selected })
+    await connect(next)
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : String(cause)
+    try {
+      const previous = await invoke<Connection | null>('get_backend_connection')
+      if (!previous) throw new Error('没有已连接的工作区')
+      await connect(previous)
+      workspaceError.value = message
+    } catch (restore) {
+      error.value = message + '\n重新连接失败：' + (restore instanceof Error ? restore.message : String(restore))
+      appStore.backendReady = false
+      connected.value = false
+    }
+  } finally { connecting.value = false }
+}
+
+provide(workspaceControlsKey, {
+  available: desktop, root: workspace, busy: connecting, error: workspaceError, select: switchWorkspace,
+})
+
 onMounted(async () => {
   appStore.init()
   if (desktop) { await reconnect(); return }
