@@ -29,7 +29,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/ai-writing',
     name: 'AIWriting',
-    component: () => import('@/views/Unavailable.vue'),
+    component: () => import('@/views/AIWriting.vue'),
     meta: { title: 'AI 写作', icon: 'ai' }
   },
   {

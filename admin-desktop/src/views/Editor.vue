@@ -15,6 +15,7 @@ import MarkdownPreview from '@/components/MarkdownPreview.vue'
 import DocumentBacklinks from '@/components/DocumentBacklinks.vue'
 import ArticleForm from '@/components/ArticleForm.vue'
 import EditorQuickSwitch from '@/components/EditorQuickSwitch.vue'
+import AiWritingPanel from '@/components/AiWritingPanel.vue'
 import { applyMarkdownCommand, markdownCommands, type MarkdownCommand } from '@/utils/editorCommands'
 
 const route = useRoute()
@@ -502,6 +503,8 @@ onBeforeUnmount(() => {
             @open-document="path => router.push({ path: '/editor', query: { id: path } })" />
         </div>
       </div>
+      <AiWritingPanel v-if="!readingMode && !loading && (!session.path || session.baseline)" :buffer="session.text"
+        :document-key="activeTab.id + ':' + session.generation + ':' + (session.path || '')" @accept="session.text = $event" />
       <DocumentBacklinks v-if="session.path && session.baseline" :path="session.path" />
     </div>
     <div v-if="leaveVisible" class="editor-modal-backdrop">

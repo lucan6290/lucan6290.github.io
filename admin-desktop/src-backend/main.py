@@ -42,7 +42,9 @@ def prepare_session(project_root: Path, session_file: Path):
 
 def create_runtime_app():
     # reload 子进程继承同一 token，文件变化不会使桌面会话失效。
-    return create_app(Path(os.environ["XIAOCAN_DESKTOP_PROJECT_ROOT"]), os.environ["XIAOCAN_DESKTOP_TOKEN"])
+    state = os.environ.get("XIAOCAN_DESKTOP_STATE_DIR")
+    return create_app(Path(os.environ["XIAOCAN_DESKTOP_PROJECT_ROOT"]), os.environ["XIAOCAN_DESKTOP_TOKEN"],
+                      Path(state) if state else None)
 
 
 def main():
@@ -70,7 +72,11 @@ def main():
             listener.listen(config.backlog)
             listener.set_inheritable(True)
             session_file = args.session_file or root / ".codex-tmp/admin-desktop/session.json"
-            session = prepare_session(root, session_file.resolve())
+            session_file = session_file.resolve()
+            if session_file.is_relative_to((root / "frontend/content").resolve()):
+                raise RuntimeError("会话文件不得位于博客内容目录内")
+            session = prepare_session(root, session_file)
+            os.environ["XIAOCAN_DESKTOP_STATE_DIR"] = str(session_file.parent)
             os.environ["XIAOCAN_DESKTOP_PROJECT_ROOT"] = session["project_root"]
             os.environ["XIAOCAN_DESKTOP_TOKEN"] = session["token"]
             server = uvicorn.Server(config)
