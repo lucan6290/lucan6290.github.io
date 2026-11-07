@@ -12,6 +12,9 @@ use tauri::{Manager, State};
 mod site_runtime;
 mod updater;
 
+#[cfg(test)]
+mod workspace_switch_tests;
+
 const BASE_URL: &str = "http://127.0.0.1:18000";
 
 #[derive(Serialize)]
@@ -38,31 +41,57 @@ struct Session {
 
 #[derive(Default)]
 struct BackendRuntime {
-    active: Mutex<Option<ActiveWorkspace>>,
-    initialization: Mutex<()>,
+    workspace: Mutex<Option<ActiveWorkspace>>,
     process: Mutex<Option<OwnedProcess>>,
     exiting: AtomicBool,
 }
 
-#[derive(Clone)]
 struct ActiveWorkspace {
     root: PathBuf,
     state_dir: PathBuf,
+    executable: Option<PathBuf>,
+}
+
+impl ActiveWorkspace {
+    fn matches_root(&self, root: &Path) -> bool {
+        same_absolute_path(&self.root.to_string_lossy(), root)
+    }
+
+    fn connect(
+        &self,
+        runtime: &BackendRuntime,
+        after_stop: bool,
+    ) -> Result<BackendConnection, String> {
+        if after_stop {
+            let start = Instant::now();
+            while start.elapsed() < Duration::from_secs(2) && backend_port_open() {
+                std::thread::sleep(Duration::from_millis(50));
+            }
+        }
+        initialize_backend(
+            runtime,
+            &self.root,
+            &self.state_dir,
+            self.executable.as_deref(),
+        )
+    }
+
+    fn remember(&self) -> Result<(), String> {
+        if self.executable.is_some() {
+            remember_workspace(&self.state_dir.join("workspace.json"), &self.root)?;
+        }
+        Ok(())
+    }
 }
 
 impl BackendRuntime {
-    fn active_workspace(&self) -> Result<ActiveWorkspace, String> {
-        self.active
+    fn stop_owned_backend(&self) -> Result<bool, String> {
+        let process = self
+            .process
             .lock()
-            .map_err(|_| "工作区状态不可用。")?
-            .clone()
-            .ok_or_else(|| "请先连接本地工作区。".into())
-    }
-
-    fn set_active_workspace(&self, root: PathBuf, state_dir: PathBuf) -> Result<(), String> {
-        *self.active.lock().map_err(|_| "工作区状态不可用。")? =
-            Some(ActiveWorkspace { root, state_dir });
-        Ok(())
+            .map_err(|_| "后端进程状态不可用。")?
+            .take();
+        Ok(process.is_some())
     }
 }
 
@@ -267,27 +296,35 @@ fn installed_workspace(state: &Path, selected: Option<&Path>) -> Result<Option<P
         saved = serde_json::from_slice(&raw).map_err(|_| "上次打开的博客目录记录无效。")?;
         &saved
     };
+    validate_workspace_selection(path).map(Some)
+}
+
+fn validate_workspace_selection(path: &Path) -> Result<PathBuf, String> {
     let root = fs::canonicalize(path)
         .map_err(|error| format!("无法打开博客目录（{}）：{error}", path.display()))?;
     if root.is_dir() && root.ends_with("frontend/content") {
         if let Some(project) = root.parent().and_then(Path::parent) {
-            return Ok(Some(project.to_path_buf()));
+            return Ok(project.to_path_buf());
         }
     }
     let content = root.join("frontend/content").canonicalize();
     if !content.is_ok_and(|content| content.is_dir() && content.starts_with(&root)) {
         return Err("请选择博客仓库根目录或其中的 frontend/content。".into());
     }
-    Ok(Some(root))
+    Ok(root)
 }
 
 fn remember_workspace(state: &Path, root: &Path) -> Result<(), String> {
     let raw = serde_json::to_vec(root).map_err(|error| format!("无法记录博客目录：{error}"))?;
     let temporary = state.with_extension(format!("{}.tmp", std::process::id()));
-    fs::create_dir_all(state.parent().expect("workspace state has a parent"))
+    let saved = fs::create_dir_all(state.parent().expect("workspace state has a parent"))
         .and_then(|()| fs::write(&temporary, raw))
-        .and_then(|()| fs::rename(&temporary, state))
-        .map_err(|error| format!("无法保存博客目录：{error}"))
+        .and_then(|()| fs::rename(&temporary, state));
+    if let Err(error) = saved {
+        let _ = fs::remove_file(&temporary);
+        return Err(format!("无法保存博客目录：{error}"));
+    }
+    Ok(())
 }
 
 fn same_absolute_path(actual: &str, expected: &Path) -> bool {
@@ -397,22 +434,30 @@ fn connect_existing(
     })
 }
 
+fn backend_entry(root: &Path, executable: Option<&Path>) -> Result<PathBuf, String> {
+    if let Some(executable) = executable {
+        if !executable.is_file() {
+            return Err("安装包缺少内容后端，请重新安装箓川码笺。".into());
+        }
+        return Ok(executable.to_path_buf());
+    }
+    let entry = root.join("admin-desktop/src-backend/main.py");
+    if !entry.is_file() {
+        return Err(format!("找不到内容后端入口：{}", entry.display()));
+    }
+    Ok(entry)
+}
+
 fn spawn_backend(
     root: &Path,
     state_dir: &Path,
     executable: Option<&Path>,
 ) -> Result<OwnedProcess, String> {
-    let mut command = if let Some(executable) = executable {
-        if !executable.is_file() {
-            return Err("安装包缺少内容后端，请重新安装箓川码笺。".into());
-        }
-        Command::new(executable)
+    let entry = backend_entry(root, executable)?;
+    let mut command = if executable.is_some() {
+        Command::new(entry)
     } else {
         let backend_dir = root.join("admin-desktop/src-backend");
-        let entry = backend_dir.join("main.py");
-        if !entry.is_file() {
-            return Err(format!("找不到内容后端入口：{}", entry.display()));
-        }
         let venv = backend_dir.join(if cfg!(windows) {
             ".venv/Scripts/python.exe"
         } else {
@@ -453,6 +498,11 @@ fn spawn_backend(
     OwnedProcess::spawn(&mut command).map_err(|error| format!("无法启动内容后端：{error}"))
 }
 
+fn backend_port_open() -> bool {
+    let address: SocketAddr = "127.0.0.1:18000".parse().unwrap();
+    TcpStream::connect_timeout(&address, Duration::from_millis(500)).is_ok()
+}
+
 fn initialize_backend(
     runtime: &BackendRuntime,
     root: &Path,
@@ -460,8 +510,7 @@ fn initialize_backend(
     executable: Option<&Path>,
 ) -> Result<BackendConnection, String> {
     let client = local_client()?;
-    let address: SocketAddr = "127.0.0.1:18000".parse().unwrap();
-    if TcpStream::connect_timeout(&address, Duration::from_millis(500)).is_ok() {
+    if backend_port_open() {
         return connect_existing(&client, BASE_URL, root, state_dir);
     }
     {
@@ -519,57 +568,134 @@ fn initialize_backend(
     ))
 }
 
+fn resolve_workspace(
+    app: &tauri::AppHandle,
+    selected: Option<&Path>,
+) -> Result<Option<ActiveWorkspace>, String> {
+    if cfg!(debug_assertions) {
+        let root = match selected {
+            Some(path) => validate_project_root(&validate_workspace_selection(path)?)?,
+            None => find_project_root()?,
+        };
+        return Ok(Some(ActiveWorkspace {
+            state_dir: root.join(".codex-tmp/admin-desktop"),
+            root,
+            executable: None,
+        }));
+    }
+    let state_dir = app
+        .path()
+        .app_local_data_dir()
+        .map_err(|error| error.to_string())?;
+    let Some(root) = installed_workspace(&state_dir.join("workspace.json"), selected)? else {
+        return Ok(None);
+    };
+    let executable = app
+        .path()
+        .resource_dir()
+        .map_err(|error| error.to_string())?
+        .join("content-backend/luchuan-content.exe");
+    Ok(Some(ActiveWorkspace {
+        root,
+        state_dir,
+        executable: Some(executable),
+    }))
+}
+
+fn replace_backend(
+    runtime: &BackendRuntime,
+    current: &ActiveWorkspace,
+    candidate: &ActiveWorkspace,
+    mut connect: impl FnMut(&ActiveWorkspace, bool) -> Result<BackendConnection, String>,
+) -> Result<BackendConnection, String> {
+    if current.matches_root(&candidate.root) {
+        let connection = connect(candidate, false)?;
+        candidate.remember()?;
+        return Ok(connection);
+    }
+
+    backend_entry(&candidate.root, candidate.executable.as_deref())?;
+    let previous_owned = runtime.stop_owned_backend()?;
+    let replacement = connect(candidate, previous_owned).and_then(|connection| {
+        candidate.remember()?;
+        Ok(connection)
+    });
+    match replacement {
+        Ok(connection) => Ok(connection),
+        Err(error) => {
+            let candidate_owned = runtime.stop_owned_backend()?;
+            if previous_owned {
+                if let Err(restore) = connect(current, candidate_owned) {
+                    return Err(format!(
+                        "切换工作区失败：{error} 恢复原工作区失败：{restore}"
+                    ));
+                }
+            }
+            Err(error)
+        }
+    }
+}
+
 #[tauri::command]
 async fn get_backend_connection(
     app: tauri::AppHandle,
     project_root: Option<PathBuf>,
 ) -> Result<Option<BackendConnection>, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let runtime: State<BackendRuntime> = app.state();
-        let _initializing = runtime
-            .initialization
-            .lock()
-            .map_err(|_| "后端连接状态不可用。")?;
-        let result = (|| {
-            if cfg!(debug_assertions) {
-                let root = match project_root.as_deref() {
-                    Some(root) => validate_project_root(root)?,
-                    None => find_project_root()?,
-                };
-                let state_dir = root.join(".codex-tmp/admin-desktop");
-                let connection = initialize_backend(&runtime, &root, &state_dir, None)?;
-                runtime.set_active_workspace(root, state_dir)?;
-                return Ok(Some(connection));
+        let runtime = app.state::<BackendRuntime>();
+        let mut active = runtime.workspace.lock().map_err(|_| "工作区状态不可用。")?;
+        if let Some(current) = active.as_ref() {
+            if let Some(path) = project_root.as_deref() {
+                let root = validate_workspace_selection(path)?;
+                if !current.matches_root(&root) {
+                    return Err("请在设置中切换工作区。".into());
+                }
             }
-            let state_dir = app
-                .path()
-                .app_local_data_dir()
-                .map_err(|error| error.to_string())?;
-            let workspace = state_dir.join("workspace.json");
-            let Some(root) = installed_workspace(&workspace, project_root.as_deref())? else {
-                return Ok(None);
-            };
-            let executable = app
-                .path()
-                .resource_dir()
-                .map_err(|error| error.to_string())?
-                .join("content-backend/luchuan-content.exe");
-            let connection = initialize_backend(&runtime, &root, &state_dir, Some(&executable))?;
-            if project_root.is_some() {
-                remember_workspace(&workspace, &root)?;
-            }
-            runtime.set_active_workspace(root, state_dir)?;
-            Ok(Some(connection))
-        })();
-        if result.is_err() {
-            if let Ok(mut process) = runtime.process.lock() {
-                process.take();
+            return current.connect(&runtime, false).map(Some);
+        }
+
+        let Some(workspace) = resolve_workspace(&app, project_root.as_deref())? else {
+            return Ok(None);
+        };
+        let connection = workspace.connect(&runtime, false)?;
+        if project_root.is_some() {
+            if let Err(error) = workspace.remember() {
+                runtime.stop_owned_backend()?;
+                return Err(error);
             }
         }
-        result
+        *active = Some(workspace);
+        Ok(Some(connection))
     })
     .await
     .map_err(|error| format!("内容后端启动任务失败：{error}"))?
+}
+
+#[tauri::command]
+async fn switch_blog_workspace(
+    app: tauri::AppHandle,
+    project_root: PathBuf,
+) -> Result<BackendConnection, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let runtime = app.state::<BackendRuntime>();
+        let mut active = runtime
+            .workspace
+            .try_lock()
+            .map_err(|_| "已有站点或工作区任务正在执行。")?;
+        let current = active.as_ref().ok_or("请先连接本地工作区。")?;
+        let candidate =
+            resolve_workspace(&app, Some(&project_root))?.ok_or("请选择要打开的工作区。")?;
+        let connection = replace_backend(&runtime, current, &candidate, |target, stopped| {
+            target.connect(&runtime, stopped)
+        })?;
+        if !current.matches_root(&candidate.root) {
+            app.state::<site_runtime::SiteRuntime>().stop_preview();
+        }
+        *active = Some(candidate);
+        Ok(connection)
+    })
+    .await
+    .map_err(|error| format!("工作区切换任务失败：{error}"))?
 }
 
 #[tauri::command]
@@ -611,6 +737,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             get_backend_connection,
+            switch_blog_workspace,
             site_runtime::open_site_preview,
             site_runtime::build_blog_site,
             minimize_window,

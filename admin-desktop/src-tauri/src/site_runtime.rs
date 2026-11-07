@@ -318,11 +318,11 @@ pub(crate) async fn open_site_preview(
 ) -> Result<PreviewResult, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let backend = app.state::<BackendRuntime>();
-        let _operation = backend
-            .initialization
+        let active = backend
+            .workspace
             .try_lock()
             .map_err(|_| "已有站点或工作区任务正在执行。")?;
-        let workspace = backend.active_workspace()?;
+        let workspace = active.as_ref().ok_or("请先连接本地工作区。")?;
         let result = open_preview(
             &app.state(),
             &workspace.root,
@@ -342,11 +342,11 @@ pub(crate) async fn open_site_preview(
 pub(crate) async fn build_blog_site(app: tauri::AppHandle) -> Result<BuildResult, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let backend = app.state::<BackendRuntime>();
-        let _operation = backend
-            .initialization
+        let active = backend
+            .workspace
             .try_lock()
             .map_err(|_| "已有站点或工作区任务正在执行。")?;
-        let workspace = backend.active_workspace()?;
+        let workspace = active.as_ref().ok_or("请先连接本地工作区。")?;
         build_site(&app.state(), &workspace.root, &workspace.state_dir)
     })
     .await
