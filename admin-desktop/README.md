@@ -80,14 +80,16 @@ cargo test --offline
 
 ## Windows 安装包
 
-在 Windows x64 构建机上，先按开发启动一节准备 Node、Rust 和后端虚拟环境，再从 `admin-desktop` 运行：
+在 Windows x64 构建机上，从 `admin-desktop` 安装锁定依赖并生成未签名 NSIS 安装包：
 
 ```powershell
-src-backend/.venv/Scripts/python.exe -m pip install PyInstaller==6.17.0
+npm ci
+uv venv --managed-python --python 3.12.15 src-backend/.venv
+uv pip sync --python src-backend/.venv/Scripts/python.exe src-backend/requirements-windows-build.txt
 npm run tauri:build
 ```
 
-安装包位于 `src-tauri/target/release/bundle/nsis/`。构建脚本默认使用后端 `.venv`，也可通过 `LUCHUAN_BUILD_PYTHON` 指定已安装构建依赖的 Python。安装版包含独立内容后端及 Python 运行时。
+安装包位于 `src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/`，包含独立内容后端及 Python 运行时。工具版本、正式签名、更新渠道与验收流程见 [Windows 发布与更新](docs/Windows%20发布与更新.md)。
 
 首次启动选择博客仓库根目录或其中的 `frontend/content/`。连接成功后记住该位置，后续打开会自动启动并连接本机后端。选择的仓库仅需包含内容目录，桌面端源码可以不在其中。会话、日志及上次选择的位置存放在当前用户的本地应用数据目录 `cn.xiaocancoding.admin` 下。
 

@@ -24,6 +24,7 @@ reqwest = { version = "0.12", features = ["blocking", "json"] }
 tokio = { version = "1", features = ["full"] }
 
 [target.'cfg(windows)'.dependencies]
+tauri-plugin-updater = { version = "2.14.1", default-features = false, features = ["native-tls"] }
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading", "Win32_System_Diagnostics_ToolHelp"] }
 
 [features]

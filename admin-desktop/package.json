@@ -4,14 +4,14 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "test": "node scripts/test.mjs",
+    "test": "node scripts/test.mjs && node --test scripts/windows-release.test.mjs",
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "pretauri:build": "node scripts/build-content-backend.mjs",
-    "tauri:build": "tauri build --config src-tauri/tauri.bundle.conf.json --bundles nsis"
+    "tauri:build": "tauri build --config src-tauri/tauri.bundle.conf.json --bundles nsis --target x86_64-pc-windows-msvc -- --locked"
   },
   "dependencies": {
     "@bytemd/plugin-frontmatter": "^1.22.0",
@@ -35,7 +35,7 @@
     "vue-virtual-scroller": "^3.0.4"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.0.0",
+    "@tauri-apps/cli": "2.12.4",
     "@vitejs/plugin-vue": "^6.0.7",
     "esbuild": "^0.28.0",
     "typescript": "~6.0.2",

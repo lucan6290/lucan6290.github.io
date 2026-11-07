@@ -9,6 +9,8 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use tauri::{Manager, State};
 
+mod updater;
+
 const BASE_URL: &str = "http://127.0.0.1:18000";
 
 #[derive(Serialize)]
@@ -574,12 +576,24 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
         .manage(BackendRuntime::default())
+        .setup(|app| {
+            #[cfg(windows)]
+            updater::configure(app)?;
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             get_backend_connection,
             minimize_window,
             maximize_window,
             close_window,
             is_maximized,
+            updater::get_desktop_update_status,
+            #[cfg(windows)]
+            updater::windows::check_desktop_update,
+            #[cfg(windows)]
+            updater::windows::download_desktop_update,
+            #[cfg(windows)]
+            updater::windows::install_desktop_update,
         ])
         .build(tauri::generate_context!())
         .expect("构建 Tauri 应用时出错")

@@ -1,61 +1,109 @@
-name: Build and Release - admin-desktop
+name: Release - admin-desktop Windows
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '已在 main 历史中的桌面版本标签（desktop-vX.Y.Z）'
+        required: true
+        type: string
 
 permissions:
-  contents: write
-  pull-requests: read
-  issues: read
-  actions: read
+  contents: read
+
+concurrency:
+  group: release-admin-desktop
+  cancel-in-progress: false
+
+env:
+  LUCHUAN_RELEASE_TAG: ${{ inputs.tag }}
+  RUSTUP_TOOLCHAIN: '1.98.0'
 
 jobs:
-  build:
-    runs-on: windows-latest
-
+  source:
+    if: github.ref == 'refs/heads/main'
+    runs-on: windows-2025
+    outputs:
+      sha: ${{ steps.validate.outputs.sha }}
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: old/admin-desktop/package-lock.json
+          fetch-depth: 0
+          persist-credentials: false
+      - id: validate
+        name: Verify desktop tag on main
+        run: |
+          if ($env:LUCHUAN_RELEASE_TAG -cnotmatch '^desktop-v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$') { throw 'Invalid desktop release tag' }
+          $sha = git rev-parse --verify "refs/tags/$env:LUCHUAN_RELEASE_TAG^{commit}"
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop tag must already exist' }
+          git merge-base --is-ancestor $sha HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop tag must point to a commit on main' }
+          "sha=$sha" >> $env:GITHUB_OUTPUT
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install frontend dependencies
-        working-directory: old/admin-desktop
-        run: npm ci
-
-      - name: Build Tauri app
-        working-directory: old/admin-desktop
-        run: npm run tauri:build -- --bundles nsis,msi
+  signed:
+    needs: source
+    runs-on: [self-hosted, Windows, X64, admin-desktop-signing]
+    environment: desktop-windows-release
+    defaults:
+      run:
+        working-directory: admin-desktop
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24.11.1'
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
+        with:
+          version: '0.13.7'
+      - name: Install pinned build dependencies
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          rustup toolchain install $env:RUSTUP_TOOLCHAIN --profile minimal --target x86_64-pc-windows-msvc
+          npm ci
+          uv venv --managed-python --python 3.12.15 src-backend/.venv
+          uv pip sync --python src-backend/.venv/Scripts/python.exe src-backend/requirements-windows-build.txt
+      - name: Build and verify signed NSIS release
+        run: ./scripts/sign-windows-release.ps1 -OutputDirectory (Join-Path $env:RUNNER_TEMP 'desktop-release')
         env:
+          LUCHUAN_CODESIGN_THUMBPRINT: ${{ vars.LUCHUAN_CODESIGN_THUMBPRINT }}
+          LUCHUAN_CODESIGN_TIMESTAMP_URL: ${{ vars.LUCHUAN_CODESIGN_TIMESTAMP_URL }}
+          LUCHUAN_UPDATER_ENDPOINT: ${{ vars.LUCHUAN_UPDATER_ENDPOINT }}
+          LUCHUAN_UPDATER_PUBLIC_KEY: ${{ vars.LUCHUAN_UPDATER_PUBLIC_KEY }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-
-      - name: Prepare release notes
-        shell: pwsh
-        run: |
-          node old/admin-desktop/scripts/extract-changelog.mjs "${{ github.ref_name }}" > release-notes.md 2>$null
-          if ($LASTEXITCODE -ne 0 -or -not (Test-Path release-notes.md) -or -not (Get-Content release-notes.md -Raw).Trim()) {
-            Set-Content -Path release-notes.md -Value "Release ${{ github.ref_name }}`n`nSee CHANGELOG.md for release history." -Encoding utf8NoBOM
-          }
-
-      - name: Upload Release
-        uses: softprops/action-gh-release@v2
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          files: |
-            old/admin-desktop/src-tauri/target/release/bundle/nsis/*.exe
-            old/admin-desktop/src-tauri/target/release/bundle/msi/*.msi
-            old/admin-desktop/src-tauri/target/release/bundle/latest.json
-          draft: true
-          body_path: release-notes.md
-          generate_release_notes: false
+          name: admin-desktop-windows-x64-signed
+          path: ${{ runner.temp }}/desktop-release/
+          if-no-files-found: error
+
+  draft:
+    needs: [source, signed]
+    runs-on: windows-2025
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+          persist-credentials: false
+      - name: Verify the tag still matches the signed commit
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SIGNED_SHA: ${{ needs.source.outputs.sha }}
+        run: |
+          if ((git rev-parse HEAD) -cne $env:SIGNED_SHA) { throw 'Desktop tag moved after signing' }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: admin-desktop-windows-x64-signed
+          path: ${{ runner.temp }}/desktop-release
+      - name: Stage verified assets in a draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $directory = Join-Path $env:RUNNER_TEMP 'desktop-release'
+          $assets = @(Get-ChildItem -LiteralPath $directory -File | Where-Object Name -ne 'release-notes.md' | ForEach-Object FullName)
+          if ($assets.Count -ne 4) { throw 'Expected installer, signature, checksum and updater manifest' }
+          gh release create $env:LUCHUAN_RELEASE_TAG @assets --repo $env:GITHUB_REPOSITORY --verify-tag --draft --latest=false --title "箓川码笺桌面端 $env:LUCHUAN_RELEASE_TAG" --notes-file (Join-Path $directory 'release-notes.md')
