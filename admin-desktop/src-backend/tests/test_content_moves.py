@@ -93,7 +93,7 @@ class ContentMoveTests(unittest.TestCase):
 
         def replace(source, destination):
             nonlocal failed
-            if Path(destination) == self.content / self.target and not failed:
+            if Path(destination) == self.store.content_root / self.target and not failed:
                 failed = True
                 raise OSError("simulated filesystem failure")
             return real_replace(source, destination)
