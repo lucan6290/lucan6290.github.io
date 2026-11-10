@@ -6,7 +6,7 @@ import { contentApi, setContentConnection } from '@/api/content'
 import { useAppStore } from '@/stores/app'
 import { clearEditorTabs, editorTabs } from '@/utils/editorTabs'
 import { openFavorites } from '@/utils/editorFavorites'
-import { workspaceControlsKey } from '@/utils/workspaceControls'
+import { formatWindowsPathsForDisplay, workspaceControlsKey } from '@/utils/workspaceControls'
 import WindowTitlebar from '@/components/WindowTitlebar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import ToastContainer from '@/components/ToastContainer.vue'
@@ -109,7 +109,7 @@ onMounted(async () => {
       <div v-else class="main-content" style="max-width: 680px; margin: 60px auto;">
         <div class="card">
           <h2>连接本地内容库</h2><p>文档直接保存在当前项目的 frontend/content，供桌面端、编辑器和 AI 共同维护。</p>
-          <p v-if="error" role="alert" style="color: var(--status-error); white-space: pre-wrap;">{{ error }}</p>
+          <p v-if="error" role="alert" style="color: var(--status-error); white-space: pre-wrap;">{{ formatWindowsPathsForDisplay(error) }}</p>
           <form v-if="!desktop" @submit.prevent="reconnect()">
             <label for="session-token">本地会话令牌</label><p style="font-size: 13px; color: var(--text-secondary);">启动内容后端后，使用本次会话的令牌连接；桌面应用会自动连接。</p>
             <input id="session-token" v-model="token" class="input" type="password" autocomplete="off" required />

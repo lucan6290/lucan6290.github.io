@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { revealItemInDir } from '@tauri-apps/plugin-opener'
+import { formatWindowsPathsForDisplay } from '@/utils/workspaceControls'
 
 interface PreviewResult { url: string; owned: boolean; log_path: string | null }
 interface BuildResult { exit_code: number | null; output_dir: string | null; log_path: string; log_tail: string }
@@ -50,7 +51,7 @@ async function locate(path: string) {
     </div>
     <p v-if="!desktop">站点预览和生产构建可在桌面应用中使用。</p>
     <p v-else-if="documentPath">站点预览使用已保存的文档。</p>
-    <p v-if="error" class="site-error" role="alert">{{ error }}</p>
+    <p v-if="error" class="site-error" role="alert">{{ formatWindowsPathsForDisplay(error) }}</p>
     <div v-if="preview" role="status">
       <p>已打开 {{ preview.owned ? '桌面应用启动的' : '当前工作区已有的' }}站点预览。<code>{{ preview.url }}</code></p>
       <button v-if="preview.log_path" type="button" class="btn btn-secondary" @click="locate(preview.log_path)">定位预览日志</button>
@@ -59,7 +60,7 @@ async function locate(path: string) {
       <p role="status" :class="{ 'site-error': !build.output_dir }">
         {{ build.output_dir ? '构建成功' : build.exit_code === 0 ? '构建结束，未找到完整产物' : '构建失败' }}（退出码 {{ build.exit_code ?? '未知' }}）
       </p>
-      <p v-if="build.output_dir"><code>{{ build.output_dir }}</code></p>
+      <p v-if="build.output_dir"><code>{{ formatWindowsPathsForDisplay(build.output_dir) }}</code></p>
       <div class="site-buttons">
         <button v-if="build.output_dir" type="button" class="btn btn-secondary" @click="locate(build.output_dir)">定位构建产物</button>
         <button type="button" class="btn btn-secondary" @click="locate(build.log_path)">定位构建日志</button>
