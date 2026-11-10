@@ -1,6 +1,6 @@
 ﻿# types — AGENTS.md
 
-> TypeScript 类型定义。详细规范见 `admin/lc-docs/FRONTEND_CONVENTION.md` 第 2.6 节。
+> TypeScript 类型定义。
 
 ## 职责
 
@@ -17,6 +17,4 @@
 - 契约 DTO 字段 snake_case，与后端一致。
 - strict 模式，避免 `any`。
 
-## 维护要求
-
-新增本目录下的子模块时，必须同步生成该子目录的 `AGENTS.md`，并登记到 `admin/lc-docs/DOCUMENTATION_INDEX.md` 的层级索引与根 `AGENTS.md` 的 Task Routing。
+当前管理界面开发见 [桌面前端开发规范](../../../../../admin-desktop/src/AGENTS.md)。

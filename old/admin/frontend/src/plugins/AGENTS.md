@@ -6,6 +6,4 @@
 
 - `postAssetPreview.ts`：ByteMD 图片资源预览插件
 
-## 维护要求
-
-新增本目录下的子模块时，必须同步生成该子目录的 `AGENTS.md`，并登记到 `admin/lc-docs/DOCUMENTATION_INDEX.md` 的层级索引与根 `AGENTS.md` 的 Task Routing。
+当前管理界面开发见 [桌面前端开发规范](../../../../../admin-desktop/src/AGENTS.md)。

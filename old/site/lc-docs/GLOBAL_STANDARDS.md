@@ -7,7 +7,7 @@
 
 ## 1. 本地优先原则
 
-站点内容以 `site/` 下的 Markdown/MDX 文件为事实源；管理后台负责扫描、解析、校验、创建、编辑与构建，站点负责对外渲染。
+本页记录归档站点规范。当前内容事实源为 `frontend/content/`，写作与构建约定见 [工程全局规范](../../../docs/GLOBAL_STANDARDS.md) 与 [内容指南](../../../docs/SITE_CONTENT_GUIDE.md)。
 
 ## 2. 运行端口（强制）
 

@@ -20,5 +20,3 @@
 | `../../docs/superpowers/specs/2026-10-29-admin-desktop-content-design.md` | 已确认设计与分阶段范围 |
 | `../../docs/superpowers/plans/2026-10-29-admin-desktop-content.md` | 第一阶段实施与验证记录 |
 | `../../docs/superpowers/plans/2026-10-29-admin-article-frontmatter.md` | 六字段模板实施计划与取舍 |
-
-`old/admin` 的 Docusaurus 契约仅作历史参考，桌面内容后端不向旧模型兼容。

@@ -1,76 +1,25 @@
-# XLucan Admin Desktop (admin-desktop)
+# XLucan Admin Desktop
 
-> [中文版本](../README.md) | English
+[中文](../README.md)
 
-The desktop management application for the XLucan (xiaocancoding) personal tech site and knowledge base. Built with Tauri 2 + Vue 3, it provides article writing, editing, image management, category/tag maintenance, preview builds, and other writing-assistance capabilities.
-
-## Features
-
-- Article management and editing (ByteMD rich text + Front Matter)
-- Media / image management
-- Category / tag maintenance (Registry)
-- Preview builds
-- AI writing assistance
-- Dashboard and settings
-
-## Tech Stack
-
-- Frontend: Vue 3, Vite, TypeScript, Pinia, ByteMD
-- Desktop: Tauri 2 (Rust)
-- Packaging: NSIS / MSI
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 22+
-- Rust (stable)
-- Tauri system dependencies (Windows: WebView2, MSVC build tools)
-
-### Installation and Running
-
-```bash
-npm install
-npm run tauri:dev   # local development (frontend port 14200)
-```
+The desktop app uses Tauri and Vue with a local Python content service. Open a workspace to edit the Markdown and images in `frontend/content/`, preview the reader site, and manage publishing from the workspace.
 
 ## Development
 
-### Build
+Use Node.js 22+, Python 3.10+, Rust stable, WebView2 and the MSVC build tools. From the repository root:
 
-```bash
-npm run build           # frontend type check + build
-npm run tauri:build     # package installers (NSIS / MSI)
+```powershell
+cd admin-desktop
+npm install
+python -m venv src-backend/.venv
+src-backend/.venv/Scripts/python.exe -m pip install -r src-backend/requirements.txt
+npm run tauri:dev
 ```
 
-### Quality Checks
+Tauri starts the content service on `127.0.0.1:18000`. The development UI uses `127.0.0.1:14200`. See the [desktop guide](../README.md) for browser-only development and test commands.
 
-```bash
-npm run build           # vue-tsc type check + vite build
-```
+## Windows installer
 
-## Project Structure
+The Windows x64 NSIS installer includes the content service and Python runtime. Follow the [Windows release guide](Windows%20发布与更新.md) to build, sign, and verify the installer. On first launch, choose the blog repository root or its `frontend/content/` directory.
 
-```
-admin-desktop/
-├── src/               # Vue frontend source
-├── src-tauri/         # Tauri / Rust backend
-├── src-backend/       # local Python backend (dev helper)
-├── scripts/           # version / changelog scripts
-└── docs/              # English docs
-```
-
-## FAQ
-
-- Build failure: make sure WebView2 and Visual Studio C++ build tools are installed
-- Auto-update: requires signing keys to be configured
-
-## Contributing and Security
-
-- Contributing Guide: [`CONTRIBUTING.md`](../CONTRIBUTING.md)
-- Code of Conduct: [`CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md)
-- Security Policy: [`SECURITY.md`](../SECURITY.md)
-
-## License
-
-GPL-3.0 — see [`LICENSE`](../LICENSE).
+The [documentation index](DOCUMENTATION_INDEX.md) links to the content API contract, workspace switching, preview builds, and release details.

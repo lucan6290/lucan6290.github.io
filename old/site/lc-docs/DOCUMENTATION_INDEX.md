@@ -5,7 +5,7 @@
 > Last Reviewed: 2026-08-30
 > Confidence:    high
 
-本文档是站点端文档的导航索引。管理端文档见 `admin/lc-docs/DOCUMENTATION_INDEX.md`。
+本页索引归档站点资料。当前站点和管理端入口见 [工程文档索引](../../../docs/DOCUMENTATION_INDEX.md) 与 [桌面端文档索引](../../../admin-desktop/docs/DOCUMENTATION_INDEX.md)。
 
 ## 1. 站点端治理文档（site/lc-docs/，本目录）
 

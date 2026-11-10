@@ -1,6 +1,6 @@
 # 工程目录与实现入口
 
-> 更新日期：2026-11-07。本文描述当前前端、可选互动服务及工程文档。
+> 更新日期：2026-11-10。本文描述读者站点、桌面管理 App、可选互动服务及工程文档。
 
 ## 当前维护目录
 
@@ -40,6 +40,11 @@ xiaocancoding/
 │   │   ├── vite/
 │   │   └── generated/               # 自动生成，禁止手动编辑
 │   └── dist/                        # 构建产物
+├── admin-desktop/                   # 桌面管理 App
+│   ├── src/                         # Vue 界面
+│   ├── src-backend/                 # 本地 Python/FastAPI 内容服务
+│   ├── src-tauri/                   # 原生窗口与进程管理
+│   └── docs/                        # 桌面端接口、开发与发布说明
 └── .github/workflows/               # 自动化流程
 ```
 
@@ -96,6 +101,10 @@ frontend/content/projects/
 - 生产内容插件依据内容树和内置页面规则生成静态目录入口、`404.html` 与 `.nojekyll`，复用应用入口 HTML；这不等于正文 SSG 预渲染。
 - 生成文件和构建产物不作为手工修改入口。
 - 当前本地运行端口为 3400；读者端搜索、目录与文章展示均不需要运行时后端。
+
+## 桌面管理 App
+
+桌面 App 通过本地内容服务读写同一份 `frontend/content/`，原生层管理服务进程。开发入口、接口契约和发布方式见 [桌面端文档索引](../admin-desktop/docs/DOCUMENTATION_INDEX.md)。
 
 ## 文档与实现同步
 

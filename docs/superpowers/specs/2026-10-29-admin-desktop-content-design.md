@@ -10,23 +10,17 @@
 - 协作指同一台电脑上的桌面端、外部编辑器和 AI 交替修改 Markdown。
 - 先检查并提出方案，用户明确指令后再修改代码。
 
-## 2. 已核实的问题
+## 2. 当前实现入口
 
-| 位置 | 现状与影响 |
-| --- | --- |
-| `admin-desktop/src-backend/main.py` | 仍查找 `admin/backend`。实际源码位于 `old/admin/backend`，直接执行目录解析已失败。 |
-| `admin-desktop/src-tauri/src/lib.rs` | 根目录发现、Python 环境、配置文件定位也依赖旧路径，后端还使用随机端口。 |
-| `admin-desktop/src/types/api.ts`、`src/api/index.ts` | 类型固定为 `docs/blog`，无法表达新站动态栏目。 |
-| `admin-desktop/src/api/index.ts` 的 `createPost` | 将含 Front Matter 的整篇 Markdown 作为 `body` 发往会再次组装文档头的旧后端。 |
-| `admin-desktop/src/utils/frontmatter.ts` | 简易 YAML 解析丢失数组与嵌套结构。以内存执行方式验证：现有文档的 `tags` 数组变为空字符串；该模块自己序列化的标签数组也无法重新解析。 |
-| `old/admin/backend/scr/services/content/articles/` | 创建与保存依赖旧分类、侧边栏、作者与校验规则；保存写入 `last_update`。 |
-| 旧资源与站点服务 | 图片目录为 `-imgs`，构建指向旧站 `build`；桌面 API 的预览默认 3000，部署默认路径 `site`。 |
+- [桌面端说明](../../../admin-desktop/README.md) 说明启动、工作区定位和验证。
+- [内容接口契约](../../../admin-desktop/docs/内容接口契约.md) 定义路径、字段与写入行为。
+- [桌面端文档索引](../../../admin-desktop/docs/DOCUMENTATION_INDEX.md) 汇总媒体、预览构建、AI、Git 和发布说明。
 
 ## 3. 设计决策与范围
 
 以下为方案建议，并非用户已确认的实现细节。
 
-保留 Tauri + Vue + Python，不同时进行技术栈迁移。在 `admin-desktop/src-backend/` 内建立独立、精简的内容后端，复用旧后端中合适的路径检查、错误响应与版本校验思路；运行时不再导入 `old/` 或依赖已移走的 `admin/backend`。不整体复制旧后端及其 Docusaurus 工作流。
+桌面 App 使用 Tauri、Vue 和本地 Python 内容服务，独立执行路径检查、版本校验与 Markdown 读写。
 
 分两阶段验收：
 
@@ -130,7 +124,7 @@
 
 所有写入验证在临时内容根执行，不用真实笔记作为破坏性测试数据。
 
-1. 从当前仓库启动内容后端，不依赖 `old/admin`；桌面连接到正确的内容根。
+1. 从当前仓库启动内容服务，桌面连接到正确的内容根。
 2. 在带中文、空格和数字前缀的多层目录中新建 `.md`，Front Matter 只出现一次，前台扫描可发现文档。
 3. 带标签数组、注释、嵌套字段、未知字段和无 Front Matter 的文档，修改正文后无关内容不丢失；不修改时保存不写盘。
 4. 无本地修改时外部更新能刷新；有本地修改时外部更新保留缓冲；过期版本保存或删除均返回冲突。

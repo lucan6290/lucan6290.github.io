@@ -132,7 +132,7 @@
 ## 3. 跨端一致性
 
 - 分类、标签、Front Matter 规则以后端 `content-schema` 为准，前端只消费后端接口转换后的结果。
-- 字段语义/类型/枚举在 Database → Backend → API → Frontend 保持一致（详见管理端 `admin/lc-docs/API_CONTRACT.md`）。
+- 当前读者站点的内容字段见 [站点内容契约](../../../docs/API_CONTRACT.md)。
 
 ## 4. 组件职责与 Feature 边界
 

@@ -1,6 +1,6 @@
 # 工程文档索引
 
-> 更新日期：2026-11-07。适用范围：`frontend/` 工程、Markdown 内容和可选互动服务。
+> 更新日期：2026-11-10。涵盖读者站点、Markdown 内容、桌面管理 App 和可选互动服务。
 
 ## 阅读顺序
 
@@ -20,6 +20,7 @@
 | [SITE_CONTENT_GUIDE.md](SITE_CONTENT_GUIDE.md) | Markdown、图片、分类和本文目录 | 内容规则变化 |
 | [API_CONTRACT.md](API_CONTRACT.md) | 内容清单、路径和搜索数据契约 | 字段、路由或生成数据变化 |
 | [BACKEND_CONVENTION.md](BACKEND_CONVENTION.md) | 静态前端、可选互动服务的边界 | 引入或变更后端时 |
+| [桌面端文档索引](../admin-desktop/docs/DOCUMENTATION_INDEX.md) | 桌面 App、本地内容服务及发布 | 桌面界面、内容接口、原生启动或打包变化 |
 | [互动服务说明](../frontend/service/README.md) | 互动服务配置、运行、测试与发布边界 | 改动评论、阅读量或在线写作时 |
 
 ## 按任务定位
@@ -31,6 +32,7 @@
 | 调整文章和图片渲染 | [内容契约](API_CONTRACT.md) | `ArticleView.vue`、`MarkdownRenderer.vue` |
 | 调整右下角本文目录 | [前端约定](FRONTEND_CONVENTION.md) | `FloatToc.vue` |
 | 调整读者搜索 | [内容契约](API_CONTRACT.md) | `search.ts`、`SearchDialog.vue`、`buildContent.mjs` |
+| 桌面写作、媒体、工作区与本地内容接口 | [桌面端文档索引](../admin-desktop/docs/DOCUMENTATION_INDEX.md) | `admin-desktop/` |
 | 评论、阅读量与在线写作 | [互动服务规范](../frontend/service/AGENTS.md) | `frontend/service/`、`PublicArticleTools.vue`、`PublicAdminView.vue` |
 | 修改主题与响应式布局 | [前端约定](FRONTEND_CONVENTION.md) | `tokens.css`、`base.css`、对应组件 |
 | 排查内容更新 | [工程结构](PROJECT_STRUCTURE.md) | `contentManifestPlugin.ts`、`buildContent.mjs` |

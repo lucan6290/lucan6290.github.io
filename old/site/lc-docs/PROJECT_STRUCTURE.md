@@ -7,7 +7,7 @@
 
 ## 1. 项目类型与定位
 
-箓川码笺（xiaocancoding）公开站点是基于 Docusaurus 3 的内容渲染工程，承载博客、知识库与项目展示，面向读者。站点内容（Markdown/MDX）是项目的事实源，由管理后台（admin）读写校验。
+本页记录基于 Docusaurus 3 的归档站点结构。当前工程见 [工程目录与实现入口](../../../docs/PROJECT_STRUCTURE.md)。
 
 | 工程 | 技术栈 | 角色 |
 | --- | --- | --- |
@@ -17,9 +17,10 @@
 
 ```text
 xiaocancoding/
-├── site/                      # Docusaurus 公开站点（本工程）
-│   └── lc-docs/               # 站点端工程治理文档（本目录）
-├── admin/                     # 管理后台（前后端），读写 site/ 内容
+├── old/site/                  # Docusaurus 归档站点
+│   └── lc-docs/               # 归档站点文档（本目录）
+├── frontend/                  # 当前读者站点和内容目录
+├── admin-desktop/             # 当前桌面管理 App
 ├── docs/                      # 项目整体规划文档
 ├── AGENTS.md                  # Agent 项目导航入口
 └── README.md                  # 项目说明
@@ -57,11 +58,7 @@ site/
 ## 5. 数据流概览
 
 ```text
-站点内容（site/docs、site/blog，Markdown/MDX 事实源）
-      │
-      ▼  管理后台（admin）读写校验
-      │
-站点构建（site/ npm run build） → 部署到 GitHub Pages（.github/workflows/deploy.yml）
+归档站点内容（old/site/docs、old/site/blog） → Docusaurus 静态构建（old/site/build）
 ```
 
 ## 6. 事实源与派生数据
@@ -69,4 +66,4 @@ site/
 - **事实源（Source of Truth）**：`site/docs`、`site/blog` 下的 Markdown/MDX。
 - **配置源**：`site/docusaurus.config.ts`、`site/sidebars.ts`、`site/blogSidebars.ts`。
 - **构建产物**：`site/build`、`site/.docusaurus`，不应手工修改。
-- 管理后台（admin）负责扫描、解析、校验、创建、编辑与构建站点内容，其治理文档见 `admin/lc-docs/`。
+- 当前作者工具与内容事实源见 [工程目录与实现入口](../../../docs/PROJECT_STRUCTURE.md)。

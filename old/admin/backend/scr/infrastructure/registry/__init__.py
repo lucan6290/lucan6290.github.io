@@ -1,1 +1,0 @@
-"""Registry and schema services."""

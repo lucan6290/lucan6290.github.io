@@ -1,6 +1,6 @@
 # 箓川码笺桌面管理端
 
-基于 Tauri 2 + Vue 3 + 独立 Python 内容服务，直接管理当前仓库的 `frontend/content/`，不依赖旧 `admin/backend` 或 `old/`。
+基于 Tauri 2 + Vue 3，通过 `src-backend/` 中的本地 Python 内容服务管理工作区的 `frontend/content/`。
 
 ## 当前能力
 
