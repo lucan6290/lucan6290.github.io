@@ -18,7 +18,7 @@ from fastapi.testclient import TestClient
 BACKEND = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND))
 from app import create_app
-from content_store import ContentStore
+from content_store import parse_markdown
 
 
 class ContentTests(unittest.TestCase):
@@ -52,7 +52,7 @@ class ContentTests(unittest.TestCase):
         self.addCleanup(client.close)
         return client
 
-    def test_content_index_reuses_unchanged_files_after_backend_restart(self):
+    def test_content_index_reuses_unchanged_summaries_after_backend_restart(self):
         self.write("blog/01-部署.md", "---\ntags: [Tauri]\n---\n# 部署\n安装程序\n")
         self.write("blog/README.md", "# 目录介绍\n")
         self.write("blog/.draft.md", "# 草稿\n")
@@ -63,7 +63,7 @@ class ContentTests(unittest.TestCase):
             [("blog/01-部署.md", "article"), ("blog/README.md", "introduction")],
         )
         restarted = self.indexed_client()
-        with patch.object(ContentStore, "snapshot", side_effect=AssertionError("reopened unchanged Markdown")):
+        with patch("content_store.parse_markdown", side_effect=AssertionError("reparsed unchanged Markdown")):
             self.assertEqual(restarted.get("/api/v1/content").json(), first.json())
             found = restarted.get("/api/v1/content", params={"query": "TAURI 安装程序"}).json()
         self.assertEqual(found["directories"], first.json()["directories"])
@@ -83,13 +83,11 @@ class ContentTests(unittest.TestCase):
         deleted.unlink()
         self.write("blog/new.md", "# New\n新增关键词\n")
 
-        original_snapshot = ContentStore.snapshot
+        def parse_changed(raw):
+            self.assertNotEqual(raw, "# Keep\n", "refresh reparsed an unchanged file")
+            return parse_markdown(raw)
 
-        def snapshot(store, target, **kwargs):
-            self.assertNotEqual(target.name, "keep.md", "refresh reopened an unchanged file")
-            return original_snapshot(store, target, **kwargs)
-
-        with patch.object(ContentStore, "snapshot", snapshot):
+        with patch("content_store.parse_markdown", side_effect=parse_changed):
             refreshed = client.get("/api/v1/content").json()
             found = client.get("/api/v1/content", params={"query": "新的外部关键词"}).json()
             removed = client.get("/api/v1/content", params={"query": "删除关键词"}).json()
@@ -108,10 +106,32 @@ class ContentTests(unittest.TestCase):
         (other_content / "note.md").write_bytes(b"# Other\n")
         self.indexed_client().get("/api/v1/content").raise_for_status()
         self.indexed_client(other).get("/api/v1/content").raise_for_status()
-        with patch.object(ContentStore, "snapshot", side_effect=AssertionError("workspace index was lost")):
+        with patch("content_store.parse_markdown", side_effect=AssertionError("workspace index was lost")):
             for root, title in ((self.root, "First"), (other, "Other")):
                 result = self.indexed_client(root).get("/api/v1/content").json()
                 self.assertEqual([doc["title"] for doc in result["documents"]], [title])
+
+    def test_content_index_refreshes_external_edit_with_original_size_and_mtime(self):
+        target = self.write("note.md", "---\ntitle: Alpha\n---\n# Alpha\nold-token\n")
+        client = self.indexed_client()
+        original = client.get("/api/v1/content").json()["documents"][0]
+        before = target.stat()
+
+        updated = b"---\ntitle: Omega\n---\n# Omega\nnew-token\n"
+        target.write_bytes(updated)
+        os.utime(target, ns=(before.st_atime_ns, before.st_mtime_ns))
+        after = target.stat()
+        self.assertEqual((after.st_ino, after.st_size, after.st_mtime_ns),
+                         (before.st_ino, before.st_size, before.st_mtime_ns))
+
+        refreshed = client.get("/api/v1/content").json()["documents"][0]
+        self.assertEqual(refreshed["title"], "Omega")
+        self.assertEqual(refreshed["version"], hashlib.sha256(updated).hexdigest())
+        self.assertEqual(refreshed["modified_at"], original["modified_at"])
+        found = client.get("/api/v1/content", params={"query": "new-token"}).json()
+        self.assertEqual(found["documents"], [refreshed])
+        removed = client.get("/api/v1/content", params={"query": "old-token"}).json()
+        self.assertEqual(removed["documents"], [])
 
     def test_content_index_failure_falls_back_to_current_markdown(self):
         target = self.write("note.md", "# First\n")

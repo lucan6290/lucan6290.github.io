@@ -66,14 +66,6 @@ def first_heading(body):
     return re.sub(r"[\t ]+#+[\t ]*$", "", match[1].rstrip("\r")).strip() if match else None
 
 
-def file_fingerprint(stat: os.stat_result) -> str:
-    identity = (stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns)
-    # Windows 的 ctime 是创建时间，且路径与已打开文件报告的精度可能不同。
-    if os.name != "nt":
-        identity += (stat.st_ctime_ns,)
-    return ":".join(map(str, identity))
-
-
 class ContentStore:
     def __init__(self, project_root: Path, state_dir: Path | None = None):
         self.project_root = project_root.resolve()
@@ -136,12 +128,11 @@ class ContentStore:
         return data, raw, stat
 
     def detail(self, relative_path, *, summary=False):
-        detail, _ = self._read_detail(relative_path, summary=summary)
-        return detail
-
-    def _read_detail(self, relative_path, *, summary):
         target = self.path(relative_path)
         data, raw, stat = self.snapshot(target, tolerate_encoding=summary)
+        return self._describe_document(relative_path, target, raw, stat, self.version_of(data), summary=summary)
+
+    def _describe_document(self, relative_path, target, raw, stat, version, *, summary):
         try:
             fm, body = parse_markdown(raw)
         except ContentError:
@@ -159,8 +150,8 @@ class ContentStore:
             "date": str(fm["date"]) if fm.get("date") is not None else None,
             "updated": str(fm["updated"]) if fm.get("updated") is not None else None,
             "modified_at": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat(),
-            "version": self.version_of(data), "raw_content": raw, "frontmatter": fm,
-        }, stat
+            "version": version, "raw_content": raw, "frontmatter": fm,
+        }
 
     def version(self, relative_path):
         try:
@@ -210,14 +201,19 @@ class ContentStore:
             cached = {path: (fingerprint, summary, searchable) for path, fingerprint, summary, searchable
                       in db.execute(f"SELECT path, fingerprint, summary, {search_column} FROM documents")}
 
-        def read_summary(entry, relative_path):
+        def read_summary(relative_path):
+            target = self.path(relative_path)
+            data, raw, stat = self.snapshot(target, tolerate_encoding=True)
+            version = self.version_of(data)
+            # 外部工具可能在改写后恢复 mtime。用原始字节校验内容，mtime 只影响最近修改时间。
+            fingerprint = f"{version}:{stat.st_mtime_ns}"
             previous = cached.get(relative_path)
             if previous is not None:
-                fingerprint, summary, searchable = previous
-                if fingerprint == file_fingerprint(entry.stat(follow_symlinks=False)):
-                    return json.loads(summary), searchable
+                cached_fingerprint, cached_summary, searchable = previous
+                if cached_fingerprint == fingerprint:
+                    return json.loads(cached_summary), searchable
 
-            detail, stat = self._read_detail(relative_path, summary=True)
+            detail = self._describe_document(relative_path, target, raw, stat, version, summary=True)
             searchable = ""
             if words or db is not None:
                 searchable = "\n".join((detail["title"], relative_path, detail["description"],
@@ -225,7 +221,7 @@ class ContentStore:
             summary = {key: value for key, value in detail.items() if key not in {"raw_content", "frontmatter"}}
             if db is not None:
                 db.execute("INSERT OR REPLACE INTO documents VALUES (?, ?, ?, ?)",
-                           (relative_path, file_fingerprint(stat), json.dumps(summary, ensure_ascii=False), searchable))
+                           (relative_path, fingerprint, json.dumps(summary, ensure_ascii=False), searchable))
             return summary, searchable
 
         def walk(directory, relative):
@@ -258,9 +254,7 @@ class ContentStore:
                     child_count += 1
                 elif entry.is_file() and entry.suffix.lower() in MD_EXTENSIONS:
                     try:
-                        summary, searchable = read_summary(entry, rel)
-                    except FileNotFoundError:
-                        continue
+                        summary, searchable = read_summary(rel)
                     except ContentError as error:
                         if error.status == 404:
                             continue
