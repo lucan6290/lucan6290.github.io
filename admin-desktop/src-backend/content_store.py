@@ -1,9 +1,13 @@
 """以 Markdown 原始字节为事实源的本地内容仓库。"""
+from contextlib import closing
 from datetime import datetime, timezone
 import hashlib
+import json
+import logging
 import os
 from pathlib import Path
 import re
+import sqlite3
 import tempfile
 import threading
 
@@ -62,12 +66,27 @@ def first_heading(body):
     return re.sub(r"[\t ]+#+[\t ]*$", "", match[1].rstrip("\r")).strip() if match else None
 
 
+def file_fingerprint(stat: os.stat_result) -> str:
+    identity = (stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns)
+    # Windows 的 ctime 是创建时间，且路径与已打开文件报告的精度可能不同。
+    if os.name != "nt":
+        identity += (stat.st_ctime_ns,)
+    return ":".join(map(str, identity))
+
+
 class ContentStore:
-    def __init__(self, project_root: Path):
+    def __init__(self, project_root: Path, state_dir: Path | None = None):
         self.project_root = project_root.resolve()
         self.content_root = (self.project_root / "frontend/content").resolve()
         if not self.content_root.is_dir() or not self.content_root.is_relative_to(self.project_root):
             raise RuntimeError("博客目录必须包含位于其内部的 frontend/content")
+        self.index_path = None
+        if state_dir is not None:
+            state_dir = state_dir.resolve()
+            if state_dir.is_relative_to(self.content_root):
+                raise RuntimeError("应用状态目录不得位于博客内容目录内")
+            workspace_key = hashlib.sha256(os.fsencode(self.content_root)).hexdigest()
+            self.index_path = state_dir / f"content-index-v1-{workspace_key}.sqlite3"
         self.lock = threading.RLock()
 
     def path(self, relative_path, *, directory=False):
@@ -117,6 +136,10 @@ class ContentStore:
         return data, raw, stat
 
     def detail(self, relative_path, *, summary=False):
+        detail, _ = self._read_detail(relative_path, summary=summary)
+        return detail
+
+    def _read_detail(self, relative_path, *, summary):
         target = self.path(relative_path)
         data, raw, stat = self.snapshot(target, tolerate_encoding=summary)
         try:
@@ -137,7 +160,7 @@ class ContentStore:
             "updated": str(fm["updated"]) if fm.get("updated") is not None else None,
             "modified_at": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat(),
             "version": self.version_of(data), "raw_content": raw, "frontmatter": fm,
-        }
+        }, stat
 
     def version(self, relative_path):
         try:
@@ -164,8 +187,46 @@ class ContentStore:
                 "section": relative_path.split("/")[0] if relative_path else ""}
 
     def list_content(self, query=""):
+        if self.index_path is not None:
+            try:
+                self.index_path.parent.mkdir(parents=True, exist_ok=True)
+                with closing(sqlite3.connect(self.index_path, timeout=0.25)) as db, db:
+                    db.execute("BEGIN IMMEDIATE")
+                    db.execute("""CREATE TABLE IF NOT EXISTS documents (
+                        path TEXT PRIMARY KEY, fingerprint TEXT NOT NULL,
+                        summary TEXT NOT NULL, search_text TEXT NOT NULL
+                    )""")
+                    return self._list_content(query, db)
+            except (sqlite3.Error, OSError, json.JSONDecodeError) as error:
+                logging.getLogger(__name__).warning("SQLite 内容索引不可用，回退到 Markdown 扫描：%s", error)
+        return self._list_content(query)
+
+    def _list_content(self, query, db=None):
         words = query.casefold().split()
         visited = {self.content_root}
+        cached = {}
+        if db is not None:
+            search_column = "search_text" if words else "''"
+            cached = {path: (fingerprint, summary, searchable) for path, fingerprint, summary, searchable
+                      in db.execute(f"SELECT path, fingerprint, summary, {search_column} FROM documents")}
+
+        def read_summary(entry, relative_path):
+            previous = cached.get(relative_path)
+            if previous is not None:
+                fingerprint, summary, searchable = previous
+                if fingerprint == file_fingerprint(entry.stat(follow_symlinks=False)):
+                    return json.loads(summary), searchable
+
+            detail, stat = self._read_detail(relative_path, summary=True)
+            searchable = ""
+            if words or db is not None:
+                searchable = "\n".join((detail["title"], relative_path, detail["description"],
+                                        *detail["tags"], detail["raw_content"])).casefold()
+            summary = {key: value for key, value in detail.items() if key not in {"raw_content", "frontmatter"}}
+            if db is not None:
+                db.execute("INSERT OR REPLACE INTO documents VALUES (?, ?, ?, ?)",
+                           (relative_path, file_fingerprint(stat), json.dumps(summary, ensure_ascii=False), searchable))
+            return summary, searchable
 
         def walk(directory, relative):
             directories, documents = [], []
@@ -197,22 +258,25 @@ class ContentStore:
                     child_count += 1
                 elif entry.is_file() and entry.suffix.lower() in MD_EXTENSIONS:
                     try:
-                        detail = self.detail(rel, summary=True)
+                        summary, searchable = read_summary(entry, rel)
+                    except FileNotFoundError:
+                        continue
                     except ContentError as error:
                         if error.status == 404:
                             continue
                         raise
-                    searchable = "\n".join((detail["title"], rel, detail["description"],
-                                            *detail["tags"], detail["raw_content"])).casefold() if words else ""
+                    cached.pop(rel, None)
                     if all(word in searchable for word in words):
-                        documents.append({key: value for key, value in detail.items() if key not in {"raw_content", "frontmatter"}})
-                    if detail["kind"] == "introduction":
+                        documents.append(summary)
+                    if summary["kind"] == "introduction":
                         has_introduction = True
                     else:
                         child_count += 1
             return directories, documents, child_count, has_introduction
 
         directories, documents, _, _ = walk(self.content_root, "")
+        if db is not None and cached:
+            db.executemany("DELETE FROM documents WHERE path = ?", ((path,) for path in cached))
         return {"directories": [self.directory_info("")] + directories, "documents": documents}
 
     def create(self, relative_path, raw_content, article=True):

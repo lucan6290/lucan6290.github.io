@@ -18,6 +18,7 @@ from fastapi.testclient import TestClient
 BACKEND = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND))
 from app import create_app
+from content_store import ContentStore
 
 
 class ContentTests(unittest.TestCase):
@@ -44,6 +45,86 @@ class ContentTests(unittest.TestCase):
         return self.client.put("/api/v1/documents", json={
             "relative_path": path, "raw_content": raw, "expected_version": version,
         })
+
+    def indexed_client(self, root=None):
+        client = TestClient(create_app(root or self.root, "test-token", self.root / "state"))
+        client.headers["Authorization"] = "Bearer test-token"
+        self.addCleanup(client.close)
+        return client
+
+    def test_content_index_reuses_unchanged_files_after_backend_restart(self):
+        self.write("blog/01-部署.md", "---\ntags: [Tauri]\n---\n# 部署\n安装程序\n")
+        self.write("blog/README.md", "# 目录介绍\n")
+        self.write("blog/.draft.md", "# 草稿\n")
+        first = self.indexed_client().get("/api/v1/content")
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(
+            [(doc["relative_path"], doc["kind"]) for doc in first.json()["documents"]],
+            [("blog/01-部署.md", "article"), ("blog/README.md", "introduction")],
+        )
+        restarted = self.indexed_client()
+        with patch.object(ContentStore, "snapshot", side_effect=AssertionError("reopened unchanged Markdown")):
+            self.assertEqual(restarted.get("/api/v1/content").json(), first.json())
+            found = restarted.get("/api/v1/content", params={"query": "TAURI 安装程序"}).json()
+        self.assertEqual(found["directories"], first.json()["directories"])
+        self.assertEqual([doc["relative_path"] for doc in found["documents"]], ["blog/01-部署.md"])
+
+    def test_content_index_refreshes_external_edits_and_removals(self):
+        edited = self.write("blog/edit.md", "# Original\n旧关键词\n")
+        moved = self.write("blog/move.md", "# Move\n移动关键词\n")
+        deleted = self.write("blog/delete.md", "# Delete\n删除关键词\n")
+        self.write("blog/keep.md", "# Keep\n")
+        client = self.indexed_client()
+        first = client.get("/api/v1/content").json()
+        self.assertEqual(len(first["documents"]), 4)
+
+        edited.write_bytes("# Changed\n新的外部关键词\n".encode())
+        moved.rename(self.content / "blog/renamed.md")
+        deleted.unlink()
+        self.write("blog/new.md", "# New\n新增关键词\n")
+
+        original_snapshot = ContentStore.snapshot
+
+        def snapshot(store, target, **kwargs):
+            self.assertNotEqual(target.name, "keep.md", "refresh reopened an unchanged file")
+            return original_snapshot(store, target, **kwargs)
+
+        with patch.object(ContentStore, "snapshot", snapshot):
+            refreshed = client.get("/api/v1/content").json()
+            found = client.get("/api/v1/content", params={"query": "新的外部关键词"}).json()
+            removed = client.get("/api/v1/content", params={"query": "删除关键词"}).json()
+        documents = {doc["name"]: doc for doc in refreshed["documents"]}
+        self.assertEqual(set(documents), {"edit.md", "keep.md", "new.md", "renamed.md"})
+        self.assertEqual(documents["edit.md"]["title"], "Changed")
+        self.assertEqual(documents["edit.md"]["version"], hashlib.sha256(edited.read_bytes()).hexdigest())
+        self.assertEqual([doc["name"] for doc in found["documents"]], ["edit.md"])
+        self.assertEqual(removed["documents"], [])
+
+    def test_content_index_is_separate_for_workspaces_sharing_a_state_directory(self):
+        self.write("note.md", "# First\n")
+        other = self.root / "other"
+        other_content = other / "frontend/content"
+        other_content.mkdir(parents=True)
+        (other_content / "note.md").write_bytes(b"# Other\n")
+        self.indexed_client().get("/api/v1/content").raise_for_status()
+        self.indexed_client(other).get("/api/v1/content").raise_for_status()
+        with patch.object(ContentStore, "snapshot", side_effect=AssertionError("workspace index was lost")):
+            for root, title in ((self.root, "First"), (other, "Other")):
+                result = self.indexed_client(root).get("/api/v1/content").json()
+                self.assertEqual([doc["title"] for doc in result["documents"]], [title])
+
+    def test_content_index_failure_falls_back_to_current_markdown(self):
+        target = self.write("note.md", "# First\n")
+        client = self.indexed_client()
+        client.get("/api/v1/content").raise_for_status()
+        indexes = list((self.root / "state").glob("*.sqlite3"))
+        self.assertEqual(len(indexes), 1)
+        indexes[0].write_bytes(b"invalid database")
+        target.write_bytes(b"# Current\n")
+        with self.assertLogs("content_store", level="WARNING"):
+            response = client.get("/api/v1/content")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([doc["title"] for doc in response.json()["documents"]], ["Current"])
 
     def test_health_identifies_root_and_other_routes_require_token(self):
         health = self.client.get("/health").json()

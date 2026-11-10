@@ -43,7 +43,8 @@ class DeletePayload(Payload):
 def create_app(project_root: Path, token: str, state_dir: Path | None = None):
     if not token:
         raise ValueError("会话 token 不能为空")
-    store = ContentStore(project_root)
+    state_dir = state_dir.resolve() if state_dir is not None else None
+    store = ContentStore(project_root, state_dir)
     app = FastAPI(title="箓川码笺桌面内容服务", docs_url=None, redoc_url=None, openapi_url=None)
     app.add_middleware(CORSMiddleware, allow_origins=[
         "http://tauri.localhost", "https://tauri.localhost", "tauri://localhost",
@@ -72,9 +73,6 @@ def create_app(project_root: Path, token: str, state_dir: Path | None = None):
 
     dependencies = [Depends(authenticate)]
     if state_dir is not None:
-        state_dir = state_dir.resolve()
-        if state_dir.is_relative_to(store.content_root):
-            raise RuntimeError("应用状态目录不得位于博客内容目录内")
         app.include_router(create_ai_router(state_dir), dependencies=dependencies)
     app.include_router(create_article_form_router(), dependencies=dependencies)
     app.include_router(create_media_router(store), dependencies=dependencies)
