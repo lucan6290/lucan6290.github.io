@@ -103,8 +103,6 @@ class ContentStore:
         return hashlib.sha256(data).hexdigest()
 
     def snapshot(self, target, *, tolerate_encoding=False):
-        if target.is_dir():
-            raise ContentError(400, "invalid_path", "目标是目录，不能作为文档")
         try:
             for _ in range(3):
                 with target.open("rb") as source:
@@ -120,6 +118,9 @@ class ContentStore:
         except IsADirectoryError as error:
             raise ContentError(400, "invalid_path", "目标是目录，不能作为文档") from error
         except OSError as error:
+            # Windows 打开目录可能报告 PermissionError，仅在失败时查询类型。
+            if isinstance(error, PermissionError) and target.is_dir():
+                raise ContentError(400, "invalid_path", "目标是目录，不能作为文档") from error
             raise ContentError(500, "read_failed", "无法读取文档") from error
         try:
             raw = data.decode("utf-8", errors="replace" if tolerate_encoding else "strict")
@@ -227,11 +228,14 @@ class ContentStore:
         def walk(directory, relative):
             directories, documents = [], []
             child_count, has_introduction = 0, False
-            for entry in sorted(directory.iterdir(), key=lambda p: (not p.is_dir(), sort_key(p.name))):
-                if entry.name.startswith((".", "_")) or entry.is_symlink():
+            with os.scandir(directory) as entries:
+                children = sorted(entries, key=lambda child: (not child.is_dir(), sort_key(child.name)))
+            for child in children:
+                if child.name.startswith((".", "_")) or child.is_symlink():
                     continue
+                entry = Path(child.path)
                 rel = f"{relative}/{entry.name}" if relative else entry.name
-                if entry.is_dir():
+                if child.is_dir():
                     if RESOURCE_DIRECTORY.match(entry.name):
                         continue
                     try:
@@ -244,15 +248,16 @@ class ContentStore:
                         continue
                     visited.add(resolved)
                     nested_dirs, nested_docs, nested_count, introduction = walk(entry, rel)
-                    empty_category = rel.startswith(("knowledge/", "blog/", "projects/")) and all(
-                        item.name.startswith((".", "_")) for item in entry.iterdir())
-                    if relative and not nested_count and not introduction and not empty_category:
-                        continue
+                    if relative and not nested_count and not introduction:
+                        empty_category = rel.startswith(("knowledge/", "blog/", "projects/")) and all(
+                            item.name.startswith((".", "_")) for item in entry.iterdir())
+                        if not empty_category:
+                            continue
                     directories.append(self.directory_info(rel))
                     directories.extend(nested_dirs)
                     documents.extend(nested_docs)
                     child_count += 1
-                elif entry.is_file() and entry.suffix.lower() in MD_EXTENSIONS:
+                elif entry.suffix.lower() in MD_EXTENSIONS and child.is_file():
                     try:
                         summary, searchable = read_summary(rel)
                     except ContentError as error:
