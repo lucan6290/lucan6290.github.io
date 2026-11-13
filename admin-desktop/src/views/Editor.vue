@@ -456,16 +456,6 @@ onBeforeUnmount(() => {
         <p style="grid-column: 1 / -1; color: var(--text-secondary); margin: 0;">{{ articleDocument ? '请填写标题与摘要，正文一级标题应与 title 一致；日期已记录开始写作时间。' : '说明文档可直接写正文；README.md 与 AGENTS.md 自动免用文章模板。' }}</p>
         <p v-if="draftNotice" role="status" style="grid-column: 1 / -1; margin: 0;">{{ draftNotice }}</p>
       </div>
-      <div v-else-if="session.baseline" class="card" style="margin-bottom: 16px;">
-        <label>本次编辑用途
-          <select v-model="purpose" class="select" :disabled="session.saving">
-            <option value="auto">自动识别</option>
-            <option value="article">普通文章</option>
-            <option value="document">说明文档</option>
-          </select>
-        </label>
-        <p style="color: var(--text-secondary); margin-bottom: 0;">选择仅用于本次编辑，重新打开后恢复自动识别；说明文档按原文保存。</p>
-      </div>
       <div v-if="session.missing || session.external" class="card" role="alert" style="margin-bottom: 16px;">
         <p>{{ session.missing ? '原文件已被删除或移动。本地文本已保留，保存不会自动重建原路径。' : '磁盘文件已变化。本地文本与原读取版本已保留，保存时仍会检查冲突。' }}</p>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -482,8 +472,6 @@ onBeforeUnmount(() => {
         </details>
       </div>
       <p v-else-if="session.externalUpdated" role="status">已读取外部更新。</p>
-      <ArticleForm ref="articleForm" v-if="!readingMode && !loading && (session.baseline || articleDocument)" :key="activeTab.id + ':' + session.generation" :text="session.text"
-        @apply="(before, after) => { if (session.text === before) session.text = after }" />
       <div class="card" style="padding: 0; overflow: hidden;">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; border-bottom: 1px solid var(--border-subtle);">
           <span style="font-size: 12px; color: var(--text-secondary);">{{ loading ? '读取中...' : 'Markdown 源码编辑' }}</span>
@@ -511,6 +499,18 @@ onBeforeUnmount(() => {
             @open-document="path => router.push({ path: '/editor', query: { id: path } })" />
         </div>
       </div>
+      <ArticleForm ref="articleForm" v-if="!readingMode && !loading && (session.baseline || articleDocument)" class="editor-article-info" :key="activeTab.id + ':' + session.generation" :text="session.text"
+        @apply="(before, after) => { if (session.text === before) session.text = after }">
+        <template v-if="session.baseline" #purpose>
+          <label class="document-purpose">本次编辑用途
+            <select v-model="purpose" class="select" :disabled="session.saving">
+              <option value="auto">自动识别</option>
+              <option value="article">普通文章</option>
+              <option value="document">说明文档</option>
+            </select>
+          </label>
+        </template>
+      </ArticleForm>
       <section v-if="!readingMode && session.path && session.baseline" class="card editor-site"><SiteActions :document-path="session.path" /></section>
       <AiWritingPanel v-if="!readingMode && !loading && (!session.path || session.baseline)" :buffer="session.text"
         :document-key="activeTab.id + ':' + session.generation + ':' + (session.path || '')" @accept="session.text = $event" />
@@ -546,6 +546,9 @@ onBeforeUnmount(() => {
 .editor-tab { display: inline-flex; align-items: center; max-width: 240px; border: 1px solid var(--border-subtle); border-radius: 6px; }
 .editor-tab.selected { border-color: var(--text-secondary); }
 .editor-tab button:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.editor-article-info { margin-top: 12px; }
+.document-purpose { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; color: var(--text-secondary); font-size: 12px; }
+.document-purpose .select { width: auto; padding-block: 4px; }
 .markdown-toolbar { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 12px; border-bottom: 1px solid var(--border-subtle); }
 .editor-content { width: 100%; min-height: 500px; padding: 16px; font-family: var(--font-mono); font-size: 13px; line-height: 1.7; border: none; outline: none; resize: vertical; background: var(--bg-panel); color: var(--text-primary); }
 .editor-panes.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
