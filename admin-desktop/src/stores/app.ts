@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { contentApi } from '@/api/content'
+import { contentApi, getContentConnection } from '@/api/content'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 
@@ -43,7 +43,7 @@ export const useAppStore = defineStore('app', () => {
   const backendChecking = ref(false)
 
   async function checkBackendHealth(): Promise<boolean> {
-    backendPort.value = 18000
+    backendPort.value = Number(new URL(getContentConnection().base_url).port)
     backendChecking.value = true
     try {
       const health = await contentApi.health()

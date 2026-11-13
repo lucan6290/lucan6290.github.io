@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, provide, ref } from 'vue'
+import { onMounted, onUnmounted, provide, ref } from 'vue'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { contentApi, setContentConnection } from '@/api/content'
@@ -19,11 +19,16 @@ const connecting = ref(false)
 const error = ref('')
 const token = ref('')
 const needsDirectory = ref(false)
+const recoveryError = ref('')
 const desktop = isTauri()
+const maxRecoveryAttempts = 2
+let recoveryAttempts = 0
+let checkingConnection = false
+let healthTimer: ReturnType<typeof setInterval> | undefined
 async function connect(connection: Connection) {
   setContentConnection(connection.base_url, connection.token)
   const health = await contentApi.health()
-  if (health.service !== 'xiaocancoding-content' || health.api_version !== 1) throw new Error('18000 端口不是当前内容服务。')
+  if (health.service !== 'xiaocancoding-content' || health.api_version !== 1) throw new Error('本机端口不是当前内容服务。')
   if (connection.content_root && connection.content_root !== health.content_root) throw new Error('内容根目录已变化，请重新连接当前项目。')
   await contentApi.list()
   if (workspace.value !== health.content_root) {
@@ -32,10 +37,49 @@ async function connect(connection: Connection) {
     workspace.value = health.content_root
   }
   appStore.backendReady = true
-  appStore.backendPort = 18000
+  appStore.backendPort = Number(new URL(connection.base_url).port)
   if (!desktop) sessionStorage.setItem('content-session', JSON.stringify({ ...connection, content_root: health.content_root }))
   connected.value = true
   token.value = ''
+}
+
+async function recoverConnection(manual = false) {
+  if (connecting.value) return
+  connecting.value = true
+  recoveryError.value = ''
+  recoveryAttempts = manual ? maxRecoveryAttempts : recoveryAttempts + 1
+  try {
+    const connection = await invoke<Connection | null>('get_backend_connection', { recover: !manual })
+    if (!connection || connection.content_root !== workspace.value) throw new Error('当前工作区的内容服务尚未恢复。')
+    // 原生层已验证项目根和令牌。只换连接，避免卸载编辑器或重放写入。
+    setContentConnection(connection.base_url, connection.token)
+    appStore.backendPort = Number(new URL(connection.base_url).port)
+    appStore.backendReady = true
+  } catch (cause) {
+    appStore.backendReady = false
+    recoveryError.value = cause instanceof Error ? cause.message : String(cause)
+  } finally { connecting.value = false }
+}
+
+async function monitorConnection() {
+  if (!connected.value || connecting.value || checkingConnection) return
+  checkingConnection = true
+  let failed = false
+  try {
+    // 探测鉴权也能发现同一端口的后端已重启、令牌已变更。
+    const health = await contentApi.health(2000)
+    if (health.service !== 'xiaocancoding-content' || health.api_version !== 1 || health.content_root !== workspace.value) throw new Error('内容服务身份已变化。')
+    await contentApi.probe(2000)
+    if (connecting.value) return
+    appStore.backendReady = true
+    recoveryAttempts = 0
+    recoveryError.value = ''
+  } catch {
+    if (connecting.value) return
+    appStore.backendReady = false
+    failed = true
+  } finally { checkingConnection = false }
+  if (failed && recoveryAttempts < maxRecoveryAttempts) await recoverConnection()
 }
 async function reconnect(projectRoot?: string) {
   connecting.value = true
@@ -65,9 +109,10 @@ async function switchWorkspace() {
     workspaceError.value = cause instanceof Error ? cause.message : String(cause)
     return null
   })
-  if (!selected || typeof selected !== 'string') return
+  if (!selected || typeof selected !== 'string' || connecting.value || editorTabs.value.some(tab => tab.session.dirty || tab.session.saving)) return
   connecting.value = true
   workspaceError.value = ''
+  recoveryAttempts = 0
   try {
     const next = await invoke<Connection>('switch_blog_workspace', { projectRoot: selected })
     await connect(next)
@@ -92,7 +137,7 @@ provide(workspaceControlsKey, {
 
 onMounted(async () => {
   appStore.init()
-  if (desktop) { await reconnect(); return }
+  if (desktop) { healthTimer = setInterval(() => { void monitorConnection() }, 3000); await reconnect(); return }
   const stored = sessionStorage.getItem('content-session')
   if (!stored) return
   connecting.value = true
@@ -100,11 +145,16 @@ onMounted(async () => {
   catch (cause) { sessionStorage.removeItem('content-session'); error.value = cause instanceof Error ? cause.message : String(cause) }
   finally { connecting.value = false }
 })
+onUnmounted(() => clearInterval(healthTimer))
 </script>
 <template>
   <div class="desktop-shell" :class="{ 'sidebar-collapsed': appStore.sidebarCollapsed }">
     <WindowTitlebar /><AppSidebar />
     <main class="desktop-main">
+      <div v-if="desktop && connected && !appStore.backendReady" class="backend-notice" role="status">
+        <span>{{ connecting ? '正在恢复内容服务…' : '内容服务未连接。未保存的编辑仍保留。' }}</span>
+        <button v-if="!connecting" class="btn btn-secondary" :title="recoveryError" @click="recoverConnection(true)">重新连接</button>
+      </div>
       <router-view v-if="connected" :key="workspace" />
       <div v-else class="main-content" style="max-width: 680px; margin: 60px auto;">
         <div class="card">
@@ -128,4 +178,5 @@ onMounted(async () => {
 
 <style scoped>
 .workspace-actions button + button { margin-left: 8px; }
+.backend-notice { padding: 8px 16px; display: flex; align-items: center; gap: 12px; }
 </style>

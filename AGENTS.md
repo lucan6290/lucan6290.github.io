@@ -40,4 +40,4 @@
 | 桌面内容服务 | 仓库根目录 | 浏览器联调时执行 `python admin-desktop/src-backend/main.py --project-root . --port 18000 --reload`，另在 `admin-desktop/` 执行 `npm run dev` |
 | 站点互动服务 | `frontend/service/` | 见 [服务说明](frontend/service/README.md) |
 
-启动前先检查端口。固定开发端口被本项目的旧进程占用时，确认进程身份后停止对应进程，再按原端口启动。站点开发与构建预览共用 3400。桌面环境准备与连接步骤见 [桌面端说明](admin-desktop/README.md#开发启动)。
+启动前先检查固定开发端口。被本项目的旧进程占用时，确认进程身份后停止对应进程，再按原端口启动。桌面 App 启动的内容后端优先用 18000，冲突时使用系统分配的回环端口。站点开发与构建预览共用 3400。桌面环境准备与连接步骤见 [桌面端说明](admin-desktop/README.md#开发启动)。

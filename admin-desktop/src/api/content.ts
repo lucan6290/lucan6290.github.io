@@ -33,7 +33,8 @@ export async function request<T>(path: string, method = 'GET', data?: unknown, t
 }
 
 export const contentApi = {
-  health: () => request<ContentHealth>('/health'),
+  health: (timeout?: number) => request<ContentHealth>('/health', 'GET', undefined, timeout),
+  probe: (timeout: number) => request<ContentVersion>('/api/v1/documents/version?path=desktop-connection-probe.md', 'GET', undefined, timeout),
   list: (query = '') => request<ContentIndex>(query ? `/api/v1/content?${new URLSearchParams({ query })}` : '/api/v1/content'),
   async image(path: string, signal: AbortSignal) {
     const response = await fetch(`${connection.base_url}/api/v1/images?${new URLSearchParams({ path })}`, {

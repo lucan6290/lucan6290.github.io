@@ -9,6 +9,7 @@
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
+    "pretauri:dev": "node scripts/check-desktop-dev-port.mjs",
     "tauri:dev": "tauri dev",
     "pretauri:build": "node scripts/build-content-backend.mjs",
     "tauri:build": "tauri build --config src-tauri/tauri.bundle.conf.json --bundles nsis --target x86_64-pc-windows-msvc -- --locked"

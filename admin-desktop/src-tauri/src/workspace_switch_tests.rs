@@ -10,7 +10,7 @@ fn target(root: &Path, state_dir: PathBuf, executable: Option<PathBuf>) -> Activ
 
 fn connection(target: &ActiveWorkspace) -> BackendConnection {
     BackendConnection {
-        base_url: BASE_URL.into(),
+        base_url: format!("http://127.0.0.1:{PREFERRED_PORT}"),
         token: "workspace-test-token".into(),
         content_root: target
             .root

@@ -1,12 +1,11 @@
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::fs::{self, OpenOptions};
-use std::net::{SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tauri::{Manager, State};
 
 mod site_runtime;
@@ -15,7 +14,11 @@ mod updater;
 #[cfg(test)]
 mod workspace_switch_tests;
 
-const BASE_URL: &str = "http://127.0.0.1:18000";
+const PREFERRED_PORT: u16 = 18000;
+
+fn preferred_port() -> u16 {
+    PREFERRED_PORT
+}
 
 #[derive(Serialize)]
 struct BackendConnection {
@@ -37,12 +40,15 @@ struct Session {
     token: String,
     project_root: String,
     content_root: String,
+    #[serde(default = "preferred_port")]
+    port: u16,
 }
 
 #[derive(Default)]
 struct BackendRuntime {
     workspace: Mutex<Option<ActiveWorkspace>>,
     process: Mutex<Option<OwnedProcess>>,
+    managed: AtomicBool,
     exiting: AtomicBool,
 }
 
@@ -57,17 +63,7 @@ impl ActiveWorkspace {
         same_absolute_path(&self.root.to_string_lossy(), root)
     }
 
-    fn connect(
-        &self,
-        runtime: &BackendRuntime,
-        after_stop: bool,
-    ) -> Result<BackendConnection, String> {
-        if after_stop {
-            let start = Instant::now();
-            while start.elapsed() < Duration::from_secs(2) && backend_port_open() {
-                std::thread::sleep(Duration::from_millis(50));
-            }
-        }
+    fn connect(&self, runtime: &BackendRuntime) -> Result<BackendConnection, String> {
         initialize_backend(
             runtime,
             &self.root,
@@ -98,6 +94,7 @@ impl BackendRuntime {
 /// 只有启动器创建的进程进入此句柄；外部服务不会被管理或终止。
 struct OwnedProcess {
     child: Child,
+    session_path: Option<PathBuf>,
     #[cfg(windows)]
     job: windows_job::Job,
 }
@@ -129,6 +126,7 @@ impl OwnedProcess {
         };
         Ok(Self {
             child,
+            session_path: None,
             #[cfg(windows)]
             job,
         })
@@ -147,6 +145,9 @@ impl Drop for OwnedProcess {
         }
         let _ = self.child.kill();
         let _ = self.child.wait();
+        if let Some(path) = &self.session_path {
+            let _ = fs::remove_file(path);
+        }
     }
 }
 
@@ -379,28 +380,34 @@ fn local_client() -> Result<reqwest::blocking::Client, String> {
         .map_err(|error| format!("无法建立本地连接：{error}"))
 }
 
-fn connect_existing(
-    client: &reqwest::blocking::Client,
-    base_url: &str,
-    root: &Path,
-    state_dir: &Path,
-) -> Result<BackendConnection, String> {
-    let health: Health = client
-        .get(format!("{base_url}/health"))
-        .send()
-        .and_then(|response| response.error_for_status())
-        .and_then(|response| response.json())
-        .map_err(|error| format!("18000 端口健康检查失败：{error}"))?;
-    validate_health(&health, root)?;
-    let session_path = state_dir.join("session.json");
+fn read_session(session_path: &Path) -> Result<Session, String> {
     let session: Session =
-        serde_json::from_str(&fs::read_to_string(&session_path).map_err(|error| {
+        serde_json::from_str(&fs::read_to_string(session_path).map_err(|error| {
             format!(
                 "无法读取本项目会话文件（{}）：{error}",
                 session_path.display()
             )
         })?)
         .map_err(|_| "内容后端会话文件格式无效；请重启该项目的内容后端。".to_string())?;
+    if session.port == 0 {
+        return Err("内容后端会话端口无效。".into());
+    }
+    Ok(session)
+}
+
+fn connect_existing(
+    client: &reqwest::blocking::Client,
+    root: &Path,
+    session_path: &Path,
+) -> Result<BackendConnection, String> {
+    let session = read_session(session_path)?;
+    let base_url = format!("http://127.0.0.1:{}", session.port);
+    let health: Health = client
+        .get(format!("{base_url}/health"))
+        .send()
+        .and_then(|response| response.error_for_status())
+        .and_then(|response| response.json())
+        .map_err(|error| format!("内容服务健康检查失败：{error}"))?;
     validate_identity(&health, &session, root)?;
     let response = client
         .get(format!("{base_url}/api/v1/documents/version"))
@@ -421,7 +428,7 @@ fn connect_existing(
         return Err("内容后端认证探测版本无效。".into());
     }
     Ok(BackendConnection {
-        base_url: base_url.into(),
+        base_url,
         token: session.token,
         content_root: health.content_root,
     })
@@ -474,11 +481,16 @@ fn spawn_backend(
     let stderr = log
         .try_clone()
         .map_err(|error| format!("无法打开后端错误日志：{error}"))?;
+    let launch_time = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    let session_path = state_dir.join(format!("session-{}-{launch_time}.json", std::process::id()));
     command
         .arg("--project-root")
         .arg(root)
-        .args(["--port", "18000", "--session-file"])
-        .arg(state_dir.join("session.json"))
+        .args(["--fallback-port", "--session-file"])
+        .arg(&session_path)
         .current_dir(if executable.is_some() {
             state_dir
         } else {
@@ -488,12 +500,10 @@ fn spawn_backend(
         .stdin(Stdio::null())
         .stdout(Stdio::from(log))
         .stderr(Stdio::from(stderr));
-    OwnedProcess::spawn(&mut command).map_err(|error| format!("无法启动内容后端：{error}"))
-}
-
-fn backend_port_open() -> bool {
-    let address: SocketAddr = "127.0.0.1:18000".parse().unwrap();
-    TcpStream::connect_timeout(&address, Duration::from_millis(500)).is_ok()
+    let mut process =
+        OwnedProcess::spawn(&mut command).map_err(|error| format!("无法启动内容后端：{error}"))?;
+    process.session_path = Some(session_path);
+    Ok(process)
 }
 
 fn initialize_backend(
@@ -503,10 +513,7 @@ fn initialize_backend(
     executable: Option<&Path>,
 ) -> Result<BackendConnection, String> {
     let client = local_client()?;
-    if backend_port_open() {
-        return connect_existing(&client, BASE_URL, root, state_dir);
-    }
-    {
+    let (session_path, startup_timeout) = {
         let mut process = runtime.process.lock().map_err(|_| "后端进程状态不可用。")?;
         if runtime.exiting.load(Ordering::SeqCst) {
             return Err("应用正在退出。".into());
@@ -521,13 +528,25 @@ fn initialize_backend(
                 process.take();
             }
         }
-        if process.is_none() {
+        let starting = process.is_none();
+        if starting {
+            if let Ok(connection) = connect_existing(&client, root, &state_dir.join("session.json"))
+            {
+                runtime.managed.store(false, Ordering::SeqCst);
+                return Ok(connection);
+            }
             *process = Some(spawn_backend(root, state_dir, executable)?);
+            runtime.managed.store(true, Ordering::SeqCst);
         }
-    }
+        let path = process
+            .as_ref()
+            .and_then(|backend| backend.session_path.clone())
+            .ok_or("没有内容后端会话路径。")?;
+        (path, Duration::from_secs(if starting { 30 } else { 6 }))
+    };
     let start = Instant::now();
     let mut last_error = "内容后端尚未就绪。".to_string();
-    while start.elapsed() < Duration::from_secs(30) && !runtime.exiting.load(Ordering::SeqCst) {
+    while start.elapsed() < startup_timeout && !runtime.exiting.load(Ordering::SeqCst) {
         {
             let mut process = runtime.process.lock().map_err(|_| "后端进程状态不可用。")?;
             if let Some(backend) = process.as_mut() {
@@ -544,7 +563,7 @@ fn initialize_backend(
                 }
             }
         }
-        match connect_existing(&client, BASE_URL, root, state_dir) {
+        match connect_existing(&client, root, &session_path) {
             Ok(connection) => return Ok(connection),
             Err(error) => last_error = error,
         }
@@ -633,6 +652,7 @@ fn replace_backend(
 async fn get_backend_connection(
     app: tauri::AppHandle,
     project_root: Option<PathBuf>,
+    recover: Option<bool>,
 ) -> Result<Option<BackendConnection>, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let runtime = app.state::<BackendRuntime>();
@@ -644,13 +664,24 @@ async fn get_backend_connection(
                     return Err("请在设置中切换工作区。".into());
                 }
             }
-            return current.connect(&runtime, false).map(Some);
+            if recover == Some(true) && !runtime.managed.load(Ordering::SeqCst) {
+                return connect_existing(
+                    &local_client()?,
+                    &current.root,
+                    &current.state_dir.join("session.json"),
+                )
+                .map(Some);
+            }
+            return current.connect(&runtime).map(Some);
+        }
+        if recover == Some(true) {
+            return Ok(None);
         }
 
         let Some(workspace) = resolve_workspace(&app, project_root.as_deref())? else {
             return Ok(None);
         };
-        let connection = workspace.connect(&runtime, false)?;
+        let connection = workspace.connect(&runtime)?;
         if project_root.is_some() {
             if let Err(error) = workspace.remember() {
                 runtime.stop_owned_backend()?;
@@ -678,8 +709,8 @@ async fn switch_blog_workspace(
         let current = active.as_ref().ok_or("请先连接本地工作区。")?;
         let candidate =
             resolve_workspace(&app, Some(&project_root))?.ok_or("请选择要打开的工作区。")?;
-        let connection = replace_backend(&runtime, current, &candidate, |target, stopped| {
-            target.connect(&runtime, stopped)
+        let connection = replace_backend(&runtime, current, &candidate, |target, _| {
+            target.connect(&runtime)
         })?;
         if !current.matches_root(&candidate.root) {
             app.state::<site_runtime::SiteRuntime>().stop_preview();
@@ -784,8 +815,32 @@ mod tests {
                 token: "test-session".into(),
                 project_root,
                 content_root,
+                port: 18000,
             },
         )
+    }
+
+    #[test]
+    fn session_discovery_accepts_only_nonzero_loopback_port() {
+        let root = fixture("session-port");
+        let path = root.join("session.json");
+        let (_, session) = identities(&root);
+        for (port, expected) in [
+            (None, Some(18000)),
+            (Some(21456), Some(21456)),
+            (Some(0), None),
+        ] {
+            let mut value = serde_json::json!({"token": session.token, "project_root": session.project_root, "content_root": session.content_root});
+            if let Some(port) = port {
+                value["port"] = port.into();
+            }
+            fs::write(&path, value.to_string()).unwrap();
+            assert_eq!(
+                read_session(&path).ok().map(|session| session.port),
+                expected
+            );
+        }
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]
@@ -911,9 +966,9 @@ mod tests {
             let root = fixture(if accepted { "auth-valid" } else { "auth-stale" });
             let (health, session) = identities(&root);
             std::fs::create_dir_all(root.join(".codex-tmp/admin-desktop")).unwrap();
-            std::fs::write(root.join(".codex-tmp/admin-desktop/session.json"), serde_json::json!({"token": session.token,"project_root":session.project_root,"content_root":session.content_root}).to_string()).unwrap();
             let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-            let base_url = format!("http://{}", listener.local_addr().unwrap());
+            let session_path = root.join(".codex-tmp/admin-desktop/session.json");
+            std::fs::write(&session_path, serde_json::json!({"token": session.token,"project_root":session.project_root,"content_root":session.content_root,"port":listener.local_addr().unwrap().port()}).to_string()).unwrap();
             let body = serde_json::to_string(&health).unwrap();
             let server = std::thread::spawn(move || {
                 for index in 0..2 {
@@ -943,13 +998,7 @@ mod tests {
             });
             let client = local_client().unwrap();
             assert_eq!(
-                connect_existing(
-                    &client,
-                    &base_url,
-                    &root,
-                    &root.join(".codex-tmp/admin-desktop")
-                )
-                .is_ok(),
+                connect_existing(&client, &root, &session_path).is_ok(),
                 accepted
             );
             server.join().unwrap();

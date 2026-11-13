@@ -16,7 +16,7 @@ src-backend/.venv/Scripts/python.exe -m pip install -r src-backend/requirements.
 npm run tauri:dev
 ```
 
-Tauri starts the content service on `127.0.0.1:18000`. The development UI uses `127.0.0.1:14200`. See the [desktop guide](../README.md) for browser-only development and test commands.
+Tauri prefers `127.0.0.1:18000` and uses an OS-assigned loopback port if it is unavailable. The development UI uses `127.0.0.1:14200`. See the [desktop guide](../README.md) for browser-only development and test commands.
 
 ## Windows installer
 

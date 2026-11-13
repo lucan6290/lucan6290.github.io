@@ -488,6 +488,43 @@ walk(result.tree); process.stdout.write(JSON.stringify({directories, documents})
 
 
 class StartupTests(unittest.TestCase):
+    def test_desktop_falls_back_after_occupied_or_excluded_preferred_port(self):
+        import errno
+        import main
+
+        bind_errors = [OSError(errno.EADDRINUSE, 'occupied')]
+        if os.name == 'nt':
+            bind_errors.append(OSError(0, 'excluded', None, 10013))
+        for bind_error in bind_errors:
+            with self.subTest(bind_error=bind_error), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                (root / 'frontend/content').mkdir(parents=True)
+                (root / 'admin-desktop').mkdir()
+                session_file = root / 'session.json'
+                args = ['main.py', '--project-root', str(root), '--session-file', str(session_file), '--reload', '--fallback-port']
+                original_bind = socket.socket.bind
+
+                def bind(sock, address):
+                    if address == ('127.0.0.1', 18000):
+                        raise bind_error
+                    original_bind(sock, address)
+
+                def run_reloader(reloader):
+                    address, port = reloader.sockets[0].getsockname()
+                    self.assertEqual(address, '127.0.0.1')
+                    self.assertNotIn(port, (0, 18000))
+                    session = json.loads(session_file.read_text('utf-8'))
+                    self.assertEqual(session['port'], port)
+                    self.assertEqual(reloader.config.port, port)
+                    for _ in range(2):
+                        response = TestClient(main.create_runtime_app()).get(
+                            '/api/v1/content', headers={'Authorization': f"Bearer {session['token']}"})
+                        self.assertEqual(response.status_code, 200)
+
+                with patch.object(sys, 'argv', args), patch.dict(os.environ), patch('socket.socket.bind', new=bind), patch('main.ChangeReload.run', new=run_reloader):
+                    main.main()
+                    self.assertTrue(session_file.is_file())
+
     def test_port_failure_does_not_replace_existing_session(self):
         import main
         with tempfile.TemporaryDirectory() as temporary:
@@ -550,7 +587,7 @@ class StartupTests(unittest.TestCase):
                     client = TestClient(main.create_runtime_app())
                     response = client.get("/api/v1/content", headers={"Authorization": f"Bearer {session['token']}"})
                     self.assertEqual(response.status_code, 200)
-                self.assertEqual(reloader.config.port, 18000)
+                self.assertEqual(reloader.config.port, listener.getsockname()[1])
 
             with patch.object(sys, "argv", args), patch.dict(os.environ), patch("socket.socket.bind", new=bind_temporary), patch("main.ChangeReload.run", new=run_reloader):
                 main.main()
