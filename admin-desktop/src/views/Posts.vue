@@ -20,6 +20,7 @@ const directory = ref(typeof route.query.directory === 'string' ? route.query.di
 const section = ref('')
 const search = ref('')
 const loading = ref(false)
+const refreshingManually = ref(false)
 const error = ref('')
 const newDirectory = ref('')
 const creating = ref(false)
@@ -52,9 +53,19 @@ async function refresh() {
     if (request !== latestRequest) return
     directories.value = index.directories.sort((a, b) => compareContentPaths(a.relative_path, b.relative_path))
     documents.value = index.documents.sort((a, b) => compareContentPaths(a.relative_path, b.relative_path))
+    if (refreshingManually.value) appStore.showToast('刷新完成', 'success')
   }
   catch (cause) { if (request === latestRequest) error.value = cause instanceof Error ? cause.message : '读取内容失败' }
-  finally { if (request === latestRequest) loading.value = false }
+  finally {
+    if (request === latestRequest) {
+      loading.value = false
+      refreshingManually.value = false
+    }
+  }
+}
+function refreshManually() {
+  refreshingManually.value = true
+  return refresh()
 }
 watch(search, (_value, _previous, onCleanup) => {
   latestRequest++
@@ -96,11 +107,14 @@ async function remove(document: DocumentSummary) {
   finally { deleting.value = '' }
 }
 onMounted(() => { refresh(); window.addEventListener('focus', refresh) })
-onUnmounted(() => window.removeEventListener('focus', refresh))
+onUnmounted(() => {
+  latestRequest++
+  window.removeEventListener('focus', refresh)
+})
 </script>
 <template>
   <div>
-    <div class="main-header"><div class="main-header-title">文档管理</div><div class="main-header-actions"><button class="btn btn-secondary btn-sm" :disabled="loading" @click="refresh">刷新</button><button v-if="directory" class="btn btn-secondary btn-sm" @click="moveTarget = { source: directory, kind: 'directory' }">移动当前目录</button><button class="btn btn-primary btn-sm" @click="edit()">新建文档</button></div></div>
+    <div class="main-header"><div class="main-header-title">文档管理</div><div class="main-header-actions"><button class="btn btn-secondary btn-sm" :disabled="loading" @click="refreshManually">{{ refreshingManually ? '刷新中…' : '刷新' }}</button><button v-if="directory" class="btn btn-secondary btn-sm" @click="moveTarget = { source: directory, kind: 'directory' }">移动当前目录</button><button class="btn btn-primary btn-sm" @click="edit()">新建文档</button></div></div>
     <div class="main-content documents-content">
       <p v-if="error" role="alert" style="color: var(--status-error);">{{ error }}</p>
       <div class="documents-toolbar">
