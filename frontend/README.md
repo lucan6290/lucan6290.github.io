@@ -197,8 +197,10 @@ pnpm preview      # 本地预览构建产物
 - 构建会为全部分类、文章、关于及未被内容栏目占用的标签/归档页输出对应目录的 `index.html`。直接打开或刷新文章可由 Pages 命中真实文件；无法作为可移植目录名的标签继续通过 Vue Router 访问。Pages 可能补充 URL 末尾的 `/`，查询参数和章节锚点保留。
 - `404.html` 用于未知地址，`.nojekyll` 保留静态资源目录。文章、栏目和系列页还会写入预渲染正文，关于、标签和归档保留 Vue 入口。
 - 本地验证子路径可执行 `pnpm build --base /仓库名/`；实际用户站使用 `pnpm build`。本地预览的 SPA 回退不能替代对生成目录和静态 HTTP 状态的检查。
-- 文章评论使用 [Utterances](https://utteranc.es/)，仓库须启用 Issues 并安装 [Utterances GitHub App](https://github.com/apps/utterances)。读者使用 GitHub 账号登录后发言，每篇文章按 Markdown 源路径关联独立 Issue。移动或重命名源文件时，若要保留评论，需要把原 Issue 的标题更新为新路径对应的检索词。
+- 文章评论使用 [giscus](https://giscus.app/zh-CN)，按 Markdown 源路径严格匹配独立讨论，界面使用简体中文并跟随站点主题。文章下方的「反馈文章问题」会打开带有文章标题和链接的 GitHub Issue 草稿。
 - 如需启用累计阅读量或在线管理，在仓库变量中设置公开的 HTTPS 服务地址 `VITE_PUBLIC_SERVICE_URL`。配置及鉴权见 [站点互动服务](service/README.md)。
+
+启用 giscus 时，在公开仓库 `lucan6290/lucan6290.github.io` 的 Settings → General → Features 勾选 Discussions，保留 Issues。安装 [giscus GitHub App](https://github.com/apps/giscus) 并授权该仓库。到 Discussions 创建名为「文章评论」的分类，格式选择 Announcements。打开 [giscus 配置页](https://giscus.app/zh-CN)，填写仓库并选中该分类，复制生成代码里的 `data-category-id` 值。将它保存到 Settings → Secrets and variables → Actions → Variables 的仓库变量 `VITE_GISCUS_CATEGORY_ID`，再运行 Pages 部署。开发时可在 `frontend/.env.local` 设置同名变量。
 
 内容迁移由作者从旧站复制到新前端内容目录。
 

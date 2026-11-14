@@ -53,6 +53,7 @@ jobs:
         env:
           SITE_URL: ${{ steps.pages.outputs.origin }}
           VITE_PUBLIC_SERVICE_URL: ${{ vars.VITE_PUBLIC_SERVICE_URL }}
+          VITE_GISCUS_CATEGORY_ID: ${{ vars.VITE_GISCUS_CATEGORY_ID }}
           PAGES_BASE_PATH: ${{ steps.pages.outputs.base_path }}
         run: pnpm build --base "$PAGES_BASE_PATH/"
 

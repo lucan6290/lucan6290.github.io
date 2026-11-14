@@ -4,20 +4,33 @@
       <h2 :id="headingId">评论</h2>
       <p v-if="views !== null" class="view-count">累计阅读 {{ views.toLocaleString('zh-CN') }} 次</p>
     </header>
-    <p v-if="!publicServiceConfigured">本站尚未启用阅读统计。</p>
-    <p v-else-if="loading" role="status">正在加载阅读量…</p>
+    <p v-if="loading" role="status">正在加载阅读量…</p>
     <div v-else-if="loadError">
       <p role="status">{{ loadError }}</p>
       <button type="button" @click="loadViews">重新加载</button>
     </div>
-    <p>使用 GitHub 账号登录后发表评论。</p>
-    <div ref="commentsHost" />
-    <p v-if="commentsFailed" role="status">GitHub 评论暂无法加载，请刷新页面重试。</p>
+    <Giscus
+      v-if="giscusCategoryId"
+      id="article-comments"
+      repo="lucan6290/lucan6290.github.io"
+      repo-id="R_kgDOSk2r-g"
+      category="文章评论"
+      :category-id="giscusCategoryId"
+      mapping="specific"
+      :term="articlePath"
+      strict="1"
+      :theme="siteTheme"
+      lang="zh-CN"
+      loading="lazy"
+    />
+    <p v-else>本站尚未启用文章评论。</p>
   </section>
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, useId, watch } from 'vue';
+import { onBeforeUnmount, ref, useId, watch } from 'vue';
+import Giscus from '@giscus/vue';
+import { siteTheme } from '@/composables/useTheme';
 import {
   articleService, PublicServiceError, publicServiceConfigured, visitorSession,
 } from '@/api/publicService';
@@ -27,8 +40,7 @@ const headingId = useId();
 const loading = ref(false);
 const loadError = ref('');
 const views = ref<number | null>(null);
-const commentsHost = ref<HTMLDivElement | null>(null);
-const commentsFailed = ref(false);
+const giscusCategoryId = import.meta.env.VITE_GISCUS_CATEGORY_ID?.trim();
 let current: AbortController | undefined;
 
 async function loadViews() {
@@ -64,26 +76,6 @@ async function loadViews() {
 watch(() => props.articlePath, loadViews, { immediate: true });
 onBeforeUnmount(() => current?.abort());
 
-// ArticleView 按源路径挂载此组件，换文章时 Vue 会移除整个评论容器。
-onMounted(async () => {
-  try {
-    // 使用固定长度的检索词，避免中文及长路径受 GitHub Issue 搜索和标题长度限制。
-    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(props.articlePath));
-    if (!commentsHost.value) return;
-    const issueKey = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
-    const script = document.createElement('script');
-    script.src = 'https://utteranc.es/client.js';
-    script.async = true;
-    script.crossOrigin = 'anonymous';
-    script.setAttribute('repo', 'lucan6290/lucan6290.github.io');
-    script.setAttribute('issue-term', `blog-comment ${issueKey}`);
-    script.setAttribute('theme', 'preferred-color-scheme');
-    script.onerror = () => { commentsFailed.value = true; };
-    commentsHost.value.append(script);
-  } catch {
-    commentsFailed.value = true;
-  }
-});
 </script>
 
 <style scoped>

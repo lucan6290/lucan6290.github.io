@@ -1,4 +1,4 @@
-import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { onMounted, onUnmounted, readonly, ref, watch } from 'vue';
 
 type Theme = 'light' | 'dark';
 const STORAGE_KEY = 'xiaocan-theme';
@@ -17,6 +17,7 @@ function systemPrefersDark() {
 }
 
 const current = ref<Theme>('light');
+export const siteTheme = readonly(current);
 const isManual = ref(false);
 
 export function useTheme() {

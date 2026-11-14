@@ -46,6 +46,9 @@
         </header>
         <MarkdownRenderer :content="rawContent" :relative-path="article.relativePath" :title="article.frontmatter.title" />
       </article>
+      <div class="article-feedback">
+        <a :href="feedbackUrl" target="_blank" rel="noopener noreferrer">反馈文章问题（GitHub）</a>
+      </div>
       <PublicArticleTools :key="article.relativePath" :article-path="article.relativePath" />
       <PrevNext :prev="pn.prev" :next="pn.next" />
     </main>
@@ -84,15 +87,17 @@ const treeNodes = computed(() => {
   return top ? sidebarNodes(top.children, root.value, props.article.path) : [];
 });
 
-watchEffect((onCleanup) => {
+const feedbackUrl = computed(() => {
+  const { path, frontmatter } = props.article;
+  const articleUrl = new URL(publicPageHref(path, import.meta.env.BASE_URL), window.location.origin);
+  const issue = new URL('https://github.com/lucan6290/lucan6290.github.io/issues/new');
+  issue.searchParams.set('title', `[文章反馈] ${frontmatter.title}`);
+  issue.searchParams.set('body', `文章：${articleUrl.href}\n\n### 问题或建议\n\n请说明所在段落、遇到的问题或建议的改法。\n`);
+  return issue.href;
+});
+
+watchEffect(() => {
   document.title = `${props.article.frontmatter.title} - 箓川码笺`;
-  // Utterances 优先用 canonical 作为 GitHub 登录后的返回地址。
-  const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
-  if (canonical) {
-    const original = canonical.href;
-    canonical.href = new URL(publicPageHref(props.article.path, import.meta.env.BASE_URL), original).href;
-    onCleanup(() => { canonical.href = original; });
-  }
 });
 
 function formatDate(iso: string) {
@@ -175,6 +180,7 @@ function formatDate(iso: string) {
 }
 .tags a:hover { border-color: var(--site-accent); }
 .series-entry { margin: 12px 0 0; font-size: .88rem; }
+.article-feedback { margin-top: 24px; text-align: right; font-size: .88rem; }
 
 @media (max-width: 996px) {
   .article-layout { display: block; }
