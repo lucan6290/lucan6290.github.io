@@ -197,7 +197,8 @@ pnpm preview      # 本地预览构建产物
 - 构建会为全部分类、文章、关于及未被内容栏目占用的标签/归档页输出对应目录的 `index.html`。直接打开或刷新文章可由 Pages 命中真实文件；无法作为可移植目录名的标签继续通过 Vue Router 访问。Pages 可能补充 URL 末尾的 `/`，查询参数和章节锚点保留。
 - `404.html` 用于未知地址，`.nojekyll` 保留静态资源目录。文章、栏目和系列页还会写入预渲染正文，关于、标签和归档保留 Vue 入口。
 - 本地验证子路径可执行 `pnpm build --base /仓库名/`；实际用户站使用 `pnpm build`。本地预览的 SPA 回退不能替代对生成目录和静态 HTTP 状态的检查。
-- 如需启用公开互动，在仓库变量中设置公开的 HTTPS 服务地址 `VITE_PUBLIC_SERVICE_URL`。配置及鉴权见 [站点互动服务](service/README.md)。
+- 文章评论使用 [Utterances](https://utteranc.es/)，仓库须启用 Issues 并安装 [Utterances GitHub App](https://github.com/apps/utterances)。读者使用 GitHub 账号登录后发言，每篇文章按 Markdown 源路径关联独立 Issue。移动或重命名源文件时，若要保留评论，需要把原 Issue 的标题更新为新路径对应的检索词。
+- 如需启用累计阅读量或在线管理，在仓库变量中设置公开的 HTTPS 服务地址 `VITE_PUBLIC_SERVICE_URL`。配置及鉴权见 [站点互动服务](service/README.md)。
 
 内容迁移由作者从旧站复制到新前端内容目录。
 

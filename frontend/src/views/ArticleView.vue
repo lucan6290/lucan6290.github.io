@@ -58,6 +58,7 @@ import { computed, watchEffect } from 'vue';
 import type { ArticleMeta } from '@/types/content';
 import { useContent } from '@/composables/useContent';
 import { sidebarNodes } from '@/composables/contentPaths';
+import { publicPageHref } from '@/utils/publicPaths';
 import { seriesHref } from '@/utils/seriesPaths';
 import TreeSidebar from '@/components/sidebar/TreeSidebar.vue';
 import ResizableSidebar from '@/components/sidebar/ResizableSidebar.vue';
@@ -83,8 +84,15 @@ const treeNodes = computed(() => {
   return top ? sidebarNodes(top.children, root.value, props.article.path) : [];
 });
 
-watchEffect(() => {
+watchEffect((onCleanup) => {
   document.title = `${props.article.frontmatter.title} - 箓川码笺`;
+  // Utterances 优先用 canonical 作为 GitHub 登录后的返回地址。
+  const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+  if (canonical) {
+    const original = canonical.href;
+    canonical.href = new URL(publicPageHref(props.article.path, import.meta.env.BASE_URL), original).href;
+    onCleanup(() => { canonical.href = original; });
+  }
 });
 
 function formatDate(iso: string) {
